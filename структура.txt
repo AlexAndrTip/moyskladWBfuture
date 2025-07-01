@@ -1,0 +1,50 @@
+c:/Projects/moyskladWBfuture/
+├── backend/
+│   ├── src/
+│   │   ├── controllers/      # Файлы для обработки логики эндпоинтов
+│   │   ├── models/           # Схемы и модели MongoDB
+│   │   ├── routes/           # Определения эндпоинтов
+│   │   ├── services/         # Файлы для бизнес-логики и взаимодействия с БД
+│   │   ├── wbms.js           # Основной файл запуска бэкенда
+│   │   └── utils/            # Вспомогательные утилиты (например, для JWT, валидации)
+│   ├── .env.example          # Пример файла .env
+│   ├── package.json
+│   └── .gitignore
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   ├── router/
+│   │   ├── views/
+│   │   └── main.js
+│   ├── .env.example          # Пример файла .env для фронтенда
+│   ├── package.json
+│   └── .gitignore
+└── .gitignore                # Общий .gitignore для проекта
+
+
+
+├── backend/
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── wbms.js
+│   │   └── utils/
+│   ├── .env.example
+│   ├── package.json
+│   └── .gitignore
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   ├── router/
+│   │   ├── views/
+│   │   └── main.js
+│   ├── .env.example
+│   ├── package.json
+│   └── .gitignore
+└── .gitignore

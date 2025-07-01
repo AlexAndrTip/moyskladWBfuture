@@ -1,0 +1,228 @@
+Резюме проекта: WBMS (Wildberries Management System)
+Этот проект представляет собой веб-приложение для управления данными, связанными с Wildberries, с авторизацией и админ-панелью. Он состоит из двух основных частей: бэкенда на Node.js (Express) и фронтенда на Vue.js. Для хранения данных используется MongoDB, а конфигурация управляется через .env файлы.
+
+Общая структура проекта
+Проект имеет монорепозиторную структуру с двумя основными директориями: backend/ и frontend/.
+
+your-project-name/
+├── backend/                  # Все, что касается сервера (Node.js/Express)
+│   ├── src/
+│   │   ├── controllers/      # Логика обработки запросов для маршрутов
+│   │   ├── models/           # Схемы и модели данных MongoDB (Mongoose)
+│   │   ├── middleware/       # Промежуточное ПО (аутентификация, авторизация)
+│   │   ├── routes/           # Определение API-маршрутов
+│   │   └── wbms.js           # Главный файл запуска бэкенда
+│   ├── .env                  # Переменные окружения для бэкенда (чувствительные данные)
+│   ├── .env.example          # Пример файла .env для бэкенда
+│   ├── package.json          # Манифест зависимостей бэкенда
+│   └── node_modules/
+│
+├── frontend/                 # Все, что касается клиентской части (Vue.js)
+│   ├── public/               # Статические ассеты
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/       # Переиспользуемые Vue-компоненты
+│   │   ├── router/
+│   │   │   └── index.js      # Конфигурация Vue Router
+│   │   ├── views/            # Компоненты Vue, представляющие целые страницы
+│   │   │   ├── AdminPanelPage.vue
+│   │   │   ├── LoginPage.vue
+│   │   │   ├── UserDashboardPage.vue
+│   │   │   ├── SkladiPage.vue        (заглушка)
+│   │   │   ├── WbKabinetyPage.vue    (заглушка)
+│   │   │   ├── IntegraciiPage.vue    (заглушка)
+│   │   │   ├── NastroikiPage.vue     (заглушка)
+│   │   │   ├── OtchetiPage.vue       (заглушка)
+│   │   │   └── PostavkiPage.vue      (заглушка)
+│   │   └── main.js           # Точка входа Vue приложения
+│   ├── .env                  # Переменные окружения для фронтенда (доступные в браузере)
+│   ├── .env.example          # Пример файла .env для фронтенда
+│   ├── package.json          # Манифест зависимостей фронтенда
+│   ├── vite.config.js        # Конфигурация Vite
+│   ├── index.html            # Главный HTML-файл фронтенда
+│   └── node_modules/
+│
+└── .gitignore                # Общий .gitignore
+Бэкенд (Node.js/Express)
+Основной файл запуска: backend/src/wbms.js
+
+Инициализирует Express-сервер.
+
+Подключается к MongoDB через Mongoose.
+
+Использует dotenv для загрузки переменных окружения из файла backend/.env.
+
+Применяет cors middleware для разрешения междоменных запросов с фронтенда (http://localhost:5173).
+
+Подключает роутеры для различных API-эндпоинтов.
+
+Зависимости (backend/package.json):
+
+express: Веб-фреймворк для Node.js.
+
+mongoose: ODM (Object Data Modeling) для MongoDB, упрощает взаимодействие с базой данных.
+
+dotenv: Загружает переменные окружения из .env файла.
+
+bcryptjs: Для хеширования паролей пользователей.
+
+jsonwebtoken: Для создания и верификации JWT-токенов для аутентификации.
+
+cors: Для управления политикой Cross-Origin Resource Sharing (CORS).
+
+Модель данных (backend/src/models/User.js):
+
+Определяет схему пользователя для MongoDB (поля username, password, role, createdAt).
+
+Пароли хешируются с использованием bcryptjs перед сохранением.
+
+Предоставляет метод matchPassword для проверки паролей.
+
+Маршруты и контроллеры:
+
+backend/src/routes/authRoutes.js:
+
+POST /api/auth/login: Авторизация пользователя. Возвращает JWT-токен, имя пользователя и роль.
+
+POST /api/auth/register: Регистрация нового пользователя. Используется для первоначального создания администратора.
+
+backend/src/controllers/authController.js: Содержит логику для входа и регистрации, генерации JWT-токенов.
+
+backend/src/routes/userRoutes.js:
+
+GET /api/users: Получение списка всех пользователей. (Требует роли admin).
+
+POST /api/users: Создание нового пользователя. (Требует роли admin).
+
+DELETE /api/users/:id: Удаление пользователя по ID. (Требует роли admin).
+
+backend/src/controllers/userController.js: Содержит логику для управления пользователями.
+
+backend/src/middleware/authMiddleware.js:
+
+protect: Проверяет наличие и валидность JWT-токена в заголовке Authorization. Прикрепляет данные пользователя (req.user, req.userRole) к объекту запроса.
+
+authorizeRoles: Проверяет, имеет ли аутентифицированный пользователь необходимую роль для доступа к маршруту.
+
+Фронтенд (Vue.js)
+Точка входа (frontend/src/main.js):
+
+Создает Vue-приложение.
+
+Подключает Vue Router.
+
+Монтирует приложение к элементу <div id="app"> в index.html.
+
+Корневой компонент (frontend/src/App.vue):
+
+Содержит <router-view />, который отображает компоненты страниц, соответствующие текущему маршруту.
+
+Конфигурация Vite (frontend/vite.config.js):
+
+Настраивает Vite, включает vue() плагин для обработки .vue файлов.
+
+Зависимости (frontend/package.json):
+
+vue: Основной фреймворк.
+
+vue-router: Для маршрутизации в одностраничном приложении.
+
+axios: HTTP-клиент для отправки запросов к бэкенду.
+
+@vitejs/plugin-vue: Плагин Vite для компиляции Vue-компонентов.
+
+vite: Сборщик и сервер разработки.
+
+font-awesome (через CDN в index.html): Для иконок.
+
+Маршрутизация (frontend/src/router/index.js):
+
+Использует createWebHistory для режима истории в браузере.
+
+Маршруты:
+
+/ (Login): Страница авторизации (LoginPage.vue).
+
+/admin (AdminPanel): Админ-панель (AdminPanelPage.vue). Защищена, требует аутентификации и роли admin.
+
+/dashboard (UserDashboard): Главная рабочая среда пользователя (UserDashboardPage.vue). Защищена, требует аутентификации. Имеет вложенные маршруты для пунктов меню.
+
+'/dashboard' (Home)
+
+'/dashboard/skladi' (Склады)
+
+'/dashboard/wb-kabinety' (WB Кабинеты)
+
+'/dashboard/integracii' (Интеграции)
+
+'/dashboard/nastroiki' (Настройки)
+
+'/dashboard/otcheti' (Отчеты)
+
+'/dashboard/postavki' (Поставки)
+
+Глобальный навигационный хук (router.beforeEach):
+
+Проверяет наличие токена и роль пользователя (admin или user) в localStorage.
+
+Перенаправляет неавторизованных пользователей на /.
+
+Блокирует доступ к /admin для не-админов.
+
+Перенаправляет авторизованных пользователей с Login или Register на /admin (если админ) или /dashboard (если обычный пользователь).
+
+Страницы/Компоненты:
+
+LoginPage.vue: Форма для ввода логина/пароля. После успешного входа сохраняет токен, имя пользователя и роль в localStorage и перенаправляет на /admin или /dashboard в зависимости от роли.
+
+AdminPanelPage.vue: Отображает список пользователей, позволяет добавлять и удалять их (только для admin).
+
+UserDashboardPage.vue: Главный компонент для рабочих страниц пользователей.
+
+Содержит выдвижное боковое меню с пунктами: "Склады", "WB Кабинеты", "Интеграции", "Настройки", "Отчеты", "Поставки".
+
+Использует <router-view name="dashboardContent" /> для отображения содержимого выбранного пункта меню.
+
+Содержит кнопку "Выйти" для сброса аутентификации.
+
+SkladiPage.vue, WbKabinetyPage.vue, IntegraciiPage.vue, NastroikiPage.vue, OtchetiPage.vue, PostavkiPage.vue: В настоящее время это компоненты-заглушки, которые будут содержать функционал для каждого пункта меню.
+
+Переменные окружения (.env)
+backend/.env:
+
+MONGO_URI: Строка подключения к MongoDB.
+
+JWT_SECRET: Секретный ключ для подписи JWT-токенов.
+
+ADMIN_USERNAME: Имя пользователя для учетной записи администратора.
+
+ADMIN_PASSWORD: Пароль для учетной записи администратора.
+
+PORT: Порт, на котором будет работать бэкенд (например, 3900).
+
+frontend/.env:
+
+VITE_API_BASE_URL: Базовый URL для запросов к API бэкенда (например, http://localhost:3900/api).
+
+Запуск проекта
+Запустить MongoDB.
+
+Для бэкенда (в папке backend/):
+
+Убедиться, что package.json заполнен и npm install выполнен.
+
+Проверить/создать .env с правильными данными.
+
+node src/wbms.js
+
+Для фронтенда (в папке frontend/):
+
+Убедиться, что package.json заполнен и npm install выполнен.
+
+Проверить/создать .env с правильным VITE_API_BASE_URL.
+
+npm run dev
+
+Создать первого админа (однократно) через REST-клиент (POST http://localhost:3900/api/auth/register).
+
+Открыть фронтенд в браузере по адресу, указанному в терминале (http://localhost:5173/).
