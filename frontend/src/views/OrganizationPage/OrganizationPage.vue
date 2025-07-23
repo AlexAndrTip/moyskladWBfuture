@@ -170,7 +170,7 @@
         <div class="form-group-with-actions">
           <div class="form-group">
             <label for="storeSelect">
-              Склад (МойСклад):
+              Склад для товаров (МойСклад):
               <span v-if="currentOrganizationLink?.moyskladStoreHref" class="label-linked-indicator">
                 <i class="fas fa-check-circle"></i>
               </span>
@@ -217,14 +217,66 @@
           </div>
         </div>
 
+        <!-- Поле для Склада приемок по расходам WB -->
+        <div class="form-group-with-actions">
+          <div class="form-group">
+            <label for="storeExpensesSelect">
+              Склад для приемок по расходам WB (МойСклад):
+              <span v-if="currentOrganizationLink?.moyskladStoreExpensesHref" class="label-linked-indicator">
+                <i class="fas fa-check-circle"></i>
+              </span>
+            </label>
+            <select
+              id="storeExpensesSelect"
+              v-model="selectedMoyskladStoreExpenses"
+              class="moysklad-select"
+              :disabled="loadingMoyskladStoresList"
+            >
+              <option :value="null" disabled>-- Выберите склад --</option>
+              <option v-for="store in moyskladStoresList" :key="store.id" :value="store">
+                {{ store.name }}
+              </option>
+            </select>
+            <p v-if="loadingMoyskladStoresList" class="loading-message small-text">Загрузка складов...</p>
+            <p v-if="moyskladStoresListError" class="error-message small-text">{{ moyskladStoresListError }}</p>
+            <p v-if="!loadingMoyskladStoresList && !moyskladStoresListError && moyskladStoresList.length === 0" class="info-message small-text">
+              Нет доступных складов.
+            </p>
+          </div>
+          <div class="action-buttons">
+            <button
+              @click="linkStoreExpenses"
+              :disabled="!selectedMoyskladStoreExpenses || savingOrganizationLink || currentOrganizationLink?.moyskladStoreExpensesHref"
+              class="action-btn link-btn"
+            >
+              Связать
+            </button>
+            <button
+              @click="openCreateStoreModal"
+              :disabled="savingOrganizationLink || currentOrganizationLink?.moyskladStoreExpensesHref"
+              class="action-btn create-btn"
+            >
+              Создать в МС
+            </button>
+            <button
+              @click="unlinkStoreExpenses"
+              :disabled="!currentOrganizationLink?.moyskladStoreExpensesHref || savingOrganizationLink"
+              class="action-btn unlink-btn"
+            >
+              Удалить связку
+            </button>
+          </div>
+        </div>
+
         <p v-if="saveMessage" :class="saveMessageType">{{ saveMessage }}</p>
 
-        <div v-if="currentOrganizationLink && (currentOrganizationLink.moyskladOrganizationHref || currentOrganizationLink.moyskladCounterpartyHref || currentOrganizationLink.moyskladContractHref || currentOrganizationLink.moyskladStoreHref)" class="current-links">
+        <div v-if="currentOrganizationLink && (currentOrganizationLink.moyskladOrganizationHref || currentOrganizationLink.moyskladCounterpartyHref || currentOrganizationLink.moyskladContractHref || currentOrganizationLink.moyskladStoreHref || currentOrganizationLink.moyskladStoreExpensesHref)" class="current-links">
           <h4>Текущие ссылки:</h4>
           <p v-if="currentOrganizationLink.moyskladOrganizationHref">Организация: <a :href="currentOrganizationLink.moyskladOrganizationHref" target="_blank">{{ currentOrganizationLink.moyskladOrganizationName || 'Ссылка' }}</a></p>
           <p v-if="currentOrganizationLink.moyskladCounterpartyHref">Контрагент: <a :href="currentOrganizationLink.moyskladCounterpartyHref" target="_blank">{{ currentOrganizationLink.moyskladCounterpartyName || 'Ссылка' }}</a></p>
           <p v-if="currentOrganizationLink.moyskladContractHref">Договор: <a :href="currentOrganizationLink.moyskladContractHref" target="_blank">{{ currentOrganizationLink.moyskladContractName || 'Ссылка' }}</a></p>
-          <p v-if="currentOrganizationLink.moyskladStoreHref">Склад: <a :href="currentOrganizationLink.moyskladStoreHref" target="_blank">{{ currentOrganizationLink.moyskladStoreName || 'Ссылка' }}</a></p>
+          <p v-if="currentOrganizationLink.moyskladStoreHref">Склад для товаров: <a :href="currentOrganizationLink.moyskladStoreHref" target="_blank">{{ currentOrganizationLink.moyskladStoreName || 'Ссылка' }}</a></p>
+          <p v-if="currentOrganizationLink.moyskladStoreExpensesHref">Склад для приемок по расходам WB: <a :href="currentOrganizationLink.moyskladStoreExpensesHref" target="_blank">{{ currentOrganizationLink.moyskladStoreExpensesName || 'Ссылка' }}</a></p>
         </div>
       </div>
     </div>
@@ -321,6 +373,7 @@ const loadingMoyskladStoresList = ref(false);
 const moyskladStoresListError = ref('');
 
 const selectedMoyskladStore = ref(null);
+const selectedMoyskladStoreExpenses = ref(null); // Новый поле для склада приемок по расходам WB
 
 // ОБЪЕДИНЕННОЕ ОБЪЯВЛЕНИЕ form И СОСТОЯНИЙ МОДАЛЬНЫХ ОКОН
 const form = ref({
@@ -437,6 +490,7 @@ const fetchOrganizationLink = async () => {
     selectedMoyskladCounterparty.value = null;
     selectedMoyskladContract.value = null;
     selectedMoyskladStore.value = null; // Сбрасываем и для склада
+    selectedMoyskladStoreExpenses.value = null; // Сбрасываем для нового склада
     return;
   }
 
@@ -486,6 +540,14 @@ const fetchOrganizationLink = async () => {
         selectedMoyskladStore.value = null;
       }
 
+      if (response.data.moyskladStoreExpensesHref && moyskladStoresList.value.length > 0) {
+        selectedMoyskladStoreExpenses.value = moyskladStoresList.value.find(
+          store => store.meta.href === response.data.moyskladStoreExpensesHref
+        ) || null;
+      } else {
+        selectedMoyskladStoreExpenses.value = null;
+      }
+
     } else {
       form.value = {
         moyskladOrganizationName: '',
@@ -497,6 +559,7 @@ const fetchOrganizationLink = async () => {
       selectedMoyskladCounterparty.value = null;
       selectedMoyskladContract.value = null;
       selectedMoyskladStore.value = null; // Сбрасываем и для склада
+      selectedMoyskladStoreExpenses.value = null; // Сбрасываем для нового склада
     }
   } catch (error) {
     organizationLinkError.value = error.response?.data?.message || 'Ошибка загрузки связки МойСклад.';
@@ -512,6 +575,7 @@ const fetchOrganizationLink = async () => {
     selectedMoyskladCounterparty.value = null;
     selectedMoyskladContract.value = null;
     selectedMoyskladStore.value = null; // Сбрасываем и для склада при ошибке
+    selectedMoyskladStoreExpenses.value = null; // Сбрасываем для нового склада
   } finally {
     loadingOrganizationLink.value = false;
   }
@@ -536,6 +600,8 @@ const linkOrganization = async () => {
       moyskladContractHref: currentOrganizationLink.value?.moyskladContractHref,
       moyskladStoreName: currentOrganizationLink.value?.moyskladStoreName,
       moyskladStoreHref: currentOrganizationLink.value?.moyskladStoreHref,
+      moyskladStoreExpensesName: currentOrganizationLink.value?.moyskladStoreExpensesName,
+      moyskladStoreExpensesHref: currentOrganizationLink.value?.moyskladStoreExpensesHref,
     };
     const response = await axios.post(`${API_BASE_URL}/organizations/link`, payload, {
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -584,6 +650,8 @@ const unlinkOrganization = async () => {
       moyskladContractHref: currentOrganizationLink.value?.moyskladContractHref,
       moyskladStoreName: currentOrganizationLink.value?.moyskladStoreName,
       moyskladStoreHref: currentOrganizationLink.value?.moyskladStoreHref,
+      moyskladStoreExpensesName: currentOrganizationLink.value?.moyskladStoreExpensesName,
+      moyskladStoreExpensesHref: currentOrganizationLink.value?.moyskladStoreExpensesHref,
     };
     const response = await axios.post(`${API_BASE_URL}/organizations/link`, payload, {
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -621,6 +689,8 @@ const linkCounterparty = async () => {
       moyskladContractHref: currentOrganizationLink.value?.moyskladContractHref,
       moyskladStoreName: currentOrganizationLink.value?.moyskladStoreName,
       moyskladStoreHref: currentOrganizationLink.value?.moyskladStoreHref,
+      moyskladStoreExpensesName: currentOrganizationLink.value?.moyskladStoreExpensesName,
+      moyskladStoreExpensesHref: currentOrganizationLink.value?.moyskladStoreExpensesHref,
     };
     const response = await axios.post(`${API_BASE_URL}/organizations/link`, payload, {
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -669,6 +739,8 @@ const unlinkCounterparty = async () => {
       moyskladContractHref: currentOrganizationLink.value?.moyskladContractHref,
       moyskladStoreName: currentOrganizationLink.value?.moyskladStoreName,
       moyskladStoreHref: currentOrganizationLink.value?.moyskladStoreHref,
+      moyskladStoreExpensesName: currentOrganizationLink.value?.moyskladStoreExpensesName,
+      moyskladStoreExpensesHref: currentOrganizationLink.value?.moyskladStoreExpensesHref,
     };
     const response = await axios.post(`${API_BASE_URL}/organizations/link`, payload, {
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -706,6 +778,8 @@ const linkContract = async () => {
       moyskladContractHref: selectedMoyskladContract.value.meta.href,
       moyskladStoreName: currentOrganizationLink.value?.moyskladStoreName,
       moyskladStoreHref: currentOrganizationLink.value?.moyskladStoreHref,
+      moyskladStoreExpensesName: currentOrganizationLink.value?.moyskladStoreExpensesName,
+      moyskladStoreExpensesHref: currentOrganizationLink.value?.moyskladStoreExpensesHref,
     };
     const response = await axios.post(`${API_BASE_URL}/organizations/link`, payload, {
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -759,6 +833,8 @@ const unlinkContract = async () => {
       moyskladContractHref: null,
       moyskladStoreName: currentOrganizationLink.value?.moyskladStoreName,
       moyskladStoreHref: currentOrganizationLink.value?.moyskladStoreHref,
+      moyskladStoreExpensesName: currentOrganizationLink.value?.moyskladStoreExpensesName,
+      moyskladStoreExpensesHref: currentOrganizationLink.value?.moyskladStoreExpensesHref,
     };
     const response = await axios.post(`${API_BASE_URL}/organizations/link`, payload, {
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -796,6 +872,8 @@ const linkStore = async () => {
       moyskladContractHref: currentOrganizationLink.value?.moyskladContractHref,
       moyskladStoreName: selectedMoyskladStore.value.name,
       moyskladStoreHref: selectedMoyskladStore.value.meta.href,
+      moyskladStoreExpensesName: currentOrganizationLink.value?.moyskladStoreExpensesName,
+      moyskladStoreExpensesHref: currentOrganizationLink.value?.moyskladStoreExpensesHref,
     };
     const response = await axios.post(`${API_BASE_URL}/organizations/link`, payload, {
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -844,6 +922,8 @@ const unlinkStore = async () => {
       moyskladContractHref: currentOrganizationLink.value?.moyskladContractHref,
       moyskladStoreName: null,
       moyskladStoreHref: null,
+      moyskladStoreExpensesName: currentOrganizationLink.value?.moyskladStoreExpensesName,
+      moyskladStoreExpensesHref: currentOrganizationLink.value?.moyskladStoreExpensesHref,
     };
     const response = await axios.post(`${API_BASE_URL}/organizations/link`, payload, {
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -856,6 +936,85 @@ const unlinkStore = async () => {
     saveMessage.value = error.response?.data?.message || 'Ошибка удаления связки со складом МойСклад.';
     saveMessageType.value = 'error';
     console.error('Ошибка удаления связки со складом МойСклад:', error);
+  } finally {
+    savingOrganizationLink.value = false;
+  }
+};
+
+// Функции для Склада приемок по расходам WB
+const linkStoreExpenses = async () => {
+  if (!selectedMoyskladStoreExpenses.value) {
+    alert('Пожалуйста, выберите склад для связывания.');
+    return;
+  }
+  savingOrganizationLink.value = true;
+  saveMessage.value = '';
+  saveMessageType.value = '';
+  try {
+    const payload = {
+      integrationLinkId: selectedIntegrationId.value,
+      moyskladOrganizationName: currentOrganizationLink.value?.moyskladOrganizationName,
+      moyskladOrganizationHref: currentOrganizationLink.value?.moyskladOrganizationHref,
+      moyskladCounterpartyName: currentOrganizationLink.value?.moyskladCounterpartyName,
+      moyskladCounterpartyHref: currentOrganizationLink.value?.moyskladCounterpartyHref,
+      moyskladContractName: currentOrganizationLink.value?.moyskladContractName,
+      moyskladContractHref: currentOrganizationLink.value?.moyskladContractHref,
+      moyskladStoreName: currentOrganizationLink.value?.moyskladStoreName,
+      moyskladStoreHref: currentOrganizationLink.value?.moyskladStoreHref,
+      moyskladStoreExpensesName: selectedMoyskladStoreExpenses.value.name,
+      moyskladStoreExpensesHref: selectedMoyskladStoreExpenses.value.meta.href,
+    };
+    const response = await axios.post(`${API_BASE_URL}/organizations/link`, payload, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    currentOrganizationLink.value = response.data;
+    saveMessage.value = 'Склад для приемок по расходам WB МойСклад успешно связан!';
+    saveMessageType.value = 'success';
+  } catch (error) {
+    saveMessage.value = error.response?.data?.message || 'Ошибка связывания склада для приемок по расходам WB МойСклад.';
+    saveMessageType.value = 'error';
+    console.error('Ошибка связывания склада для приемок по расходам WB МойСклад:', error);
+  } finally {
+    savingOrganizationLink.value = false;
+  }
+};
+
+const unlinkStoreExpenses = async () => {
+  if (!currentOrganizationLink.value?.moyskladStoreExpensesHref) {
+    alert('Склад для приемок по расходам WB не связан.');
+    return;
+  }
+  if (!confirm('Вы уверены, что хотите удалить связку с этим складом для приемок по расходам WB?')) {
+    return;
+  }
+  savingOrganizationLink.value = true;
+  saveMessage.value = '';
+  saveMessageType.value = '';
+  try {
+    const payload = {
+      integrationLinkId: selectedIntegrationId.value,
+      moyskladOrganizationName: currentOrganizationLink.value?.moyskladOrganizationName,
+      moyskladOrganizationHref: currentOrganizationLink.value?.moyskladOrganizationHref,
+      moyskladCounterpartyName: currentOrganizationLink.value?.moyskladCounterpartyName,
+      moyskladCounterpartyHref: currentOrganizationLink.value?.moyskladCounterpartyHref,
+      moyskladContractName: currentOrganizationLink.value?.moyskladContractName,
+      moyskladContractHref: currentOrganizationLink.value?.moyskladContractHref,
+      moyskladStoreName: currentOrganizationLink.value?.moyskladStoreName,
+      moyskladStoreHref: currentOrganizationLink.value?.moyskladStoreHref,
+      moyskladStoreExpensesName: null,
+      moyskladStoreExpensesHref: null,
+    };
+    const response = await axios.post(`${API_BASE_URL}/organizations/link`, payload, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    currentOrganizationLink.value = response.data;
+    selectedMoyskladStoreExpenses.value = null;
+    saveMessage.value = 'Связка со складом для приемок по расходам WB МойСклад успешно удалена!';
+    saveMessageType.value = 'success';
+  } catch (error) {
+    saveMessage.value = error.response?.data?.message || 'Ошибка удаления связки со складом для приемок по расходам WB МойСклад.';
+    saveMessageType.value = 'error';
+    console.error('Ошибка удаления связки со складом для приемок по расходам WB МойСклад:', error);
   } finally {
     savingOrganizationLink.value = false;
   }
@@ -911,7 +1070,15 @@ watch(moyskladStoresList, (newList) => {
   }
 });
 
-// Watcher для отслеживания изменений в связанных организации и контрагенте
+watch(moyskladStoresList, (newList) => {
+  if (currentOrganizationLink.value && currentOrganizationLink.value.moyskladStoreExpensesHref) {
+    selectedMoyskladStoreExpenses.value = newList.find(
+      store => store.meta.href === currentOrganizationLink.value.moyskladStoreExpensesHref
+    ) || null;
+  }
+});
+
+// Watcher для отслеживания изменений в связанных организация и контрагенте
 watch(() => [currentOrganizationLink.value?.moyskladOrganizationHref, currentOrganizationLink.value?.moyskladCounterpartyHref], ([newOrgHref, newCpHref], [oldOrgHref, oldCpHref]) => {
   // Если изменились href организации или контрагента, и оба теперь связаны, или если они были связаны и теперь нет
   if ((newOrgHref && newCpHref && (newOrgHref !== oldOrgHref || newCpHref !== oldCpHref)) || (!newOrgHref || !newCpHref)) {

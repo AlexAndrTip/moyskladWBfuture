@@ -129,7 +129,9 @@ exports.createOrUpdateOrganizationLink = async (req, res) => {
       moyskladContractName,
       moyskladContractHref, // ДОБАВЛЕНО
       moyskladStoreName,
-      moyskladStoreHref // ДОБАВЛЕНО
+      moyskladStoreHref, // ДОБАВЛЕНО
+      moyskladStoreExpensesName, // ДОБАВЛЕНО
+      moyskladStoreExpensesHref // ДОБАВЛЕНО
     } = req.body;
 
     const dataToSave = {
@@ -140,7 +142,9 @@ exports.createOrUpdateOrganizationLink = async (req, res) => {
       moyskladContractName,
       moyskladContractHref, // ДОБАВЛЕНО
       moyskladStoreName,
-      moyskladStoreHref // ДОБАВЛЕНО
+      moyskladStoreHref, // ДОБАВЛЕНО
+      moyskladStoreExpensesName, // ДОБАВЛЕНО
+      moyskladStoreExpensesHref // ДОБАВЛЕНО
     };
 
     const link = await organizationLinkService.createOrUpdateOrganizationLink(

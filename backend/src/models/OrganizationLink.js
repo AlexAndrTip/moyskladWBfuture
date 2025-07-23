@@ -54,6 +54,16 @@ const OrganizationLinkSchema = new mongoose.Schema({
     trim: true,
     default: null,
   },
+  moyskladStoreExpensesName: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+  moyskladStoreExpensesHref: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
