@@ -51,9 +51,11 @@ const menuItems = ref([
   { name: 'WBKabinety', label: 'WB Кабинеты', path: '/dashboard/wb-kabinety', icon: 'fas fa-store' },
   { name: 'Integracii', label: 'Интеграции', path: '/dashboard/integracii', icon: 'fas fa-puzzle-piece' },
   { name: 'Tovary', label: 'Товары', path: '/dashboard/tovary', icon: 'fas fa-box' },
-  { name: 'Nastroiki', label: 'Настройки', path: '/dashboard/nastroiki', icon: 'fas fa-cog' },
+  { name: 'Organizations', label: 'Организации', path: '/dashboard/organizations', icon: 'fas fa-users' }, // <-- ИЗМЕНЕНО: Исправлен путь и добавлена иконка
+  { name: 'Uslugi', label: 'Услуги', path: '/dashboard/uslugi', icon: 'fas fa-briefcase' },
   { name: 'Otcheti', label: 'Отчеты', path: '/dashboard/otcheti', icon: 'fas fa-chart-line' },
   { name: 'Postavki', label: 'Поставки', path: '/dashboard/postavki', icon: 'fas fa-truck' },
+   { name: 'Nastroiki', label: 'Настройки', path: '/dashboard/nastroiki', icon: 'fas fa-cog' },
 ]);
 
 // Вычисляемое свойство для отображения заголовка текущего пункта меню
@@ -83,30 +85,49 @@ const logout = () => {
 
 <style scoped>
 .dashboard-layout {
-  display: flex;
-  min-height: 100vh; /* Занимаем всю высоту экрана */
+  display: grid; /* Изменяем на CSS Grid */
+  grid-template-columns: auto 1fr; /* Первая колонка для сайдбара, вторая для основного контента */
+  min-height: 100vh;
   font-family: Arial, sans-serif;
   background-color: #f0f2f5;
 }
 
 /* Стили для бокового меню */
 aside {
-  width: 250px; /* Ширина развернутого меню */
+  /* Ширина здесь не фиксируется, Grid сам ее обработает */
   background-color: #2c3e50;
   color: #ecf0f1;
   display: flex;
   flex-direction: column;
-  transition: width 0.3s ease; /* Анимация сворачивания/разворачивания */
+  transition: width 0.3s ease; /* Сохраняем анимацию ширины */
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
-  height: 100vh; /* Занимаем всю высоту вьюпорта */
-  overflow-y: auto; /* Для прокрутки, если меню длинное */
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* Применяем ширину непосредственно к элементу aside в зависимости от состояния сворачивания */
+aside:not(.sidebar-collapsed) {
+    width: 250px; /* Ширина в развернутом состоянии */
 }
 
 .sidebar-collapsed {
-  width: 60px; /* Ширина свернутого меню */
+    width: 60px; /* Ширина в свернутом состоянии */
 }
+
+/* Остальные стили aside и main-content могут оставаться в основном без изменений,
+   но убедитесь, что нет фиксированных ширин для main-content,
+   которые могли бы переопределить поведение Grid. */
+
+/* Основное содержимое может оставаться как есть, так как Grid будет управлять его шириной */
+.main-content {
+  /* flex-grow: 1; - это больше не нужно с Grid, так как 1fr обрабатывает это */
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* ... (остальные существующие стили) ... */
 
 .sidebar-header {
   display: flex;
@@ -252,7 +273,7 @@ aside {
 
 /* Стили для основного содержимого */
 .main-content {
-  flex-grow: 1; /* Занимает оставшееся пространство */
+
   padding: 20px;
   overflow-y: auto; /* Для прокрутки содержимого */
 }

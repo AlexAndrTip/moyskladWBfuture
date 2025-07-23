@@ -1,0 +1,290 @@
+<template>
+  <div class="product-item">
+    <input
+      type="checkbox"
+      :value="product._id"
+      :checked="isSelected"
+      @change="event => emit('toggle-select', event, product._id)"
+    />
+    <div class="product-info">
+      <strong>Название:</strong> {{ product.title }}<br/>
+      <strong>Артикул WB:</strong> {{ product.nmID }}<br/>
+      <strong>Артикул продавца:</strong> {{ product.vendorCode }}
+      <div v-if="product.ms_href_general || (product.sizes && product.sizes.some(size => size.ms_href))" class="ms-link">
+        <span class="ms-exists-label">
+          в МС ✅
+        </span>
+      </div>
+    </div>
+    <div class="product-sizes">
+      <strong>Размеры:</strong>
+      <ul>
+        <li v-for="size in product.sizes" :key="size.chrtID">
+          {{ size.techSize }} (SKUs: {{ size.skus ? size.skus.join(', ') : 'Нет' }})
+          <span v-if="size.ms_href" class="ms-size-link-icon">
+            ✅
+          </span>
+        </li>
+      </ul>
+    </div>
+    <div v-if="product.sizes && product.sizes.length === 1" class="product-complect">
+      <label class="complect-label">Комплект:</label>
+      <input
+        type="checkbox"
+        :checked="product.complect"
+        @change="handleComplectToggle"
+        :disabled="
+          isActionInProgress(product._id, 'updateComplect')
+          || product.ms_href_general
+          || (product.sizes && product.sizes.some(size => size.ms_href))
+        "
+        class="complect-checkbox"
+      />
+    </div>
+
+    <div class="product-actions">
+      <button @click="emit('create-in-ms', product)" class="action-btn create-ms" :disabled="isActionInProgress(product._id, 'createMs')">
+        {{ isActionInProgress(product._id, 'createMs') ? 'Создаётся...' : 'Создать в МС' }}
+      </button>
+      <button
+        v-if="product.sizes && product.sizes.length > 1 && !product.ms_href_general"
+        @click="emit('create-variants', product)"
+        class="action-btn create-kit"
+        :disabled="isActionInProgress(product._id, 'createVariants') || product.sizes.every(size => size.ms_href)"
+      >
+        {{ isActionInProgress(product._id, 'createVariants') ? 'Создаются...' : 'Создать модификации' }}
+      </button>
+
+      <button
+          v-else-if="product.sizes && product.sizes.length > 1 && product.ms_href_general && !product.sizes.every(size => size.ms_href)"
+          @click="emit('create-variants', product)"
+          class="action-btn create-kit"
+          :disabled="isActionInProgress(product._id, 'createVariants') || product.sizes.every(size => size.ms_href)"
+      >
+          {{ isActionInProgress(product._id, 'createVariants') ? 'Создаются...' : 'Создать модификации' }}
+      </button>
+
+      <button @click="emit('link-to-product', product)" class="action-btn link-product" :disabled="isActionInProgress(product._id, 'linkProduct')">Связать с товаром</button>
+      <button @click="emit('unlink-product', product)" class="action-btn unlink-product" :disabled="isActionInProgress(product._id, 'unlinkProduct')">Удалить связку</button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { defineProps, defineEmits } from 'vue';
+
+const props = defineProps({
+  product: Object,
+  isSelected: Boolean,
+  isActionInProgress: Function,
+});
+
+const emit = defineEmits([
+  'toggle-select',
+  'create-in-ms',
+  'create-variants',
+  'link-to-product',
+  'unlink-product',
+  'toggle-complect',
+]);
+
+const handleComplectToggle = (event) => {
+    console.log('ProductListItem: Чекбокс "Комплект" изменен.');
+    console.log('ID товара:', props.product._id);
+    console.log('Новое значение:', event.target.checked);
+    emit('toggle-complect', props.product._id, event.target.checked);
+};
+</script>
+
+<style scoped>
+/* Ваши текущие стили */
+.product-item {
+  display: grid;
+  grid-template-columns: 40px 3fr 2fr 1fr 3fr; /* Это должно быть согласовано с заголовком */
+  gap: 15px;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  background-color: #f9f9f9;
+}
+.product-item.header {
+  grid-template-columns: 40px 3fr 2fr 1fr 3fr; /* Важно, чтобы здесь тоже был столбец для "Комплекта" */
+  background-color: #f0f2f5;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #ccc;
+}
+.product-item:last-child {
+  border-bottom: none;
+}
+.product-item input[type="checkbox"] {
+  transform: scale(1.3);
+  cursor: pointer;
+}
+.product-info strong {
+  color: #333;
+  min-width: 150px;
+  display: inline-block;
+  margin-right: 5px;
+}
+.product-info br {
+  display: block;
+}
+
+.ms-link {
+  margin-top: 5px;
+  font-size: 0.9em;
+}
+
+.ms-exists-label {
+  color: #28a745;
+  font-weight: bold;
+}
+
+/* НОВЫЙ СТИЛЬ для иконки ✅ рядом с размером */
+.ms-size-link-icon {
+  color: #28a745; /* Зеленый цвет для галочки */
+  font-weight: bold;
+  margin-left: 5px; /* Небольшой отступ от текста размера */
+}
+
+.product-complect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.complect-label {
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.complect-checkbox {
+  transform: scale(1.3);
+  cursor: pointer;
+}
+.complect-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* НОВЫЕ СТИЛИ для плейсхолдера, чтобы сохранить сетку */
+.product-complect-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.8em;
+    color: #999;
+    min-height: 50px;
+}
+.complect-info {
+    padding: 5px 0;
+}
+
+
+.product-sizes ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.product-sizes li {
+  background-color: #e2e6ea;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 0.9em;
+  color: #495057;
+  /* Добавьте display: flex и align-items: center для выравнивания галочки */
+  display: flex;
+  align-items: center;
+}
+.product-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.action-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+.action-btn:hover {
+  transform: translateY(-1px);
+}
+.action-btn:disabled {
+  background-color: #cccccc !important;
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.8;
+}
+.create-ms {
+  background-color: #5cb85c;
+  color: white;
+}
+.create-ms:hover {
+  background-color: #4cae4c;
+}
+.create-kit {
+  background-color: #f0ad4e;
+  color: white;
+}
+.create-kit:hover {
+  background-color: #ec971f;
+}
+.link-product {
+  background-color: #5bc0de;
+  color: white;
+}
+.link-product:hover {
+  background-color: #31b0d5;
+}
+.unlink-product {
+  background-color: #d9534f;
+  color: white;
+}
+.unlink-product:hover {
+  background-color: #c9302c;
+}
+
+@media (max-width: 768px) {
+  .product-item {
+    grid-template-columns: 40px 1fr;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .product-item.header {
+    grid-template-columns: 40px 1fr;
+  }
+  .product-item .header-sizes,
+  .product-item .header-actions,
+  .product-item .header-complect {
+    display: none;
+  }
+  .product-sizes,
+  .product-actions,
+  .product-complect,
+  .product-complect-placeholder {
+    display: none;
+  }
+  .product-actions {
+    justify-content: flex-start;
+  }
+}
+</style>

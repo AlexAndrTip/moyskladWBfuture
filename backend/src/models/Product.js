@@ -36,6 +36,18 @@ const ProductSchema = new mongoose.Schema({
   tags: [mongoose.Schema.Types.Mixed], // Массив тегов
   createdAt: Date,
   updatedAt: Date,
+  ms_href_general: { // <-- НОВОЕ ПОЛЕ: URL товара в МойСклад для общей карточки
+  type: String,
+  required: false,
+},
+
+// --- ОБНОВЛЕНО: complect как Boolean ---
+complect: {
+  type: Boolean, // Теперь Boolean
+  default: false, // По умолчанию false
+  required: true,
+},
+
 
   // --- Связь с интеграцией и пользователем ---
   integrationLink: {
@@ -57,13 +69,16 @@ const ProductSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Storage',
     required: true,
-  }
+  },
+
 });
 
 // Добавим индекс для быстрого поиска товаров по nmID внутри интеграции
 ProductSchema.index({ nmID: 1, integrationLink: 1, user: 1 }, { unique: true });
 // Также индекс для фильтрации по интеграции
 ProductSchema.index({ integrationLink: 1, user: 1 });
+
+ProductSchema.index({ 'sizes.skus': 1 }); // Добавьте это в Product.js
 
 
 module.exports = mongoose.model('Product', ProductSchema);

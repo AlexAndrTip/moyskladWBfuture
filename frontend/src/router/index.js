@@ -8,10 +8,12 @@ import UserDashboardPage from '../views/UserDashboardPage.vue';
 import SkladiPage from '../views/SkladiPage.vue'; // <-- Новый импорт
 import WbKabinetyPage from '../views/WbKabinetyPage.vue';
 import IntegraciiPage from '../views/IntegraciiPage.vue';
-import TovaryPage from '../views/TovaryPage.vue';
+import TovaryPage from '../views/TovaryPage/TovaryPage.vue';
 import NastroikiPage from '../views/NastroikiPage.vue';
 import OtchetiPage from '../views/OtchetiPage.vue';
 import PostavkiPage from '../views/PostavkiPage.vue';
+import OrganizationPage from '../views/OrganizationPage/OrganizationPage.vue';
+import UslugiPage from '../views/UslugiPage/UslugiPage.vue';
 
 const routes = [
   {
@@ -74,6 +76,22 @@ const routes = [
         name: 'Postavki',
         components: { dashboardContent: PostavkiPage }
       },
+      { // <-- НОВЫЙ МАРШРУТ ДЛЯ ОРГАНИЗАЦИЙ
+        path: 'organizations',
+        name: 'Organizations',
+        components: {
+          dashboardContent: OrganizationPage
+        },
+        meta: { requiresAuth: true, roles: ['user', 'admin'] }
+      },
+      { // <-- НОВЫЙ МАРШРУТ ДЛЯ УСЛУГ
+        path: 'uslugi',
+        name: 'Uslugi',
+        components: {
+          dashboardContent: UslugiPage
+        },
+        meta: { requiresAuth: true, roles: ['user', 'admin'] }
+      }
     ]
   },
 ];

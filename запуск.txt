@@ -1,0 +1,2 @@
+c:\Projects\moyskladWBfuture\backend>node src/wbms.js
+c:\Projects\moyskladWBfuture\frontend>npm run dev

@@ -1,228 +1,526 @@
-Резюме проекта: WBMS (Wildberries Management System)
-Этот проект представляет собой веб-приложение для управления данными, связанными с Wildberries, с авторизацией и админ-панелью. Он состоит из двух основных частей: бэкенда на Node.js (Express) и фронтенда на Vue.js. Для хранения данных используется MongoDB, а конфигурация управляется через .env файлы.
+Актуальное Резюме Проекта: WBMS (Wildberries Management System)
+1. Общая Цель и Обзор Проекта
+Проект WBMS (Wildberries Management System) — это веб-приложение, предназначенное для помощи пользователям в управлении своими операциями на Wildberries (WB) через интеграцию с внешними системами, такими как МойСклад (МС). Система обеспечивает авторизацию пользователей, администрирование, управление учетными данными WB и МС, а также автоматизированную синхронизацию и массовое управление товарами.
 
-Общая структура проекта
-Проект имеет монорепозиторную структуру с двумя основными директориями: backend/ и frontend/.
+Проект построен как монорепозиторий и состоит из двух основных частей:
+
+Бэкенд: Реализован на Node.js с фреймворком Express.
+
+Фронтенд: Разработан на Vue.js 3 с использованием Vite для сборки.
+
+База данных: MongoDB используется для хранения всех данных приложения.
+
+Конфигурация: Чувствительные данные и жесткие настройки управляются через файлы .env.
+
+2. Структура Проекта
+Файловая структура проекта организована для четкого разделения бэкенда и фронтенда:
 
 your-project-name/
-├── backend/                  # Все, что касается сервера (Node.js/Express)
+├── backend/                        # Все, что относится к серверной части (Node.js/Express)
 │   ├── src/
-│   │   ├── controllers/      # Логика обработки запросов для маршрутов
-│   │   ├── models/           # Схемы и модели данных MongoDB (Mongoose)
-│   │   ├── middleware/       # Промежуточное ПО (аутентификация, авторизация)
-│   │   ├── routes/           # Определение API-маршрутов
-│   │   └── wbms.js           # Главный файл запуска бэкенда
-│   ├── .env                  # Переменные окружения для бэкенда (чувствительные данные)
-│   ├── .env.example          # Пример файла .env для бэкенда
-│   ├── package.json          # Манифест зависимостей бэкенда
-│   └── node_modules/
+│   │   ├── controllers/            # Обработчики бизнес-логики для API-маршрутов
+│   │   │   ├── authController.js       # Аутентификация (вход, регистрация)
+│   │   │   ├── userController.js       # Управление пользователями (только для админов)
+│   │   │   ├── storageController.js    # Управление складами (WB и МойСклад)
+│   │   │   ├── wbCabinetController.js  # Управление WB-кабинетами
+│   │   │   ├── productController.js    # Управление товарами (синхронизация, создание в МС, связывание)
+│   │   │   └── organizationController.js # НОВОЕ: Управление организациями и связками МойСклад сущностей
+│   │   ├── models/                 # Схемы и модели данных MongoDB (Mongoose)
+│   │   │   ├── User.js                 # Модель пользователя
+│   │   │   ├── Limit.js                # Модель для лимитов пользователя
+│   │   │   ├── Storage.js              # Модель склада (с токеном МойСклад)
+│   │   │   ├── WbCabinet.js            # Модель WB-кабинета (с токеном Wildberries)
+│   │   │   ├── IntegrationLink.js      # Модель связи WB-кабинет <-> Склад
+│   │   │   ├── Product.js              # Модель товара (с полями для ms_href)
+│   │   │   ├── Organization.js         # НОВОЕ: Модель собственных организаций пользователя (с ИНН, КПП и т.д.)
+│   │   │   └── OrganizationLink.js     # НОВОЕ: Модель связок сущностей МойСклад (Организация, Контрагент, Договор, Склад)
+│   │   ├── middleware/             # Промежуточное ПО Express (аутентификация, авторизация)
+│   │   │   └── authMiddleware.js       # Функции `protect` и `authorizeRoles`
+│   │   ├── routes/                 # Определение API-маршрутов Express
+│   │   │   ├── authRoutes.js
+│   │   │   ├── userRoutes.js
+│   │   │   ├── storageRoutes.js
+│   │   │   ├── wbCabinetRoutes.js
+│   │   │   ├── productRoutes.js
+│   │   │   └── organizationRoutes.js   # НОВОЕ: Маршруты для организаций и связок МойСклад сущностей
+│   │   ├── services/               # Бизнес-логика, взаимодействие с БД и внешними API
+│   │   │   ├── syncService.js          # Синхронизация товаров с WB
+│   │   │   ├── productDbService.js     # Взаимодействие с коллекцией Product в БД
+│   │   │   ├── moySkladProductService.js # Создание товаров в МойСклад
+│   │   │   ├── moySkladVariantService.js # Создание модификаций в МойСклад
+│   │   │   ├── moySkladProductSearchService.js # Поиск товаров в МойСклад
+│   │   │   ├── moySkladVariantSearchService.js # Поиск модификаций в МойСклад
+│   │   │   ├── moySkladBundleService.js  # Создание комплектов в МойСклад
+│   │   │   ├── organizationService.js  # НОВОЕ: Сервис для собственных организаций пользователя
+│   │   │   ├── organizationLinkService.js # НОВОЕ: Сервис для связок МойСклад сущностей (OrganizationLink)
+│   │   │   └── moySkladEntityService.js # НОВОЕ: Сервис для прямого взаимодействия с МойСклад API (получение/создание сущностей)
+│   │   └── wbms.js                 # Главный файл запуска бэкенда
+│   ├── .env                        # Переменные окружения для бэкенда (чувствительные данные, НЕ коммитить!)
+│   ├── .env.example                # Пример файла .env (для демонстрации необходимых переменных)
+│   ├── package.json                # Манифест зависимостей бэкенда и скрипты
+│   └── node_modules/               # Установленные пакеты Node.js
 │
-├── frontend/                 # Все, что касается клиентской части (Vue.js)
-│   ├── public/               # Статические ассеты
+├── frontend/                       # Все, что относится к клиентской части (Vue.js)
+│   ├── public/                     # Статические ассеты (например, index.html, favicon)
 │   ├── src/
-│   │   ├── assets/
-│   │   ├── components/       # Переиспользуемые Vue-компоненты
+│   │   ├── assets/                 # Статические ресурсы (изображения, шрифты)
+│   │   ├── components/             # Переиспользуемые Vue-компоненты (для UI)
+│   │   ├── composables/            # Переиспользуемая логика Vue (хуки)
+│   │   │   ├── useIntegrationLinks.js # Теперь используется в OrganizationPage
+│   │   │   ├── useProducts.js
+│   │   │   ├── useProductActions.js # Логика индивидуальных действий с товарами
+│   │   │   ├── useBulkActions.js    # Логика массовых действий
+│   │   │   └── useSelection.js      # Логика выбора товаров
+│   │   ├── modals/                 # Модальные окна
+│   │   │   ├── BulkEditModal.vue
+│   │   │   └── LinkToProductModal.vue # Модальное окно для связывания товаров
 │   │   ├── router/
-│   │   │   └── index.js      # Конфигурация Vue Router
-│   │   ├── views/            # Компоненты Vue, представляющие целые страницы
-│   │   │   ├── AdminPanelPage.vue
-│   │   │   ├── LoginPage.vue
-│   │   │   ├── UserDashboardPage.vue
-│   │   │   ├── SkladiPage.vue        (заглушка)
-│   │   │   ├── WbKabinetyPage.vue    (заглушка)
-│   │   │   ├── IntegraciiPage.vue    (заглушка)
-│   │   │   ├── NastroikiPage.vue     (заглушка)
-│   │   │   ├── OtchetiPage.vue       (заглушка)
-│   │   │   └── PostavkiPage.vue      (заглушка)
-│   │   └── main.js           # Точка входа Vue приложения
-│   ├── .env                  # Переменные окружения для фронтенда (доступные в браузере)
-│   ├── .env.example          # Пример файла .env для фронтенда
-│   ├── package.json          # Манифест зависимостей фронтенда
-│   ├── vite.config.js        # Конфигурация Vite
-│   ├── index.html            # Главный HTML-файл фронтенда
-│   └── node_modules/
+│   │   │   └── index.js            # Конфигурация Vue Router (определение маршрутов)
+│   │   ├── views/                  # Компоненты Vue, представляющие целые страницы/виды
+│   │   │   ├── AdminPanelPage.vue      # Панель администратора
+│   │   │   ├── LoginPage.vue           # Страница авторизации
+│   │   │   ├── UserDashboardPage.vue   # Главный дашборд пользователя с меню
+│   │   │   ├── SkladiPage.vue          # Страница управления складами
+│   │   │   ├── WbKabinetyPage.vue      # Страница управления WB-кабинетами
+│   │   │   ├── IntegraciiPage.vue      # Страница управления интеграционными связками
+│   │   │   ├── TovaryPage.vue          # Страница управления товарами (импорт/связывание с МС)
+│   │   │   ├── NastroikiPage.vue       # Заглушка
+│   │   │   ├── OtchetiPage.vue         # Заглушка
+│   │   │   ├── PostavkiPage.vue        # Заглушка
+│   │   │   └── OrganizationPage/       # НОВОЕ: Папка для страницы "Организации"
+│   │   │       ├── OrganizationPage.vue    # Главная страница "Организации"
+│   │   │       └── modals/                 # Модальные окна для OrganizationPage
+│   │   │           ├── CreateMoyskladOrganizationModal.vue # НОВОЕ: Модалка для создания организации МС
+│   │   │           ├── CreateMoyskladCounterpartyModal.vue # НОВОЕ: Модалка для создания контрагента МС
+│   │   │           ├── CreateMoyskladContractModal.vue     # НОВОЕ: Модалка для создания договора МС
+│   │   │           └── CreateMoyskladStoreModal.vue        # НОВОЕ: Модалка для создания склада МС
+│   │   └── main.js                 # Точка входа Vue-приложения
+│   ├── .env                        # Переменные окружения для фронтенда (доступные в браузере, НЕ коммитить!)
+│   ├── .env.example                # Пример файла .env для фронтенда
+│   ├── package.json                # Манифест зависимостей фронтенда и скрипты
+│   ├── vite.config.js              # Конфигурация Vite
+│   └── node_modules/               # Установленные пакеты Node.js
 │
-└── .gitignore                # Общий .gitignore
-Бэкенд (Node.js/Express)
-Основной файл запуска: backend/src/wbms.js
+└── .gitignore                      # Общий файл для Git-игнорирования
 
-Инициализирует Express-сервер.
+3. Бэкенд (Node.js/Express) - Детальное описание
+3.1. Основной файл запуска: backend/src/wbms.js
+Инициализация: Создает и конфигурирует Express-сервер.
 
-Подключается к MongoDB через Mongoose.
+База данных: Устанавливает соединение с MongoDB через mongoose. Адрес БД берется из MONGO_URI в .env. Ошибки подключения логируются, и процесс завершается при сбое.
 
-Использует dotenv для загрузки переменных окружения из файла backend/.env.
+Переменные окружения: Использует dotenv для загрузки конфигурации из .env файла, расположенного в корне backend/.
 
-Применяет cors middleware для разрешения междоменных запросов с фронтенда (http://localhost:5173).
+CORS: Применяет cors middleware, явно разрешая запросы с http://localhost:5173 (адрес фронтенда). Это предотвращает ошибки безопасности браузера.
 
-Подключает роутеры для различных API-эндпоинтов.
+JSON Body Parser: express.json() используется для парсинга JSON-тела входящих HTTP-запросов.
 
-Зависимости (backend/package.json):
+Маршруты: Подключает все роутеры из папки backend/src/routes/ (authRoutes, userRoutes, storageRoutes, wbCabinetRoutes, integrationLinkRoutes, productRoutes, organizationRoutes).
 
-express: Веб-фреймворк для Node.js.
+Загрузка моделей: Явно импортирует все модели Mongoose для их инициализации (включая Organization.js и OrganizationLink.js).
 
-mongoose: ODM (Object Data Modeling) для MongoDB, упрощает взаимодействие с базой данных.
+3.2. Зависимости (backend/package.json)
+express: Веб-фреймворк для создания RESTful API.
 
-dotenv: Загружает переменные окружения из .env файла.
+mongoose: ORM (Object Relational Mapping) для MongoDB, упрощает взаимодействие с базой данных через схемы и модели.
 
-bcryptjs: Для хеширования паролей пользователей.
+dotenv: Для удобной работы с переменными окружения.
 
-jsonwebtoken: Для создания и верификации JWT-токенов для аутентификации.
+bcryptjs: Библиотека для хеширования паролей, обеспечивающая их безопасное хранение.
 
-cors: Для управления политикой Cross-Origin Resource Sharing (CORS).
+jsonwebtoken: Для реализации аутентификации на основе JSON Web Tokens (JWT).
 
-Модель данных (backend/src/models/User.js):
+cors: Промежуточное ПО для Express, позволяющее управлять политикой Cross-Origin Resource Sharing.
 
-Определяет схему пользователя для MongoDB (поля username, password, role, createdAt).
+axios: HTTP-клиент для выполнения запросов к внешним API (Wildberries, МойСклад).
 
-Пароли хешируются с использованием bcryptjs перед сохранением.
+3.3. Модели Данных (backend/src/models/)
+Все модели данных определены с использованием Mongoose и связывают сущности с пользователем через ObjectId и ref.
 
-Предоставляет метод matchPassword для проверки паролей.
+User.js:
 
-Маршруты и контроллеры:
+Поля: username, password (хешированный), role (user/admin), createdAt.
 
-backend/src/routes/authRoutes.js:
+Методы: pre('save') для хеширования пароля, matchPassword для проверки пароля.
 
-POST /api/auth/login: Авторизация пользователя. Возвращает JWT-токен, имя пользователя и роль.
+Limit.js:
 
-POST /api/auth/register: Регистрация нового пользователя. Используется для первоначального создания администратора.
+Поля: user (ссылка на User), maxStorages (по умолчанию 3), maxWbCabinets (по умолчанию 3).
 
-backend/src/controllers/authController.js: Содержит логику для входа и регистрации, генерации JWT-токенов.
+Имеет уникальный индекс по user для обеспечения одной записи лимитов на пользователя.
 
-backend/src/routes/userRoutes.js:
+Storage.js:
 
-GET /api/users: Получение списка всех пользователей. (Требует роли admin).
+Поля: name, token (токен МойСклад API, select: false для безопасности), user (ссылка на User).
 
-POST /api/users: Создание нового пользователя. (Требует роли admin).
+Проверки уникальности имени и токена для каждого пользователя.
 
-DELETE /api/users/:id: Удаление пользователя по ID. (Требует роли admin).
+WbCabinet.js:
 
-backend/src/controllers/userController.js: Содержит логику для управления пользователями.
+Поля: name, token (токен Wildberries API, select: false), user (ссылка на User).
 
-backend/src/middleware/authMiddleware.js:
+Проверки уникальности имени и токена для каждого пользователя.
 
-protect: Проверяет наличие и валидность JWT-токена в заголовке Authorization. Прикрепляет данные пользователя (req.user, req.userRole) к объекту запроса.
+IntegrationLink.js:
 
-authorizeRoles: Проверяет, имеет ли аутентифицированный пользователь необходимую роль для доступа к маршруту.
+Поля: wbCabinet (ссылка на WbCabinet), storage (ссылка на Storage), user (ссылка на User).
 
-Фронтенд (Vue.js)
-Точка входа (frontend/src/main.js):
+Имеет уникальный индекс по wbCabinet, storage, user для предотвращения дублирования связок.
 
-Создает Vue-приложение.
+Product.js:
+
+Поля: nmID, title, brand, vendorCode, description, complect (булево, true если товар является комплектом), ms_href_general (URL в МС для общего товара).
+
+sizes: Массив вложенных объектов SizeSchema.
+
+SizeSchema: Вложенная схема для элементов массива sizes. Содержит chrtID, techSize, wbSize, skus (массив строк) и ms_href (URL в МС для конкретного размера/SKU).
+
+Индексы для быстрого поиска и обеспечения уникальности nmID для каждой интеграции.
+
+Organization.js (НОВАЯ МОДЕЛЬ):
+
+Назначение: Хранение данных о собственных организациях пользователя.
+
+Поля: name (название организации), inn (ИНН), kpp (КПП), ogrn (ОГРН), address (юридический адрес), contactPerson (контактное лицо), contactPhone (контактный телефон), email (электронная почта), user (ссылка на User, владелец организации).
+
+Проверки: Уникальность inn для каждого пользователя.
+
+OrganizationLink.js (НОВАЯ МОДЕЛЬ):
+
+Назначение: Хранение связок сущностей МойСклад (Организация, Контрагент, Договор, Склад) с конкретной IntegrationLink.
+
+Поля: user, integrationLink, moyskladOrganizationName, moyskladOrganizationHref, moyskladCounterpartyName, moyskladCounterpartyHref, moyskladContractName, moyskladContractHref, moyskladStoreName, moyskladStoreHref, createdAt, updatedAt.
+
+Проверки: Уникальный индекс по integrationLink и user для обеспечения одной записи связки МойСклад сущностей на одну интеграционную связку.
+
+3.4. Маршруты и Контроллеры (backend/src/routes/ и backend/src/controllers/)
+Все маршруты защищены middleware protect, который проверяет JWT-токен.
+
+Аутентификация (authRoutes.js, authController.js):
+
+POST /api/auth/login: Авторизация пользователя, выдача JWT-токена, имени пользователя и роли.
+
+POST /api/auth/register: Регистрация нового пользователя. При регистрации автоматически создается запись в коллекции limits с лимитами по умолчанию (3 склада, 3 кабинета).
+
+Управление пользователями (userRoutes.js, userController.js):
+
+GET /api/users: Получение списка пользователей (только для admin).
+
+POST /api/users: Создание пользователя (только для admin).
+
+DELETE /api/users/:id: Удаление пользователя (только для admin).
+
+Управление складами (storageRoutes.js, storageController.js):
+
+GET /api/storages: Получение всех складов текущего пользователя.
+
+POST /api/storages: Добавление нового склада. Включает проверку:
+
+Уникальности имени склада для пользователя.
+
+Уникальности токена склада для пользователя.
+
+Лимита на количество складов (maxStorages из Limit модели).
+
+Валидации токена через GET https://api.moysklad.ru/api/remap/1.2/entity/assortment.
+
+PUT /api/storages/:id: Обновление склада. Аналогичные проверки уникальности и валидации токена.
+
+DELETE /api/storages/:id: Удаление склада. Включает проверку целостности данных: запрещает удаление, если склад используется в любой IntegrationLink.
+
+Управление WB-кабинетами (wbCabinetRoutes.js, wbCabinetController.js):
+
+GET /api/wbcabinets: Получение всех WB-кабинетов текущего пользователя.
+
+POST /api/wbcabinets: Добавление нового WB-кабинета. Включает проверку:
+
+Уникальности имени и токена кабинета для пользователя.
+
+Лимита на количество WB-кабинетов (maxWbCabinets).
+
+Валидации токена через GET https://common-api.wildberries.ru/ping.
+
+PUT /api/wbcabinets/:id: Обновление WB-кабинета. Аналогичные проверки.
+
+DELETE /api/wbcabinets/:id: Удаление WB-кабинета. Включает проверку целостности данных: запрещает удаление, если кабинет используется в любой IntegrationLink.
+
+Управление интеграционными связками (integrationLinkRoutes.js, integrationLinkController.js):
+
+GET /api/integration-links: Получение всех связок текущего пользователя. Возвращает популированные имена кабинетов и складов.
+
+POST /api/integration-links: Создание новой связки. Включает проверку принадлежности кабинета и склада пользователю, а также уникальности связки.
+
+DELETE /api/integration-links/:id: Удаление связки.
+
+Управление товарами (productRoutes.js, productController.js):
+
+GET /api/products/:integrationLinkId:
+
+Автоматически запускает синхронизацию товаров с WB API для указанной интеграции перед возвратом списка товаров.
+
+Загружает товары из WB (с пагинацией, используя курсор updatedAt/nmID).
+
+Сохраняет/обновляет товары в коллекции products вашей БД (используя Product.bulkWrite и upsert).
+
+Возвращает список товаров из вашей БД с пагинацией (20 товаров на страницу).
+
+POST /api/products/create-in-ms: Унифицированный эндпоинт для создания/обновления товаров в МойСклад.
+
+Принимает: productId (для индивидуального создания), productIds (массив для массового по выбранным) или selectedAllPages: true (для массового всех товаров интеграции). Также sizeChrtID (опционально, для конкретного размера) и integrationLinkId.
+
+Получает токен МойСклад из поля token соответствующего Storage из IntegrationLink.
+
+Логика _prepareProductDataForMoySklad: Подготавливает JSON-тело для запроса к МойСклад. Определяет, является ли товар/размер новым или уже существующим в МС (по ms_href/ms_href_general) и добавляет meta для обновления, если нужно.
+
+Если товар WB имеет один размер, то code (SKU) передаётся в МС. ms_href сохраняется в sizes[0].ms_href.
+
+Если товар WB имеет несколько размеров и sizeChrtID не указан, code не передаётся в МС. ms_href сохраняется в новом поле ms_href_general в корневом документе Product.
+
+Логика _executeMoySkladProductOperation: Выполняет axios.post с массивом запросов к МойСклад. Обрабатывает массив ответов от МойСклад, извлекает href и обновляет ms_href (или ms_href_general) в вашей БД с помощью Product.bulkWrite и $set.
+
+Возвращает детальные результаты для каждого обработанного товара (статус, сообщение, ms_href).
+
+POST /api/products/create-variants-in-ms: Создание модификаций в МойСклад.
+
+POST /api/products/sync-now: Запуск принудительной синхронизации товаров с WB.
+
+POST /api/products/unlink: Удаление индивидуальной связки товара с МойСклад.
+
+POST /api/products/bulk-unlink: Массовое удаление связок товаров с МойСклад.
+
+POST /api/products/set-complect: Обновление статуса complect для товара.
+
+POST /api/products/create-bundle: Создание комплекта (bundle) в МойСклад.
+
+POST /api/products/link-product:
+
+Назначение: Привязывает существующий товар Wildberries (или его конкретный размер/модификацию) к существующему товару или модификации в МойСклад.
+
+Принимает: wbProductId (ID товара WB), msProductHref (URL товара/модификации в МойСклад), wbSizeChrtID (опционально, chrtID размера WB, если привязывается модификация), integrationLinkId.
+
+Логика: Обращается к productDbService.linkMoySkladProduct для обновления соответствующего поля ms_href (либо ms_href_general для всего товара, либо sizes[i].ms_href для конкретной модификации) в документе Product в MongoDB.
+
+Возвращает: Сообщение об успехе, обновленный объект товара WB (updatedWbProduct) и ms_href_linked (URL, который был привязан) для обновления фронтенда.
+
+Управление организациями и связками МойСклад сущностей (organizationRoutes.js, organizationController.js):
+
+Собственные организации пользователя:
+
+GET /api/organizations: Получение всех собственных организаций текущего пользователя.
+
+POST /api/organizations: Добавление новой собственной организации.
+
+GET /api/organizations/:id: Получение собственной организации по ID.
+
+PUT /api/organizations/:id: Обновление собственной организации.
+
+DELETE /api/organizations/:id: Удаление собственной организации.
+
+Связки сущностей МойСклад (OrganizationLink):
+
+GET /api/organizations/link/:integrationLinkId: Получение связки сущностей МойСклад для конкретной интеграции.
+
+POST /api/organizations/link: Создание или обновление связки сущностей МойСклад для интеграции. Принимает integrationLinkId, а также moyskladOrganizationName, moyskladOrganizationHref, moyskladCounterpartyName, moyskladCounterpartyHref, moyskladContractName, moyskladContractHref, moyskladStoreName, moyskladStoreHref.
+
+DELETE /api/organizations/link/:integrationLinkId: Удаление связки сущностей МойСклад для интеграции.
+
+Взаимодействие с МойСклад API (для получения списков и создания):
+
+GET /api/organizations/moysklad-list/organizations/:integrationLinkId: Получение списка организаций из МойСклад.
+
+POST /api/organizations/moysklad-create/organization: Создание новой организации в МойСклад.
+
+GET /api/organizations/moysklad-list/counterparties/:integrationLinkId: Получение списка контрагентов из МойСклад.
+
+POST /api/organizations/moysklad-create/counterparty: Создание нового контрагента в МойСклад.
+
+GET /api/organizations/moysklad-list/contracts/:integrationLinkId: Получение списка договоров из МойСклад. Важно: Фильтрация по organizationHref и counterpartyHref происходит на стороне бэкенда после получения всех договоров от МойСклад API, так как прямое фильтрование по вложенным полям ownAgent.id или agent.id не поддерживается API.
+
+POST /api/organizations/moysklad-create/contract: Создание нового договора в МойСклад. Требует ownAgentHref и agentHref связанной организации и контрагента.
+
+GET /api/organizations/moysklad-list/stores/:integrationLinkId: Получение списка складов из МойСклад.
+
+POST /api/organizations/moysklad-create/store: Создание нового склада в МойСклад.
+
+3.5. Middleware (backend/src/middleware/authMiddleware.js)
+protect: Верифицирует JWT-токен из заголовка Authorization. Если токен недействителен или просрочен, возвращает 401 Unauthorized. Прикрепляет req.user (данные пользователя) и req.userRole к объекту запроса.
+
+authorizeRoles: Проверяет роль пользователя (req.userRole) для доступа к защищенным маршрутам.
+
+3.6. Переменные Окружения (backend/.env)
+MONGO_URI: Строка подключения к базе данных MongoDB.
+
+JWT_SECRET: Секретный ключ для подписи и верификации JWT.
+
+ADMIN_USERNAME, ADMIN_PASSWORD: Учетные данные для создания первого администратора.
+
+PORT: Порт, на котором слушает бэкенд (например, 3900).
+
+(Удалено: MOYSKLAD_API_TOKEN - теперь берётся из БД Storage).
+
+4. Фронтенд (Vue.js) - Детальное описание
+4.1. Точка входа (frontend/src/main.js)
+Создает Vue-приложение и монтирует его к <div id="app"> в index.html.
 
 Подключает Vue Router.
 
-Монтирует приложение к элементу <div id="app"> в index.html.
+Настраивает Axios Interceptors: перехватывает ответы HTTP-запросов. Если получен статус 401 Unauthorized (например, из-за просроченного токена), автоматически очищает localStorage и перенаправляет пользователя на страницу авторизации, выдавая уведомление.
 
-Корневой компонент (frontend/src/App.vue):
+4.2. Корневой компонент (frontend/src/App.vue)
+Использует <router-view /> для динамического отображения компонентов страниц на основе текущего маршрута.
 
-Содержит <router-view />, который отображает компоненты страниц, соответствующие текущему маршруту.
+4.3. Конфигурация Vite (frontend/vite.config.js)
+Включает плагин @vitejs/plugin-vue для обработки .vue файлов.
 
-Конфигурация Vite (frontend/vite.config.js):
+4.4. Зависимости (frontend/package.json)
+vue: Основной фреймворк для построения UI.
 
-Настраивает Vite, включает vue() плагин для обработки .vue файлов.
+vue-router: Для маршрутизации в SPA.
 
-Зависимости (frontend/package.json):
+axios: HTTP-клиент для взаимодействия с бэкенд API.
 
-vue: Основной фреймворк.
+lodash.debounce: Для отложенного выполнения функций (например, поиска).
 
-vue-router: Для маршрутизации в одностраничном приложении.
+font-awesome (подключается через CDN в index.html): Для иконок в UI.
 
-axios: HTTP-клиент для отправки запросов к бэкенду.
+pinia: (Если используется для стейт-менеджмента)
 
-@vitejs/plugin-vue: Плагин Vite для компиляции Vue-компонентов.
+4.5. Маршрутизация (frontend/src/router/index.js)
+Использует createWebHistory для чистых URL.
 
-vite: Сборщик и сервер разработки.
+Определенные маршруты:
 
-font-awesome (через CDN в index.html): Для иконок.
+/ (Login): LoginPage.vue
 
-Маршрутизация (frontend/src/router/index.js):
+/admin (AdminPanel): AdminPanelPage.vue (требует admin роли).
 
-Использует createWebHistory для режима истории в браузере.
+/dashboard (UserDashboard): UserDashboardPage.vue (родительский маршрут для всех рабочих страниц пользователя, требует аутентификации).
 
-Маршруты:
-
-/ (Login): Страница авторизации (LoginPage.vue).
-
-/admin (AdminPanel): Админ-панель (AdminPanelPage.vue). Защищена, требует аутентификации и роли admin.
-
-/dashboard (UserDashboard): Главная рабочая среда пользователя (UserDashboardPage.vue). Защищена, требует аутентификации. Имеет вложенные маршруты для пунктов меню.
-
-'/dashboard' (Home)
-
-'/dashboard/skladi' (Склады)
-
-'/dashboard/wb-kabinety' (WB Кабинеты)
-
-'/dashboard/integracii' (Интеграции)
-
-'/dashboard/nastroiki' (Настройки)
-
-'/dashboard/otcheti' (Отчеты)
-
-'/dashboard/postavki' (Поставки)
+Вложенные маршруты: /dashboard/skladi, /dashboard/wb-kabinety, /dashboard/integracii, /dashboard/tovary, /dashboard/nastroiki, /dashboard/otcheti, /dashboard/postavki, /dashboard/organizations. Каждый вложенный маршрут отображает соответствующий компонент (SkladiPage.vue, WbKabinetyPage.vue, IntegraciiPage.vue, TovaryPage.vue, OrganizationPage.vue и т.д.) внутри <router-view name="dashboardContent" /> на UserDashboardPage.vue.
 
 Глобальный навигационный хук (router.beforeEach):
 
-Проверяет наличие токена и роль пользователя (admin или user) в localStorage.
+Проверяет токен и роль пользователя в localStorage перед каждым переходом.
 
-Перенаправляет неавторизованных пользователей на /.
+Обеспечивает перенаправление на страницу входа для неавторизованных пользователей.
 
-Блокирует доступ к /admin для не-админов.
+Блокирует доступ к /admin для обычных пользователей.
 
-Перенаправляет авторизованных пользователей с Login или Register на /admin (если админ) или /dashboard (если обычный пользователь).
+Автоматически перенаправляет авторизованных пользователей с / или /register на соответствующий дашборд (/admin или /dashboard).
 
-Страницы/Компоненты:
+4.6. Страницы/Компоненты (frontend/src/views/)
+LoginPage.vue: Форма входа, сохраняет JWT-токен, имя пользователя и роль в localStorage после успешной авторизации.
 
-LoginPage.vue: Форма для ввода логина/пароля. После успешного входа сохраняет токен, имя пользователя и роль в localStorage и перенаправляет на /admin или /dashboard в зависимости от роли.
+AdminPanelPage.vue: Интерфейс для управления пользователями.
 
-AdminPanelPage.vue: Отображает список пользователей, позволяет добавлять и удалять их (только для admin).
+UserDashboardPage.vue: Макетирующий компонент, содержащий боковое выдвижное меню (aside) и область основного контента (main) с <router-view name="dashboardContent" />. Обновлен для включения пункта меню "Организации".
 
-UserDashboardPage.vue: Главный компонент для рабочих страниц пользователей.
+SkladiPage.vue: Интерфейс для добавления/редактирования/удаления складов пользователя. Включает модальные окна, валидацию токена МойСклад API.
 
-Содержит выдвижное боковое меню с пунктами: "Склады", "WB Кабинеты", "Интеграции", "Настройки", "Отчеты", "Поставки".
+WbKabinetyPage.vue: Интерфейс для добавления/редактирования/удаления WB-кабинетов пользователя. Аналогичен SkladiPage.vue, но с валидацией токена WB API.
 
-Использует <router-view name="dashboardContent" /> для отображения содержимого выбранного пункта меню.
+IntegraciiPage.vue: Интерфейс для создания/удаления связок между WB-кабинетами и складами. Отображает списки доступных кабинетов и складов, позволяет выбрать и установить связь. Включает проверку целостности данных перед удалением связанных объектов.
 
-Содержит кнопку "Выйти" для сброса аутентификации.
+TovaryPage.vue: (Текущий фокус разработки)
 
-SkladiPage.vue, WbKabinetyPage.vue, IntegraciiPage.vue, NastroikiPage.vue, OtchetiPage.vue, PostavkiPage.vue: В настоящее время это компоненты-заглушки, которые будут содержать функционал для каждого пункта меню.
+Позволяет пользователю выбрать интеграционную связку (WB Кабинет - Склад).
 
-Переменные окружения (.env)
-backend/.env:
+Автоматически запускает синхронизацию товаров с WB API при выборе интеграции или загрузке страницы.
 
-MONGO_URI: Строка подключения к MongoDB.
+Отображает список товаров из БД с пагинацией (20 товаров на страницу).
 
-JWT_SECRET: Секретный ключ для подписи JWT-токенов.
+Индивидуальные действия: Кнопки "Создать в МС", "Создать как комплект", "Связать с товаром", "Удалить связку" для каждого товара. Кнопки имеют состояние загрузки.
 
-ADMIN_USERNAME: Имя пользователя для учетной записи администратора.
+Массовые действия: Чекбоксы для выбора товаров, кнопка "Выбрать все" (на странице) и кнопка "Выбрать все на всех страницах". Кнопка "Массовое редактирование" открывает модальное окно с кнопками для массовых операций.
 
-ADMIN_PASSWORD: Пароль для учетной записи администратора.
+ms_href: Отображает ссылки на МойСклад рядом с товарами/размерами, если они созданы в МС.
 
-PORT: Порт, на котором будет работать бэкенд (например, 3900).
+Логика createInMs и bulkCreateInMs: Индивидуальные и массовые запросы отправляются на унифицированный бэкенд-эндпоинт POST /api/products/create-in-ms. Обработка ответов включает обновление ms_href в локальном products массиве для немедленного отображения.
 
-frontend/.env:
+Интеграция с модальным окном связывания: Использует isLinkToProductModalOpen, currentWbProductForLinking, handleProductLinked, closeLinkToProductModal из useProductActions для управления модальным окном. Передает полный объект wbProduct в модальное окно.
 
-VITE_API_BASE_URL: Базовый URL для запросов к API бэкенда (например, http://localhost:3900/api).
+LinkToProductModal.vue (ОБНОВЛЕННЫЙ ФУНКЦИОНАЛ):
 
-Запуск проекта
-Запустить MongoDB.
+Назначение: Модальное окно для выбора товара или модификации в МойСклад для связывания с товаром Wildberries.
 
-Для бэкенда (в папке backend/):
+Пропсы: Принимает полный объект wbProduct для отображения информации о связываемом товаре WB и его размерах.
 
-Убедиться, что package.json заполнен и npm install выполнен.
+Выбор режима: Позволяет переключаться между поиском "Товаров МС" и "Модификаций МС".
 
-Проверить/создать .env с правильными данными.
+Поиск и пагинация: Реализован поиск по названию/коду и пагинация для списков товаров и модификаций МойСклад.
 
-node src/wbms.js
+Выбор размера WB: Если у товара WB есть несколько размеров, предоставляет выпадающий список для выбора конкретного размера WB (chrtID), который будет связан с выбранным объектом МС.
 
-Для фронтенда (в папке frontend/):
+Подтверждение: Перед связыванием выводит confirm()-диалог для подтверждения действия пользователя.
 
-Убедиться, что package.json заполнен и npm install выполнен.
+Валидация на клиенте: Включает предупреждения, если пользователь пытается связать модификацию МС без выбора конкретного размера WB, или пытается связать общий товар МС с конкретным размером WB.
 
-Проверить/создать .env с правильным VITE_API_BASE_URL.
+События: При успешном связывании эмитирует событие product-linked с wbProductId, updatedWbProduct (полный обновленный объект товара WB) и wbSizeChrtID (если был выбран конкретный размер WB).
 
-npm run dev
+OrganizationPage.vue (НОВАЯ СТРАНИЦА, АКТИВНО РАЗРАБАТЫВАЕТСЯ):
 
-Создать первого админа (однократно) через REST-клиент (POST http://localhost:3900/api/auth/register).
+Назначение: Интерфейс для управления связками сущностей МойСклад (Организация, Контрагент, Договор, Склад) с выбранной интеграцией.
 
-Открыть фронтенд в браузере по адресу, указанному в терминале (http://localhost:5173/).
+Выбор интеграции: Аналогично TovaryPage, позволяет выбрать активную интеграционную связку.
+
+Отображение и редактирование связок: Показывает текущие связанные сущности МойСклад (если есть) и позволяет вводить их названия.
+
+Кнопки действий для каждой сущности (Организация, Контрагент, Договор, Склад):
+
+"Связать": Привязывает выбранную сущность МойСклад из выпадающего списка к текущей интеграции в БД OrganizationLink. Отправляет name и meta.href выбранной сущности на бэкенд.
+
+"Создать в МС": Открывает модальное окно для ввода названия новой сущности и отправляет запрос на создание этой сущности напрямую в МойСклад через бэкенд.
+
+"Удалить связку": Удаляет привязку сущности из БД OrganizationLink (не удаляет саму сущность из МойСклад).
+
+Выпадающие списки для сущностей МойСклад:
+
+Организация: Заполняется списком организаций, полученных из МойСклад API.
+
+Контрагент: Заполняется списком контрагентов, полученных из МойСклад API.
+
+Договор: Заполняется списком договоров, полученных из МойСклад API. Активируется только после того, как связаны Организация и Контрагент. Список договоров фильтруется на бэкенде по href связанной организации и контрагента.
+
+Склад: Заполняется списком складов, полученных из МойСклад API.
+
+Модальные окна для создания:
+
+CreateMoyskladOrganizationModal.vue
+
+CreateMoyskladCounterpartyModal.vue
+
+CreateMoyskladContractModal.vue (принимает ownAgentHref и agentHref для создания договора в МС)
+
+CreateMoyskladStoreModal.vue
+
+Логика обновления UI: После создания/связывания/удаления сущностей, списки в выпадающих меню и текущая связка обновляются.
+
+5. Переменные Окружения (.env файлы)
+backend/.env: Используется только на бэкенде. Содержит MONGO_URI, JWT_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD, PORT.
+
+frontend/.env: Используется только на фронтенде. Содержит VITE_API_BASE_URL (например, http://localhost:3900/api).
+
+Важно: Файлы .env не должны попасть в систему контроля версий (Git), поэтому они включены в .gitignore. Используются .env.example как шаблоны.
+
+6. Запуск Проекта
+Запустите MongoDB (локально или убедитесь, что облачный инстанс доступен).
+
+Для Бэкенда (в папке backend/):
+
+Установите зависимости: npm install
+
+Создайте файл .env на основе .env.example и заполните его.
+
+Запустите сервер: node src/wbms.js
+
+Для Фронтенда (в папке frontend/):
+
+Установите зависимости: npm install
+
+Создайте файл .env на основе .env.example и заполните его.
+
+Запустите сервер разработки: npm run dev
+
+Создайте первого администратора (однократно): Отправьте POST-запрос на http://localhost:3900/api/auth/register с username: admin, password: ваш_пароль, role: admin.
+
+Откройте фронтенд в браузере: Перейдите по адресу, указанному в терминале (http://localhost:5173/).

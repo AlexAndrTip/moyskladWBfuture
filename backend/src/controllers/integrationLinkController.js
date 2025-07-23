@@ -41,11 +41,11 @@ exports.createIntegrationLink = async (req, res) => {
       return res.status(404).json({ message: 'Выбранный Склад не найден или не принадлежит вам.' });
     }
 
-    // Проверяем, не существует ли уже такая связка
-    const existingLink = await IntegrationLink.findOne({ wbCabinet: wbCabinetId, storage: storageId, user: userId });
-    if (existingLink) {
-      return res.status(400).json({ message: 'Этот склад уже подключен к данному WB Кабинету.' });
-    }
+    // Проверяем, не существует ли уже интеграции с этим WB Кабинетом для пользователя
+const existingLink = await IntegrationLink.findOne({ wbCabinet: wbCabinetId, user: userId });
+if (existingLink) {
+  return res.status(400).json({ message: 'Для данного WB Кабинета уже создана интеграция.' });
+}
 
     const newLink = await IntegrationLink.create({
       wbCabinet: wbCabinetId,
@@ -80,8 +80,23 @@ exports.deleteIntegrationLink = async (req, res) => {
       return res.status(404).json({ message: 'Связка не найдена или у вас нет прав на ее удаление.' });
     }
 
+    // Каскадное удаление связанных данных
+    const Product = require('../models/Product');
+    const OrganizationLink = require('../models/OrganizationLink');
+    const StatRashodov = require('../models/StatRashodov');
+    const Uslugi = require('../models/Uslugi');
+    const WbIncome = require('../models/WbIncome');
+
+    await Promise.all([
+      Product.deleteMany({ integrationLink: linkId, user: userId }),
+      OrganizationLink.deleteMany({ integrationLink: linkId, user: userId }),
+      StatRashodov.deleteMany({ integrationLink: linkId, user: userId }),
+      Uslugi.deleteMany({ integrationLink: linkId, user: userId }),
+      WbIncome.deleteMany({ integrationLink: linkId, user: userId })
+    ]);
+
     await link.deleteOne();
-    res.json({ message: 'Связка успешно удалена' });
+    res.json({ message: 'Связка и все связанные данные успешно удалены' });
   } catch (error) {
     console.error("Error deleting integration link:", error);
     res.status(500).json({ message: 'Ошибка сервера при удалении связки', error: error.message });

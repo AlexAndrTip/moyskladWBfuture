@@ -155,7 +155,7 @@ const createLink = async () => {
 
 // Удаление связки (отключение)
 const deleteLink = async (linkId) => {
-  if (confirm('Вы уверены, что хотите отключить эту связку?')) {
+  if (confirm('Внимание! Будут удалены все связанные с этой интеграцией данные (товары, организации, услуги, статьи расходов, поступления). Продолжить?')) {
     try {
       await axios.delete(`${API_BASE_URL}/integration-links/${linkId}`, {
         headers: {

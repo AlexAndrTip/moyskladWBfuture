@@ -2,6 +2,23 @@
   <div class="tovary-page-container">
     <h2>Карточки Товаров WB</h2>
 
+    <p v-if="loadingIntegrations" class="loading-message">Загрузка интеграций...</p>
+    <p v-if="integrationsError" class="error-message">{{ integrationsError }}</p>
+
+    <div v-if="!loadingIntegrations && integrationLinks.length > 0" class="integration-selector-section">
+      <h3>Выберите Интеграцию:</h3>
+      <select v-model="selectedIntegrationId" @change="onIntegrationChange" class="integration-select">
+        <option value="" disabled>-- Выберите связку (Кабинет - Склад) --</option>
+        <option v-for="link in integrationLinks" :key="link._id" :value="link._id">
+          {{ link.wbCabinet.name }} - {{ link.storage.name }}
+        </option>
+      </select>
+    </div>
+    <div v-else-if="!loadingIntegrations && !integrationsError" class="no-integrations-message">
+      <p>Пожалуйста, сначала создайте интеграционные связки на странице "Интеграции".</p>
+      <router-link to="/dashboard/integracii" class="link-button">Перейти к Интеграциям</router-link>
+    </div>
+
     <div v-if="selectedIntegrationId && !loadingIntegrations">
       <div v-if="products.length > 0 && (selectedProductIds.length > 0 || selectedAllPages)" class="bulk-actions-bar">
         <button @click="openBulkEditModal" class="bulk-edit-button">
@@ -11,35 +28,16 @@
 
       <div class="selection-controls">
         <div v-if="products.length > 0 && areAllProductsSelectedOnPage && totalPages > 1 && !selectedAllPages" class="select-all-pages-bar">
-            <button @click="selectAllProductsOnAllPages" class="action-btn select-all-global-btn">
-                Выбрать все ({{ totalProducts }})
-            </button>
+          <span></span> <button @click="selectAllProductsOnAllPages" class="action-btn select-all-global-btn">
+            Выбрать все ({{ totalProducts }})
+          </button>
         </div>
         <div v-if="selectedAllPages" class="select-all-pages-bar selected-global">
-            <span>Выбрано всего товаров: {{ totalProducts }}</span>
-            <button @click="clearAllPageSelection" class="action-btn clear-all-global-btn">
-                Очистить выбор
-            </button>
+          <span>Выбрано все товаров: {{ totalProducts }}</span> <button @click="clearAllPageSelection" class="action-btn clear-all-global-btn">
+            Очистить выбор
+          </button>
         </div>
       </div>
-
-      <div v-if="individualActionMessage" :class="individualActionMessageType" class="individual-action-status">
-        {{ individualActionMessage }}
-        <a v-if="individualActionMsHref" :href="individualActionMsHref" target="_blank" rel="noopener noreferrer">Открыть в МС</a>
-        <button @click="individualActionMessage = ''" class="close-status-btn">X</button>
-      </div>
-
-      <div v-if="bulkActionResults.length > 0" class="bulk-results-summary">
-        <h3>Результаты массовой операции:</h3>
-        <div class="results-grid">
-          <div v-for="result in bulkActionResults" :key="result.productId" :class="['result-item', result.status]">
-            <strong>{{ result.title || result.nmID }}:</strong> {{ result.message }}
-            <a v-if="result.ms_href" :href="result.ms_href" target="_blank" rel="noopener noreferrer" class="result-link">Открыть</a>
-          </div>
-        </div>
-        <button @click="bulkActionResults = []" class="clear-results-btn">Скрыть результаты</button>
-      </div>
-
 
       <h3 v-if="products.length || productsLoading">Список товаров:</h3>
       <p v-if="productsLoading" class="loading-message">Загрузка товаров...</p>
@@ -63,30 +61,20 @@
             <strong>Название:</strong> {{ product.title }}<br/>
             <strong>Артикул WB:</strong> {{ product.nmID }}<br/>
             <strong>Артикул продавца:</strong> {{ product.vendorCode }}
-            <div v-if="product.sizes && product.sizes.length === 1 && product.sizes[0].ms_href" class="ms-link">
-              <a :href="product.sizes[0].ms_href" target="_blank" rel="noopener noreferrer">
-                <i class="fas fa-external-link-alt"></i> В МС
-              </a>
-            </div>
           </div>
           <div class="product-sizes">
             <strong>Размеры:</strong>
             <ul>
               <li v-for="size in product.sizes" :key="size.chrtID">
                 {{ size.techSize }} (SKUs: {{ size.skus ? size.skus.join(', ') : 'Нет' }})
-                <a v-if="size.ms_href" :href="size.ms_href" target="_blank" rel="noopener noreferrer" class="ms-link-mini">
-                  <i class="fas fa-external-link-alt"></i>
-                </a>
               </li>
             </ul>
           </div>
           <div class="product-actions">
-            <button @click="createInMs(product)" class="action-btn create-ms" :disabled="isActionInProgress(product._id, 'createMs')">
-              {{ isActionInProgress(product._id, 'createMs') ? 'Создаётся...' : 'Создать в МС' }}
-            </button>
-            <button @click="createAsKit(product)" class="action-btn create-kit" :disabled="isActionInProgress(product._id, 'createKit')">Создать как комплект</button>
-            <button @click="linkToProduct(product)" class="action-btn link-product" :disabled="isActionInProgress(product._id, 'linkProduct')">Связать с товаром</button>
-            <button @click="unlinkProduct(product)" class="action-btn unlink-product" :disabled="isActionInProgress(product._id, 'unlinkProduct')">Удалить связку</button>
+            <button @click="createInMs(product)" class="action-btn create-ms">Создать в МС</button>
+            <button @click="createAsKit(product)" class="action-btn create-kit">Создать как комплект</button>
+            <button @click="linkToProduct(product)" class="action-btn link-product">Связать с товаром</button>
+            <button @click="unlinkProduct(product)" class="action-btn unlink-product">Удалить связку</button>
           </div>
         </div>
       </div>
@@ -104,11 +92,9 @@
         <h3>Массовое редактирование</h3>
         <p>Выбрано товаров: {{ selectedAllPages ? totalProducts : selectedProductIds.length }} {{ selectedAllPages ? 'на всех страницах' : '' }}</p>
         <div class="modal-actions-grid">
-          <button @click="bulkCreateInMs" class="action-btn big-btn create-ms" :disabled="bulkActionInProgress">
-            {{ bulkActionInProgress ? 'Создаётся...' : 'Создать товары в МС' }}
-          </button>
-          <button @click="bulkCreateAsKit" class="action-btn big-btn create-kit" :disabled="bulkActionInProgress">Создать комплекты</button>
-          <button @click="bulkUnlinkProducts" class="action-btn big-btn unlink-product" :disabled="bulkActionInProgress">Удалить связки</button>
+          <button @click="bulkCreateInMs" class="action-btn big-btn create-ms">Создать товары в МС</button>
+          <button @click="bulkCreateAsKit" class="action-btn big-btn create-kit">Создать комплекты</button>
+          <button @click="bulkUnlinkProducts" class="action-btn big-btn unlink-product">Удалить связки</button>
         </div>
         <button @click="closeBulkEditModal" class="cancel-button">Отмена</button>
       </div>
@@ -138,82 +124,58 @@ const totalPages = ref(1);
 const totalProducts = ref(0);
 const productsPerPage = 20;
 
-const selectedProductIds = ref([]); // Массив для хранения _id выбранных товаров на текущей странице
+const selectedProductIds = ref([]); // Массив для хранения ID выбранных товаров на текущей странице
 const selectedAllPages = ref(false); // Флаг: выбраны ли все товары на всех страницах
 const isBulkEditModalOpen = ref(false);
 
-// Для отображения статуса индивидуальных действий
-const individualActionMessage = ref('');
-const individualActionMessageType = ref(''); // 'success', 'error', 'info'
-const individualActionMsHref = ref(''); // URL для ссылки на МС
-
-const pendingActions = ref({}); // { productId: 'actionType' } для управления disabled состоянием кнопок
-const bulkActionInProgress = ref(false); // Флаг для массовых действий
-const bulkActionResults = ref([]); // Результаты массовой операции
-
-
 const getToken = () => localStorage.getItem('token');
 
-// --- Computed Properties ---
 // Вычисляемое свойство: выбраны ли все товары на ТЕКУЩЕЙ странице
 const areAllProductsSelectedOnPage = computed(() => {
   return products.value.length > 0 && selectedProductIds.value.length === products.value.length;
 });
 
-// Проверка, выполняется ли действие для конкретного товара
-const isActionInProgress = (productId, actionType) => {
-  return pendingActions.value[productId] === actionType;
-};
-
-
-// --- Методы выбора товаров ---
 // Переключение выбора всех товаров на ТЕКУЩЕЙ странице
 const toggleSelectAllProducts = () => {
-  if (selectedAllPages.value) { // Если был выбран режим "все на всех страницах", отменяем его
+  if (selectedAllPages.value) {
+    // If "all pages" was selected, clear it
     clearAllPageSelection();
-  } else if (areAllProductsSelectedOnPage.value) { // Если выбраны все на текущей, снимаем выбор
+  } else if (areAllProductsSelectedOnPage.value) {
+    // If all on current page are selected, deselect them
     selectedProductIds.value = [];
-  } else { // Иначе выбираем все на текущей
-    selectedProductIds.value = products.value.map(p => p._id); // Используем _id продукта в БД
+  } else {
+    // Select all on current page
+    selectedProductIds.value = products.value.map(p => p._id);
   }
 };
 
 // Обработчик изменения индивидуального чекбокса
 const onIndividualCheckboxChange = (event, productId) => {
-  // Если до этого был глобальный выбор, и пользователь меняет индивидуальный чекбокс
-  if (selectedAllPages.value) {
-    selectedAllPages.value = false; // Отменяем глобальный выбор
+  selectedAllPages.value = false; // Reset global selection if an individual checkbox is changed
 
-    // Инициализируем selectedProductIds всеми ID с текущей страницы
-    // и затем добавляем/удаляем ID, как будто пользователь выбирал вручную
-    selectedProductIds.value = products.value.map(p => p._id);
-    if (event.target.checked) {
-        // Если пользователь поставил галочку на товаре, который ранее был выбран глобально,
-        // то он уже в selectedProductIds, но если его не было (т.к. мы сбросили), добавляем
-        if (!selectedProductIds.value.includes(productId)) {
-            selectedProductIds.value.push(productId);
-        }
-    } else { // Если пользователь снял галочку
-        selectedProductIds.value = selectedProductIds.value.filter(id => id !== productId);
+  if (event.target.checked) {
+    if (!selectedProductIds.value.includes(productId)) {
+      selectedProductIds.value.push(productId);
     }
+  } else {
+    selectedProductIds.value = selectedProductIds.value.filter(id => id !== productId);
   }
-  // Vue автоматически обрабатывает v-model, когда selectedAllPages.value было false
 };
-
 
 // Выбрать все товары на ВСЕХ страницах
 const selectAllProductsOnAllPages = () => {
-    selectedProductIds.value = []; // Очищаем текущий выбор, т.к. теперь выбраны все
-    selectedAllPages.value = true;
+  selectedProductIds.value = []; // Clear current page selection, as "all pages" is now active
+  selectedAllPages.value = true;
 };
 
 // Очистить выбор со всех страниц
 const clearAllPageSelection = () => {
-    selectedProductIds.value = [];
-    selectedAllPages.value = false;
+  selectedProductIds.value = [];
+  selectedAllPages.value = false;
 };
 
-// --- Функции загрузки данных ---
+
+// 1. Загрузка всех интеграционных связок при монтировании
 const fetchIntegrationLinks = async () => {
   loadingIntegrations.value = true;
   integrationsError.value = '';
@@ -233,6 +195,7 @@ const fetchIntegrationLinks = async () => {
   }
 };
 
+// 2. Загрузка товаров для выбранной интеграции
 const fetchProducts = async () => {
   if (!selectedIntegrationId.value) {
     products.value = [];
@@ -256,8 +219,9 @@ const fetchProducts = async () => {
     currentPage.value = response.data.currentPage;
     totalPages.value = response.data.totalPages;
     totalProducts.value = response.data.totalProducts;
-    selectedProductIds.value = []; // Очищаем выбор на странице при новой загрузке
-    selectedAllPages.value = false; // Сбрасываем глобальный выбор при новой загрузке
+    // Do NOT clear selectedProductIds or selectedAllPages here
+    // as it might be set for bulk actions across pages.
+    // However, if selectedAllPages is true, individual checkboxes will be checked visually.
   } catch (error) {
     productsError.value = error.response?.data?.message || 'Ошибка при загрузке товаров.';
     console.error('Fetch products error:', error);
@@ -267,110 +231,49 @@ const fetchProducts = async () => {
   }
 };
 
-// --- Обработчики UI ---
+// 3. Обработчик изменения выбранной интеграции
 const onIntegrationChange = () => {
   currentPage.value = 1;
+  selectedProductIds.value = []; // Clear selection when integration changes
+  selectedAllPages.value = false; // Clear global selection when integration changes
   fetchProducts();
 };
 
+// 4. Изменение страницы пагинации
 const changePage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
+    // When changing page, we should clear selectedProductIds
+    // because it only represents selections on the *current* page.
+    selectedProductIds.value = [];
+    // selectedAllPages flag should persist, and individual checkboxes will react to it.
     fetchProducts();
   }
 };
 
-// --- Индивидуальные действия с товарами ---
-const createInMs = async (product) => {
-  individualActionMessage.value = '';
-  individualActionMessageType.value = '';
-  individualActionMsHref.value = '';
-  pendingActions.value[product._id] = 'createMs';
-
-  let sizeChrtIDToSend = null;
-  let targetSizeTechSize = 'Общий';
-
-  if (!product.sizes || product.sizes.length === 0) {
-      individualActionMessage.value = `Ошибка: Товар "${product.title}" не имеет размеров для создания в МойСклад.`;
-      individualActionMessageType.value = 'error';
-      pendingActions.value[product._id] = null;
-      return;
-  }
-
-  if (product.sizes.length === 1) {
-    sizeChrtIDToSend = product.sizes[0].chrtID;
-    targetSizeTechSize = product.sizes[0].techSize;
-    if (product.sizes[0].ms_href) {
-        individualActionMessage.value = `Размер "${targetSizeTechSize}" уже создан в МойСклад.`;
-        individualActionMessageType.value = 'info';
-        individualActionMsHref.value = product.sizes[0].ms_href;
-        pendingActions.value[product._id] = null;
-        return;
-    }
-  } else { // product.sizes.length > 1
-    individualActionMessage.value = `Товар "${product.title}" имеет несколько размеров. Создаётся общий товар в МойСклад без конкретного SKU/кода.`;
-    individualActionMessageType.value = 'info';
-  }
-
-  try {
-    const response = await axios.post(`${API_BASE_URL}/products/create-in-ms`, {
-      productId: product._id,
-      sizeChrtID: sizeChrtIDToSend,
-      integrationLinkId: selectedIntegrationId.value,
-    }, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-    });
-
-    individualActionMessage.value = `Успешно создан в МойСклад: "${response.data.title}" (NM ID: ${response.data.nmID}) ${response.data.sizeTechSize ? 'размер ' + response.data.sizeTechSize : ''}.`;
-    individualActionMessageType.value = 'success';
-    individualActionMsHref.value = response.data.ms_href;
-
-    // Оптимизированное обновление ms_href на фронте
-    if (sizeChrtIDToSend && product.sizes) {
-      const sizeIndex = product.sizes.findIndex(s => s.chrtID === sizeChrtIDToSend);
-      if (sizeIndex !== -1) {
-        product.sizes[sizeIndex].ms_href = response.data.ms_href;
-      }
-    } else if (product.sizes && product.sizes.length === 1 && !sizeChrtIDToSend) {
-        product.sizes[0].ms_href = response.data.ms_href;
-    }
-
-  } catch (error) {
-    individualActionMessage.value = error.response?.data?.message || 'Ошибка создания в МойСклад.';
-    individualActionMessageType.value = 'error';
-    individualActionMsHref.value = '';
-    console.error('Ошибка создания в МС:', error);
-  } finally {
-    pendingActions.value[product._id] = null;
-  }
+// 5. Индивидуальные действия с товарами (заглушки)
+const createInMs = (product) => {
+  alert(`Создать в МС: ${product.title}`);
+  console.log('Создать в МС:', product);
 };
 
 const createAsKit = (product) => {
-  individualActionMessage.value = ''; individualActionMessageType.value = 'info'; individualActionMsHref.value = '';
-  pendingActions.value[product._id] = 'createKit';
   alert(`Создать как комплект: ${product.title}`);
   console.log('Создать как комплект:', product);
-  pendingActions.value[product._id] = null;
 };
 
 const linkToProduct = (product) => {
-  individualActionMessage.value = ''; individualActionMessageType.value = 'info'; individualActionMsHref.value = '';
-  pendingActions.value[product._id] = 'linkProduct';
   alert(`Связать с товаром: ${product.title}`);
   console.log('Связать с товаром:', product);
-  pendingActions.value[product._id] = null;
 };
 
 const unlinkProduct = (product) => {
-  individualActionMessage.value = ''; individualActionMessageType.value = 'info'; individualActionMsHref.value = '';
-  pendingActions.value[product._id] = 'unlinkProduct';
   alert(`Удалить связку: ${product.title}`);
   console.log('Удалить связку:', product);
-  pendingActions.value[product._id] = null;
 };
 
 
-// --- Действия для массового редактирования ---
+// 6. Действия для массового редактирования
 const openBulkEditModal = () => {
   if (selectedProductIds.value.length === 0 && !selectedAllPages.value) {
     alert('Пожалуйста, выберите хотя бы один товар или выберите все товары на всех страницах.');
@@ -383,85 +286,41 @@ const closeBulkEditModal = () => {
   isBulkEditModalOpen.value = false;
 };
 
-// --- Действия для массового редактирования ---
-const bulkCreateInMs = async () => {
-  individualActionMessage.value = ''; // Очищаем индивидуальное сообщение
-  individualActionMessageType.value = '';
-  individualActionMsHref.value = '';
-  bulkActionInProgress.value = true; // Устанавливаем статус массовой операции
-  bulkActionResults.value = []; // Очищаем предыдущие результаты
-
-  let payload = {
-    integrationLinkId: selectedIntegrationId.value
-  };
-
-  // Определяем, какие товары выбраны (все или по списку ID)
+const bulkCreateInMs = () => {
   if (selectedAllPages.value) {
-    payload.selectedAllPages = true;
-  } else if (selectedProductIds.value.length > 0) {
-    payload.productIds = selectedProductIds.value;
+    alert(`Создать в МС (массово) все ${totalProducts.value} товаров.`);
   } else {
-    // Эта проверка, по идее, уже должна быть сделана в openBulkEditModal,
-    // но на всякий случай оставим здесь или сделаем более строгую
-    alert('Пожалуйста, выберите товары для массового создания.');
-    bulkActionInProgress.value = false;
-    closeBulkEditModal();
-    return;
+    alert(`Создать в МС (массово) для ${selectedProductIds.value.length} выбранных товаров.`);
   }
-
-  try {
-    console.log('[FRONTEND] Отправляем запрос на массовое создание в МС с payload:', payload);
-    const response = await axios.post(`${API_BASE_URL}/products/create-in-ms`, payload, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-      timeout: 300000 // Увеличиваем таймаут до 5 минут для массовых операций
-    });
-
-    bulkActionResults.value = response.data.results; // Отображаем результаты
-    // После массовой операции, обновим отображаемые товары на текущей странице,
-    // чтобы увидеть обновленные ms_href
-    await fetchProducts(); // Перезагружаем текущую страницу товаров
-
-    // Если все успешно, можно вывести общее сообщение
-    const successCount = bulkActionResults.value.filter(r => r.status === 'success').length;
-    const errorCount = bulkActionResults.value.filter(r => r.status === 'error').length;
-    const skippedCount = bulkActionResults.value.filter(r => r.status === 'skipped').length;
-
-    let summaryMessage = `Массовая операция завершена: Успешно: ${successCount}`;
-    if (errorCount > 0) summaryMessage += `, Ошибок: ${errorCount}`;
-    if (skippedCount > 0) summaryMessage += `, Пропущено: ${skippedCount}`;
-
-    alert(summaryMessage); // Временно для обратной связи
-
-  } catch (error) {
-    bulkActionResults.value = [{
-      productId: 'bulk-error',
-      title: 'Общая ошибка',
-      status: 'error',
-      message: error.response?.data?.message || 'Ошибка выполнения массовой операции.'
-    }];
-    console.error('Ошибка массового создания в МС:', error);
-    alert('Произошла ошибка при массовом создании товаров.'); // Временно для обратной связи
-  } finally {
-    bulkActionInProgress.value = false; // Сбрасываем статус
-    closeBulkEditModal(); // Закрываем модальное окно после завершения
-  }
+  console.log('Массовое создание в МС для ID:', selectedProductIds.value, 'Выбраны все страницы:', selectedAllPages.value);
+  closeBulkEditModal();
+  clearAllPageSelection(); // Clear selection after bulk action
 };
 
-
 const bulkCreateAsKit = () => {
-  alert(`Создать комплекты (массово) для ${selectedAllPages.value ? totalProducts.value : selectedProductIds.value.length} товаров.`);
-  console.log('Массовое создание комплектов для ID:', selectedAllPages.value ? 'ВСЕ' : selectedProductIds.value, 'Выбраны все страницы:', selectedAllPages.value);
+  if (selectedAllPages.value) {
+    alert(`Создать комплекты (массово) для всех ${totalProducts.value} товаров.`);
+  } else {
+    alert(`Создать комплекты (массово) для ${selectedProductIds.value.length} выбранных товаров.`);
+  }
+  console.log('Массовое создание комплектов для ID:', selectedProductIds.value, 'Выбраны все страницы:', selectedAllPages.value);
   closeBulkEditModal();
+  clearAllPageSelection(); // Clear selection after bulk action
 };
 
 const bulkUnlinkProducts = () => {
-  alert(`Удалить связки (массово) для ${selectedAllPages.value ? totalProducts.value : selectedProductIds.value.length} товаров.`);
-  console.log('Массовое удаление связок для ID:', selectedAllPages.value ? 'ВСЕ' : selectedProductIds.value, 'Выбраны все страницы:', selectedAllPages.value);
+  if (selectedAllPages.value) {
+    alert(`Удалить связки (массово) для всех ${totalProducts.value} товаров.`);
+  } else {
+    alert(`Удалить связки (массово) для ${selectedProductIds.value.length} выбранных товаров.`);
+  }
+  console.log('Массовое удаление связок для ID:', selectedProductIds.value, 'Выбраны все страницы:', selectedAllPages.value);
   closeBulkEditModal();
+  clearAllPageSelection(); // Clear selection after bulk action
 };
 
 
-// --- Watcher и OnMounted ---
+// Watcher для отслеживания изменения selectedIntegrationId
 watch(selectedIntegrationId, (newVal, oldVal) => {
   if (newVal && newVal !== oldVal) {
     currentPage.value = 1;
@@ -473,6 +332,8 @@ onMounted(() => {
   fetchIntegrationLinks();
 });
 </script>
+
+
 
 <style scoped>
 /* Ваши существующие стили */
@@ -579,41 +440,41 @@ h2 {
 /* Стили для панели "Выбрать все на всех страницах" */
 .selection-controls {
     display: flex;
-    justify-content: flex-start;
+    justify-content: flex-start; /* Выравнивание к левому краю */
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 15px; /* Отступ от списка товаров */
 }
 .select-all-pages-bar {
-    background-color: #fffbe6;
+    background-color: #fffbe6; /* Желтоватый фон */
     border: 1px solid #ffe58f;
     border-radius: 8px;
-    padding: 8px 12px;
+    padding: 8px 12px; /* Меньше паддинг */
     display: flex;
-    justify-content: flex-start;
+    justify-content: flex-start; /* Выравнивание к левому краю */
     align-items: center;
-    gap: 10px;
+    gap: 10px; /* Меньше отступ */
     flex-wrap: wrap;
     text-align: left;
-    font-size: 0.9em;
-    color: #8c6b00;
+    font-size: 0.9em; /* Меньше шрифт */
+    color: #8c6b00; /* Темный текст для желтого фона */
 }
 .select-all-pages-bar.selected-global {
-    background-color: #f6ffed;
+    background-color: #f6ffed; /* Зеленоватый фон */
     border-color: #b7eb8f;
-    color: #389e08;
+    color: #389e08; /* Темный текст для зеленого фона */
 }
 
 .select-all-global-btn, .clear-all-global-btn {
     background-color: #1890ff;
     color: white;
-    padding: 6px 12px;
+    padding: 6px 12px; /* Меньше паддинг */
     border: none;
-    border-radius: 4px;
+    border-radius: 4px; /* Меньше радиус */
     cursor: pointer;
-    font-size: 0.85em;
+    font-size: 0.85em; /* Меньше шрифт */
     transition: background-color 0.3s ease;
     font-weight: bold;
-    white-space: nowrap;
+    white-space: nowrap; /* Не переносить текст */
 }
 .select-all-global-btn:hover {
     background-color: #40a9ff;
@@ -627,7 +488,7 @@ h2 {
 
 
 .products-list {
-  margin-top: 30px;
+  margin-top: 30px; /* Увеличим отступ сверху, если нет selection-controls */
   border: 1px solid #eee;
   border-radius: 5px;
   overflow: hidden;

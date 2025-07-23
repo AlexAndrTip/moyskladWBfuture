@@ -10,6 +10,10 @@ const storageRoutes = require('./routes/storageRoutes'); // ипорт упра�
 const wbCabinetRoutes = require('./routes/wbCabinetRoutes'); // ЛК WB
 const integrationLinkRoutes = require('./routes/integrationLinkRoutes'); // связки склад и вб
 const productRoutes = require('./routes/productRoutes'); // товары ВБ
+const organizationRoutes = require('./routes/organizationRoutes'); // <-- ДОБАВЛЕНО: Импорт роутов организаций
+const uslugiRoutes = require('./routes/UslugiRouters'); // <-- ДОБАВЛЕНО: Импорт роутов услуг
+const cron = require('node-cron');
+const postavkiRoutes = require('./routes/postavkiRoutes');
 
 
 const app = express();
@@ -67,6 +71,14 @@ app.use('/api/storages', storageRoutes);
 app.use('/api/wbcabinets', wbCabinetRoutes);
 app.use('/api/integration-links', integrationLinkRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/organizations', organizationRoutes); // <-- ДОБАВЛЕНО: Подключение роутов организаций
+app.use('/api/uslugi', uslugiRoutes); // <-- ДОБАВЛЕНО: Подключение роутов услуг
+app.use('/api/postavki', postavkiRoutes);
+require('./models/OrganizationLink'); // <-- ДОБАВЛЕНО: Убедитесь, что модель загружается
+require('./models/Organization'); // <-- Убедитесь, что эта модель тоже загружается, если она используется
+require('./models/Uslugi'); // <-- ДОБАВЛЕНО: Загружаем модель услуг
+require('./models/StatRashodov'); // <-- ДОБАВЛЕНО: Загружаем модель статей расходов
+// ... (другие require('./models/')) ...
 
 
 // Простой корневой маршрут для проверки работы сервера
