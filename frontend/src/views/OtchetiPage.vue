@@ -116,31 +116,20 @@ const fetchIntegrations = async () => {
   integrationsError.value = '';
   
   try {
-    console.log('[OTCHETI] Начинаем загрузку интеграций...');
     const token = getToken();
-    console.log('[OTCHETI] Токен получен:', token ? 'да' : 'нет');
     
     const response = await axios.get(`${API_BASE_URL}/integration-links`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     
-    console.log('[OTCHETI] Ответ от сервера:', response.data);
-    
-    if (response.data.success) {
-      integrationLinks.value = response.data.integrationLinks;
-      console.log('[OTCHETI] Интеграции загружены:', integrationLinks.value.length);
+    // Проверяем, что ответ - это массив
+    if (Array.isArray(response.data)) {
+      integrationLinks.value = response.data;
     } else {
-      integrationsError.value = 'Ошибка загрузки интеграций';
-      console.error('[OTCHETI] Ошибка в ответе сервера:', response.data);
+      integrationsError.value = 'Некорректный формат ответа от сервера';
     }
   } catch (error) {
     console.error('[OTCHETI] Ошибка загрузки интеграций:', error);
-    console.error('[OTCHETI] Детали ошибки:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message
-    });
     integrationsError.value = 'Ошибка загрузки интеграций: ' + (error.response?.data?.message || error.message);
   } finally {
     loadingIntegrations.value = false;
@@ -534,6 +523,12 @@ h3 {
   background-color: #f8d7da;
   border: 1px solid #f5c6cb;
   color: #721c24;
+}
+
+.notification.info {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
 }
 
 .notification-content {
