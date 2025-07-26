@@ -26,7 +26,8 @@ exports.getPostavki = async (req, res) => {
     
     // Получаем поставки из БД с учетом фильтров
     const filter = { integrationLink: integrationLinkId, user: userId };
-    const { search, dateFrom, dateTo, status, exported } = req.query;
+    const { search, dateFrom, dateTo, status, exported, page = 1, limit = 20 } = req.query;
+    
     if (search) {
       filter.$or = [
         { barcode: { $regex: search, $options: 'i' } },
@@ -42,13 +43,30 @@ exports.getPostavki = async (req, res) => {
     if (exported === 'true') filter.ms_href = { $ne: null };
     if (exported === 'false') filter.ms_href = null;
     
-    const incomes = await WbIncome.find(filter).sort({ date: -1 });
+    // Подсчитываем общее количество записей для пагинации
+    const totalPostavki = await WbIncome.countDocuments(filter);
+    
+    // Вычисляем параметры пагинации
+    const currentPage = parseInt(page);
+    const limitPerPage = parseInt(limit);
+    const totalPages = Math.ceil(totalPostavki / limitPerPage);
+    const skip = (currentPage - 1) * limitPerPage;
+    
+    // Получаем поставки с пагинацией
+    const incomes = await WbIncome.find(filter)
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limitPerPage);
     
     res.status(200).json({
       data: incomes,
       summary: {
-        totalInDB: incomes.length
-      }
+        totalInDB: totalPostavki
+      },
+      currentPage,
+      totalPages,
+      totalPostavki,
+      limitPerPage
     });
   } catch (error) {
     console.error('Ошибка получения поставок из БД:', error);
@@ -299,7 +317,7 @@ exports.refreshPostavkiFromWB = async (req, res) => {
     
     // Получаем обновленные поставки из БД с учетом фильтров
     const filter = { integrationLink: integrationLinkId, user: userId };
-    const { search, dateFrom, dateTo, status, exported } = req.query;
+    const { search, dateFrom, dateTo, status, exported, page = 1, limit = 20 } = req.query;
     if (search) {
       filter.$or = [
         { barcode: { $regex: search, $options: 'i' } },
@@ -315,7 +333,20 @@ exports.refreshPostavkiFromWB = async (req, res) => {
     if (exported === 'true') filter.ms_href = { $ne: null };
     if (exported === 'false') filter.ms_href = null;
     
-    const incomes = await WbIncome.find(filter).sort({ date: -1 });
+    // Подсчитываем общее количество записей для пагинации
+    const totalPostavki = await WbIncome.countDocuments(filter);
+    
+    // Вычисляем параметры пагинации
+    const currentPage = parseInt(page);
+    const limitPerPage = parseInt(limit);
+    const totalPages = Math.ceil(totalPostavki / limitPerPage);
+    const skip = (currentPage - 1) * limitPerPage;
+    
+    // Получаем поставки с пагинацией
+    const incomes = await WbIncome.find(filter)
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limitPerPage);
     
     res.status(200).json({
       data: incomes,
@@ -324,8 +355,12 @@ exports.refreshPostavkiFromWB = async (req, res) => {
         saved: savedCount,
         updated: updatedCount,
         errors: errorCount,
-        totalInDB: incomes.length
-      }
+        totalInDB: totalPostavki
+      },
+      currentPage,
+      totalPages,
+      totalPostavki,
+      limitPerPage
     });
   } catch (error) {
     console.error('Ошибка обновления поставок из WB:', error);

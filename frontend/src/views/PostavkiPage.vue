@@ -73,7 +73,21 @@
           Всего в БД: <strong>{{ postavkiSummary.totalInDB }}</strong>
         </p>
       </div>
-      <p v-if="!loadingPostavki && postavki.length > 0 && !postavkiSummary" class="info-message">Найдено поставок: {{ postavki.length }}</p>
+      <p v-if="!loadingPostavki && postavki.length > 0 && !postavkiSummary" class="info-message">Найдено поставок: {{ totalPostavki }}</p>
+      
+      <!-- Пагинация сверху -->
+      <PaginationControls
+        v-if="totalPages > 1"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        v-model:postavki-per-page="postavkiPerPage"
+        v-model:page-input="pageInput"
+        @change-page="changePage"
+        @go-to-page="goToPage"
+        @update:postavki-per-page="onPostavkiPerPageChange"
+        :is-top="true"
+      />
+
       <table v-if="!loadingPostavki && postavki.length" class="postavki-table">
         <thead>
           <tr>
@@ -107,16 +121,33 @@
         </tbody>
       </table>
       <p v-if="!loadingPostavki && !postavki.length" class="info-message">Нет данных о поставках.</p>
+
+      <!-- Пагинация снизу -->
+      <PaginationControls
+        v-if="totalPages > 1"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        v-model:postavki-per-page="postavkiPerPage"
+        v-model:page-input="pageInput"
+        @change-page="changePage"
+        @go-to-page="goToPage"
+        @update:postavki-per-page="onPostavkiPerPageChange"
+        :is-top="false"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { useIntegrationLinks } from './TovaryPage/composables/useIntegrationLinks.js';
+import { usePostavki } from './PostavkiPage/composables/usePostavki.js';
+import PaginationControls from './PostavkiPage/components/PaginationControls.vue';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const getToken = () => localStorage.getItem('token');
+
 const {
   integrationLinks,
   loadingIntegrations,
@@ -124,18 +155,32 @@ const {
   selectedIntegrationId,
   fetchIntegrationLinks
 } = useIntegrationLinks(getToken);
-const postavki = ref([]);
-const loadingPostavki = ref(false);
-const postavkiError = ref('');
-const postavkiSummary = ref(null);
 
-// --- Фильтры ---
-const search = ref(''); // общий поиск по артикулу/штрихкоду
-const dateFrom = ref('');
-const dateTo = ref('');
-const status = ref('');
-const exported = ref(''); // 'true' | 'false' | ''
+// Используем новый composable для поставок с пагинацией
+const {
+  postavki,
+  loadingPostavki,
+  postavkiError,
+  postavkiSummary,
+  currentPage,
+  totalPages,
+  totalPostavki,
+  postavkiPerPage,
+  pageInput,
+  search,
+  dateFrom,
+  dateTo,
+  status,
+  exported,
+  fetchPostavki,
+  refreshFromWB,
+  changePage,
+  onPostavkiPerPageChange,
+  goToPage,
+  resetFilters,
+} = usePostavki(selectedIntegrationId, getToken);
 
+// Опции статусов
 const statusOptions = [
   '', 'Принято', 'Ожидает', 'Отгружено', 'Отменено', 'Ошибка', 'В обработке'
 ];
@@ -144,76 +189,6 @@ const onIntegrationChange = async () => {
   console.log('[PostavkiPage] onIntegrationChange called, selectedIntegrationId:', selectedIntegrationId.value);
   if (selectedIntegrationId.value) {
     await fetchPostavki();
-  } else {
-    postavki.value = [];
-    postavkiError.value = '';
-    postavkiSummary.value = null;
-  }
-};
-
-const fetchPostavki = async () => {
-  if (!selectedIntegrationId.value) return;
-  loadingPostavki.value = true;
-  postavkiError.value = '';
-  try {
-    // Формируем query параметры
-    const params = {};
-    if (search.value) params.search = search.value;
-    if (dateFrom.value) params.dateFrom = dateFrom.value;
-    if (dateTo.value) params.dateTo = dateTo.value;
-    if (status.value) params.status = status.value;
-    if (exported.value) params.exported = exported.value;
-    const response = await axios.get(`${API_BASE_URL}/postavki/${selectedIntegrationId.value}`, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-      params
-    });
-    if (response.data.data && response.data.summary) {
-      postavki.value = response.data.data;
-      postavkiSummary.value = response.data.summary;
-    } else {
-      postavki.value = response.data;
-      postavkiSummary.value = null;
-    }
-  } catch (error) {
-    postavkiError.value = error.response?.data?.message || 'Ошибка загрузки поставок';
-    postavki.value = [];
-    postavkiSummary.value = null;
-  } finally {
-    loadingPostavki.value = false;
-  }
-};
-
-const refreshFromWB = async () => {
-  if (!selectedIntegrationId.value) return;
-  loadingPostavki.value = true;
-  postavkiError.value = '';
-  try {
-    // Формируем query параметры для фильтров
-    const params = {};
-    if (search.value) params.search = search.value;
-    if (dateFrom.value) params.dateFrom = dateFrom.value;
-    if (dateTo.value) params.dateTo = dateTo.value;
-    if (status.value) params.status = status.value;
-    if (exported.value) params.exported = exported.value;
-    
-    // Запрос на обновление из WB с учетом фильтров
-    const response = await axios.post(`${API_BASE_URL}/postavki/${selectedIntegrationId.value}/refresh`, {}, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-      params
-    });
-    
-    // Обрабатываем ответ с обновленными данными
-    if (response.data.data && response.data.summary) {
-      postavki.value = response.data.data;
-      postavkiSummary.value = response.data.summary;
-    } else {
-      postavki.value = response.data;
-      postavkiSummary.value = null;
-    }
-  } catch (error) {
-    postavkiError.value = error.response?.data?.message || 'Ошибка обновления из WB';
-  } finally {
-    loadingPostavki.value = false;
   }
 };
 
@@ -242,18 +217,6 @@ const deleteMsHref = async (item) => {
     alert('Ошибка удаления ms_href: ' + (error.response?.data?.message || error.message));
   }
 };
-
-const resetFilters = () => {
-  search.value = '';
-  dateFrom.value = '';
-  dateTo.value = '';
-  status.value = '';
-  exported.value = '';
-  // fetchPostavki вызовется автоматически через watch
-};
-
-// Автоматический вызов fetchPostavki при изменении любого фильтра
-watch([search, dateFrom, dateTo, status, exported], fetchPostavki);
 
 onMounted(async () => {
   await fetchIntegrationLinks();
