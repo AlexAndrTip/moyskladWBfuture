@@ -36,7 +36,7 @@
             <input 
               type="checkbox" 
               v-model="settings.autoExportProducts"
-              @change="onSettingChange"
+              @change="onAutoExportProductsChange"
               class="setting-checkbox"
             />
             <span class="setting-text">Автоматическая выгрузка товаров</span>
@@ -121,6 +121,24 @@
         </div>
       </div>
     </div>
+
+    <!-- Модальное окно с предупреждением -->
+    <div v-if="showWarningModal" class="modal-overlay" @click="closeWarningModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>Внимание!</h3>
+          <button @click="closeWarningModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>В случае автоматической выгрузки товаров в МС будут создаваться простые товары (Не комплекты) и если какая-либо карточка является комплектом, после выгрузки отчета вы не сможете это изменить.</p>
+          <p>Поэтому рекомендуем пользоваться автоматической выгрузкой в том случае, если ваши карточки на WB не являются комплектами в МС.</p>
+        </div>
+        <div class="modal-footer">
+          <button @click="confirmAutoExport" class="confirm-btn">Продолжить</button>
+          <button @click="cancelAutoExport" class="cancel-btn">Отмена</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -157,6 +175,10 @@ const savingSettings = ref(false);
 const settingsError = ref('');
 const saveMessage = ref('');
 const saveMessageType = ref('');
+
+// Состояние модального окна
+const showWarningModal = ref(false);
+const autoExportProducts = ref(false); // Для отслеживания изменений
 
 // Загрузка настроек для выбранной интеграции
 const fetchSettings = async () => {
@@ -223,6 +245,17 @@ const onSettingChange = () => {
   }
 };
 
+// Обработчик изменения автоматической выгрузки товаров
+const onAutoExportProductsChange = () => {
+  // Если включаем автоматическую выгрузку товаров, показываем предупреждение
+  if (settings.value.autoExportProducts) {
+    openWarningModal();
+  } else {
+    // Если отключаем, применяем обычную логику
+    onSettingChange();
+  }
+};
+
 // Обработчик изменения интеграции
 const onIntegrationChange = () => {
   if (selectedIntegrationId.value) {
@@ -242,6 +275,29 @@ onMounted(() => {
     fetchSettings();
   }
 });
+
+// Логика для модального окна
+const openWarningModal = () => {
+  showWarningModal.value = true;
+  autoExportProducts.value = settings.value.autoExportProducts; // Сохраняем текущее состояние
+};
+
+const closeWarningModal = () => {
+  showWarningModal.value = false;
+};
+
+const confirmAutoExport = () => {
+  settings.value.autoExportProducts = true;
+  saveSettings();
+  showWarningModal.value = false;
+};
+
+const cancelAutoExport = () => {
+  settings.value.autoExportProducts = false;
+  saveSettings();
+  showWarningModal.value = false;
+};
+
 </script>
 
 <style scoped>
@@ -422,5 +478,103 @@ h3 {
   color: #dc3545;
   background-color: #f8d7da;
   border: 1px solid #f5c6cb;
+}
+
+/* Модальное окно */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  background-color: #f8f9fa;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.3s ease;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+  font-size: 1em;
+  color: #555;
+  line-height: 1.6;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px 20px;
+  border-top: 1px solid #eee;
+  background-color: #f8f9fa;
+}
+
+.confirm-btn, .cancel-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.confirm-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.confirm-btn:hover {
+  background-color: #218838;
+}
+
+.cancel-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background-color: #c82333;
 }
 </style>

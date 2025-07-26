@@ -21,7 +21,7 @@
         <router-link to="/dashboard/integracii" class="link-button">Перейти к Интеграциям</router-link>
       </div>
     </div>
-
+    
     <!-- Таблица отчетов -->
     <div v-if="selectedIntegrationId && !loadingIntegrations" class="reports-section">
       <div class="reports-header">
@@ -54,10 +54,11 @@
             <td class="report-actions">
               <button 
                 @click="loadToDB(report)" 
-                :disabled="report.loadedInDB"
+                :disabled="report.loadedInDB || loadingReportIds.has(report.id)"
                 class="action-btn load-btn"
               >
-                Загрузить в БД
+                <span v-if="loadingReportIds.has(report.id)" class="loading-spinner"></span>
+                {{ loadingReportIds.has(report.id) ? 'Загрузка...' : 'Загрузить в БД' }}
               </button>
               <button 
                 @click="exportToMS(report)" 
@@ -75,36 +76,173 @@
         Нет доступных отчетов для выбранной интеграции.
       </p>
     </div>
+    
+    <!-- Уведомление -->
+    <div v-if="notification.show" class="notification" :class="notification.type">
+      <div class="notification-content">
+        <span class="notification-message">{{ notification.message }}</span>
+        <button @click="hideNotification" class="notification-close">&times;</button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useIntegrationLinks } from './TovaryPage/composables/useIntegrationLinks.js';
+import { ref, onMounted, watch } from 'vue';
+import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+
+// Функция для получения токена
 const getToken = () => localStorage.getItem('token');
 
-const {
-  integrationLinks,
-  loadingIntegrations,
-  integrationsError,
-  selectedIntegrationId,
-  fetchIntegrationLinks
-} = useIntegrationLinks(getToken);
+// Состояние интеграций
+const integrationLinks = ref([]);
+const loadingIntegrations = ref(false);
+const integrationsError = ref('');
+const selectedIntegrationId = ref('');
 
 // Состояние отчетов
 const reports = ref([]);
 const loadingReports = ref(false);
 const reportsError = ref('');
+const loadedReportsStatus = ref(new Set()); // Set для быстрой проверки загруженных отчетов
+const loadingReportIds = ref(new Set()); // Set для отслеживания загружающихся отчетов
+const notification = ref({ show: false, message: '', type: 'success' }); // Уведомление
+
+// Загрузка интеграций
+const fetchIntegrations = async () => {
+  loadingIntegrations.value = true;
+  integrationsError.value = '';
+  
+  try {
+    console.log('[OTCHETI] Начинаем загрузку интеграций...');
+    const token = getToken();
+    console.log('[OTCHETI] Токен получен:', token ? 'да' : 'нет');
+    
+    const response = await axios.get(`${API_BASE_URL}/integration-links`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    console.log('[OTCHETI] Ответ от сервера:', response.data);
+    
+    if (response.data.success) {
+      integrationLinks.value = response.data.integrationLinks;
+      console.log('[OTCHETI] Интеграции загружены:', integrationLinks.value.length);
+    } else {
+      integrationsError.value = 'Ошибка загрузки интеграций';
+      console.error('[OTCHETI] Ошибка в ответе сервера:', response.data);
+    }
+  } catch (error) {
+    console.error('[OTCHETI] Ошибка загрузки интеграций:', error);
+    console.error('[OTCHETI] Детали ошибки:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
+    integrationsError.value = 'Ошибка загрузки интеграций: ' + (error.response?.data?.message || error.message);
+  } finally {
+    loadingIntegrations.value = false;
+  }
+};
 
 // Обработчик изменения интеграции
 const onIntegrationChange = () => {
   if (selectedIntegrationId.value) {
     generateReports();
+    loadReportsStatus();
   } else {
     reports.value = [];
+    loadedReportsStatus.value.clear();
   }
+};
+
+// Загрузка статуса отчетов из БД
+const loadReportsStatus = async () => {
+  if (!selectedIntegrationId.value) return;
+  
+  try {
+    const response = await axios.get(`${API_BASE_URL}/reports/status/${selectedIntegrationId.value}`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    
+    if (response.data.success) {
+      // Создаем Set из загруженных отчетов для быстрой проверки
+      loadedReportsStatus.value = new Set(response.data.loadedReports);
+      
+      // Обновляем статус в списке отчетов
+      reports.value.forEach(report => {
+        report.loadedInDB = loadedReportsStatus.value.has(report.id);
+      });
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки статуса отчетов:', error);
+    // Не показываем ошибку пользователю, просто логируем
+  }
+};
+
+// Показать уведомление
+const showNotification = (message, type = 'success') => {
+  notification.value = { show: true, message, type };
+  setTimeout(() => {
+    notification.value.show = false;
+  }, 5000); // Скрыть через 5 секунд
+};
+
+// Скрыть уведомление
+const hideNotification = () => {
+  notification.value.show = false;
+};
+
+// Загрузка отчета в БД
+const loadToDB = async (report) => {
+  if (!selectedIntegrationId.value) return;
+  
+  // Добавляем отчет в список загружающихся
+  loadingReportIds.value.add(report.id);
+  
+  try {
+    console.log('Загрузка отчета в БД:', report.id);
+    
+    // Форматируем даты для API (YYYY-MM-DD)
+    const formatDateForAPI = (date) => {
+      return date.toISOString().split('T')[0];
+    };
+    
+    const response = await axios.post(`${API_BASE_URL}/reports/upload`, {
+      integrationLinkId: selectedIntegrationId.value,
+      reportId: report.id,
+      dateFrom: formatDateForAPI(report.startDate),
+      dateTo: formatDateForAPI(report.endDate)
+    }, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    
+    if (response.data.success) {
+      showNotification(`Отчет ${report.id} успешно загружен в БД! Загружено записей: ${response.data.count}`);
+      report.loadedInDB = true;
+      loadedReportsStatus.value.add(report.id); // Обновляем статус в Set
+    } else {
+      showNotification('Ошибка загрузки отчета в БД', 'error');
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки отчета в БД:', error);
+    if (error.response?.status === 401) {
+      showNotification('Ошибка авторизации. Пожалуйста, войдите в систему заново.', 'error');
+    } else {
+      showNotification('Ошибка загрузки отчета в БД: ' + (error.response?.data?.message || error.message), 'error');
+    }
+  } finally {
+    // Убираем отчет из списка загружающихся
+    loadingReportIds.value.delete(report.id);
+  }
+};
+
+// Выгрузка отчета в МС (пока заглушка)
+const exportToMS = (report) => {
+  console.log('Выгрузка отчета в МС:', report.id);
+  alert('Функция выгрузки в МС пока не реализована');
 };
 
 // Генерация отчетов по неделям за последние 3 месяца
@@ -142,12 +280,15 @@ const generateReports = () => {
     // Формируем период для отображения
     const period = `${startDay}.${startMonth}.${startYear} - ${endDay}.${endMonth}.${endYear}`;
     
+    // Проверяем, загружен ли отчет в БД
+    const isLoadedInDB = loadedReportsStatus.value.has(reportId);
+    
     reportsList.push({
       id: reportId,
       period: period,
       startDate: weekStart,
       endDate: weekEnd,
-      loadedInDB: false, // Пока всегда false, потом будет из БД
+      loadedInDB: isLoadedInDB,
       exportedToMS: false // Пока всегда false, потом будет из БД
     });
     
@@ -158,53 +299,16 @@ const generateReports = () => {
   reports.value = reportsList;
 };
 
-// Форматирование даты для отображения
-const formatDate = (date) => {
-  return date.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-};
+// Загрузка данных при монтировании компонента
+onMounted(() => {
+  fetchIntegrations();
+});
 
-// Загрузка отчета в БД
-const loadToDB = async (report) => {
-  if (!selectedIntegrationId.value) return;
-  
-  try {
-    console.log('Загрузка отчета в БД:', report.id);
-    // TODO: Здесь будет API вызов для загрузки отчета в БД
-    alert(`Отчет ${report.id} загружен в БД`);
-    
-    // Обновляем статус
-    report.loadedInDB = true;
-  } catch (error) {
-    console.error('Ошибка загрузки отчета в БД:', error);
-    alert('Ошибка загрузки отчета в БД: ' + error.message);
-  }
-};
-
-// Выгрузка отчета в МС
-const exportToMS = async (report) => {
-  if (!selectedIntegrationId.value) return;
-  
-  try {
-    console.log('Выгрузка отчета в МС:', report.id);
-    // TODO: Здесь будет API вызов для выгрузки отчета в МС
-    alert(`Отчет ${report.id} выгружен в МС`);
-    
-    // Обновляем статус
-    report.exportedToMS = true;
-  } catch (error) {
-    console.error('Ошибка выгрузки отчета в МС:', error);
-    alert('Ошибка выгрузки отчета в МС: ' + error.message);
-  }
-};
-
-onMounted(async () => {
-  await fetchIntegrationLinks();
-  if (selectedIntegrationId.value) {
+// Следим за изменением выбранной интеграции
+watch(selectedIntegrationId, (newValue) => {
+  if (newValue) {
     generateReports();
+    loadReportsStatus();
   }
 });
 </script>
@@ -328,10 +432,6 @@ h3 {
   color: #333;
 }
 
-.report-date {
-  color: #666;
-}
-
 .report-status {
   text-align: center;
 }
@@ -360,6 +460,9 @@ h3 {
   font-size: 12px;
   transition: background-color 0.3s;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .load-btn {
@@ -390,10 +493,91 @@ h3 {
   cursor: not-allowed;
 }
 
+.loading-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #ffffff;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .no-reports-message {
   text-align: center;
   color: #6c757d;
   font-style: italic;
   margin-top: 20px;
+}
+
+/* Уведомление */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 400px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.notification.success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.notification.error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  border-radius: 6px;
+}
+
+.notification-message {
+  flex: 1;
+  margin-right: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-close:hover {
+  opacity: 1;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 </style>

@@ -12,9 +12,16 @@ exports.getIntegrationLinks = async (req, res) => {
       .populate('wbCabinet', 'name') // Получаем имя кабинета
       .populate('storage', 'name');  // Получаем имя склада
 
-    res.json(links);
+    res.json({
+      success: true,
+      integrationLinks: links
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Ошибка сервера при получении связок', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Ошибка сервера при получении связок', 
+      error: error.message 
+    });
   }
 };
 

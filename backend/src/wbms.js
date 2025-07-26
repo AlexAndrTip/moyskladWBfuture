@@ -15,6 +15,7 @@ const uslugiRoutes = require('./routes/UslugiRouters'); // <-- ДОБАВЛЕН�
 const settingsRoutes = require('./routes/settingsRoutes'); // <-- ДОБАВЛЕНО: Импорт роутов настроек
 const cron = require('node-cron');
 const postavkiRoutes = require('./routes/postavkiRoutes');
+const reportRoutes = require('./routes/reportRoutes'); // <-- Импорт роутов отчетов
 
 
 const app = express();
@@ -76,11 +77,13 @@ app.use('/api/organizations', organizationRoutes); // <-- ДОБАВЛЕНО: П
 app.use('/api/uslugi', uslugiRoutes); // <-- ДОБАВЛЕНО: Подключение роутов услуг
 app.use('/api/settings', settingsRoutes); // <-- ДОБАВЛЕНО: Подключение роутов настроек
 app.use('/api/postavki', postavkiRoutes);
+app.use('/api/reports', reportRoutes); // <-- Подключение роутов отчетов
 require('./models/OrganizationLink'); // <-- ДОБАВЛЕНО: Убедитесь, что модель загружается
 require('./models/Organization'); // <-- Убедитесь, что эта модель тоже загружается, если она используется
 require('./models/Uslugi'); // <-- ДОБАВЛЕНО: Загружаем модель услуг
 require('./models/StatRashodov'); // <-- ДОБАВЛЕНО: Загружаем модель статей расходов
 require('./models/Settings'); // <-- ДОБАВЛЕНО: Загружаем модель настроек
+require('./models/Report'); // <-- ДОБАВЛЕНО: Загружаем модель отчетов
 // ... (другие require('./models/')) ...
 
 
