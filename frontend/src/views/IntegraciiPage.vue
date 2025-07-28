@@ -305,11 +305,12 @@ h2 {
   cursor: pointer;
   font-size: 16px;
   transition: background-color 0.3s ease;
-  width: 100%;
+  width: auto;
 }
 .connect-button {
   background-color: #28a745;
   color: white;
+  width: 100%; /* оставляем кнопку подключения широкой */
 }
 .connect-button:hover {
   background-color: #218838;

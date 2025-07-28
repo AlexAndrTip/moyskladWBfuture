@@ -2,7 +2,7 @@
   <div class="dashboard-layout">
     <aside :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
       <div class="sidebar-header">
-        <h3>{{ isSidebarCollapsed ? 'WBMS' : 'WBMS Dashboard' }}</h3>
+        <h3>{{ isSidebarCollapsed ? 'WBMS' : 'Uniseller WBMS' }}</h3>
         <button @click="toggleSidebar" class="sidebar-toggle-btn">
           <span v-if="isSidebarCollapsed">&gt;</span>
           <span v-else>&lt;</span>
@@ -147,8 +147,12 @@ aside:not(.sidebar-collapsed) {
 }
 
 .sidebar-collapsed .sidebar-header h3 {
-  opacity: 0; /* Скрываем текст "WBMS Dashboard" при сворачивании */
-  width: 0; /* Чтобы не занимал место */
+  display: none; /* Полностью убираем заголовок при сворачивании, чтобы не перекрывал кнопку */
+}
+
+/* Центрируем кнопку в свернутом состоянии */
+.sidebar-collapsed .sidebar-header {
+  justify-content: center;
 }
 
 .sidebar-toggle-btn {
