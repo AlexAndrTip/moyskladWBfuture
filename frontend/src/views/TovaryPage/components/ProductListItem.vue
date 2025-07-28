@@ -41,6 +41,7 @@
         class="complect-checkbox"
       />
     </div>
+    <div v-else class="product-complect-placeholder"></div>
 
     <div class="product-actions">
       <button @click="emit('create-in-ms', product)" class="action-btn create-ms" :disabled="isActionInProgress(product._id, 'createMs')">
