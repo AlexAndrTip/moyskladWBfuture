@@ -18,6 +18,44 @@ exports.uploadReport = async (req, res) => {
   }
 };
 
+// DELETE /api/reports/:integrationLinkId/:reportId
+// Удалить отчет из БД
+exports.deleteReport = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { integrationLinkId, reportId } = req.params;
+    
+    if (!integrationLinkId || !reportId) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Необходимы integrationLinkId и reportId' 
+      });
+    }
+    
+    // Удаляем все записи отчета
+    const deleteResult = await Report.deleteMany({
+      user: userId,
+      integrationlinks_id: integrationLinkId,
+      Report_id: reportId
+    });
+    
+    console.log(`[REPORT_CONTROLLER] Удалено записей отчета ${reportId}:`, deleteResult.deletedCount);
+    
+    res.json({
+      success: true,
+      message: `Отчет ${reportId} удален из БД`,
+      deletedCount: deleteResult.deletedCount
+    });
+    
+  } catch (error) {
+    console.error('[REPORT_CONTROLLER] Ошибка удаления отчета:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Ошибка сервера при удалении отчета: ' + error.message 
+    });
+  }
+};
+
 // GET /api/reports/status/:integrationLinkId
 // Получить статус отчетов для интеграции
 exports.getReportsStatus = async (req, res) => {

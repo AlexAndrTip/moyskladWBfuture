@@ -102,3 +102,89 @@ exports.deleteIntegrationLink = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера при удалении связки', error: error.message });
   }
 };
+
+// @desc    Проверить валидность токена WB API для интеграции
+// @route   GET /api/integration-links/:id/check-token
+// @access  Private
+exports.checkWbToken = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { id } = req.params;
+    
+    // Находим интеграцию
+    const integrationLink = await IntegrationLink.findOne({ _id: id, user: userId })
+      .populate('wbCabinet', 'token name');
+    
+    if (!integrationLink) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Интеграция не найдена' 
+      });
+    }
+    
+    const wbToken = integrationLink.wbCabinet?.token;
+    if (!wbToken) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Токен WB не найден' 
+      });
+    }
+    
+    // Проверяем токен, делая простой запрос к WB API
+    const axios = require('axios');
+    const { WB_CONTENT_API_URL } = require('../config/constants');
+    
+    try {
+      const response = await axios.post(WB_CONTENT_API_URL, {
+        settings: {
+          cursor: { limit: 1 },
+          filter: { withPhoto: -1 }
+        }
+      }, {
+        headers: {
+          'Authorization': `Bearer ${wbToken}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000 // 10 секунд таймаут
+      });
+      
+      // Если запрос прошел успешно, токен валиден
+      res.json({
+        success: true,
+        tokenValid: true,
+        message: 'Токен WB API действителен'
+      });
+      
+    } catch (wbError) {
+      console.error('[INTEGRATION_CONTROLLER] Ошибка WB API:', wbError.response?.data || wbError.message);
+      
+      // Проверяем, является ли ошибка связанной с токеном
+      if (wbError.response?.status === 401) {
+        // Возвращаем 200 OK с информацией о невалидном токене
+        // НЕ 401, чтобы не разрывать сессию пользователя
+        res.status(200).json({
+          success: true,
+          tokenValid: false,
+          message: 'Токен WB API недействителен или просрочен',
+          organizationName: integrationLink.wbCabinet?.name || 'неизвестной организации'
+        });
+      } else {
+        // Другие ошибки (сеть, таймаут и т.д.) считаем токен валидным
+        res.status(200).json({
+          success: true,
+          tokenValid: true,
+          message: 'Токен WB API действителен (ошибка сети не связана с токеном)'
+        });
+      }
+    }
+    
+  } catch (error) {
+    console.error('[INTEGRATION_CONTROLLER] Ошибка проверки токена:', error);
+    // Возвращаем 200 OK даже при ошибке, чтобы не разрывать сессию
+    res.status(200).json({ 
+      success: false,
+      tokenValid: false,
+      message: 'Ошибка сервера при проверке токена' 
+    });
+  }
+};

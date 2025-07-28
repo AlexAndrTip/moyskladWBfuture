@@ -10,7 +10,7 @@
       @integration-change="onIntegrationChange"
     />
 
-    <div v-if="selectedIntegrationId && !loadingIntegrations">
+    <div v-if="selectedIntegrationId && !loadingIntegrations && !tokenChecking">
 
       <BulkActionsBar
         v-if="products.length > 0 && (selectedProductIds.length > 0 || selectedAllPages)"
@@ -22,20 +22,22 @@
 
       <div class="search-and-refresh-container">
         <SearchBar
+          v-if="!tokenError"
           v-model:search-term="searchTerm"
           @search="debouncedSearch"
           @clear-search="clearSearch"
         />
       </div>
 
-      <h5>Фильтр по выгрузке в МС:</h5>
-      <select v-model="msFilter" @change="onMsFilterChange" class="ms-filter-select">
+      <h5 v-if="!tokenError">Фильтр по выгрузке в МС:</h5>
+      <select v-if="!tokenError" v-model="msFilter" @change="onMsFilterChange" class="ms-filter-select">
         <option value="">Все</option>
         <option value="exists">Есть в МС</option>
         <option value="not_exists">Нет в МС</option>
       </select>
 
       <SelectionControls
+        v-if="!tokenError"
         :products-count-on-page="products.length"
         :are-all-products-selected-on-page="areAllProductsSelectedOnPage"
         :total-pages="totalPages"
@@ -46,13 +48,14 @@
       />
 
       <IndividualActionStatus
+        v-if="!tokenError"
         :message="individualActionMessage"
         :type="individualActionMessageType"
         :ms-href="individualActionMsHref"
         @clear="clearIndividualActionMessage"
       />
 
-      <div v-if="products.length || productsLoading" class="products-header">
+      <div v-if="(products.length || productsLoading) && !tokenError" class="products-header">
         <h3>Список товаров:</h3>
         <button @click="triggerManualSync" :disabled="syncInProgress" class="refresh-button inline-refresh">
           <i :class="syncInProgress ? 'fas fa-sync fa-spin' : 'fas fa-sync-alt'"></i>
@@ -61,8 +64,35 @@
       <p v-if="productsLoading" class="loading-message">Загрузка товаров...</p>
       <p v-if="productsError" class="error-message">{{ productsError }}</p>
 
+      <!-- Ошибка токена -->
+      <div v-if="tokenError" class="token-error-container">
+        <div class="token-error-content">
+          <div class="token-error-icon">⚠️</div>
+          <div class="token-error-message">
+            <h4>Ошибка проверки токена WB</h4>
+            <p>{{ tokenError.message }}</p>
+            <div class="token-error-actions">
+              <button @click="checkToken(selectedIntegrationId)" :disabled="tokenChecking" class="token-error-btn">
+                {{ tokenChecking ? 'Проверка...' : 'Проверить токен' }}
+              </button>
+              <router-link to="/dashboard/wb-kabinety" class="token-error-link">
+                Перейти к настройкам WB кабинетов
+              </router-link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Проверка токена -->
+      <div v-if="tokenChecking" class="token-checking-container">
+        <div class="token-checking-content">
+          <div class="token-checking-spinner"></div>
+          <p>Проверка токена WB API...</p>
+        </div>
+      </div>
+
       <PaginationControls
-        v-if="totalPages > 1"
+        v-if="totalPages > 1 && !tokenError"
         :current-page="currentPage"
         :total-pages="totalPages"
         :selected-all-pages="selectedAllPages"
@@ -74,7 +104,7 @@
         :is-top="true"
       />
 
-      <div v-if="products.length > 0" class="products-list">
+      <div v-if="products.length > 0 && !tokenError" class="products-list">
         <div class="product-item header">
           <input type="checkbox" :checked="selectedAllPages || areAllProductsSelectedOnPage" @change="toggleSelectAllProducts" />
           <div class="header-info">Название / Артикул WB / Артикул продавца</div>
@@ -94,11 +124,11 @@
           @unlink-product="unlinkProduct"
         />
       </div>
-      <p v-else-if="!productsLoading && !productsError && !products.length && searchTerm">Нет товаров, соответствующих вашему поиску.</p>
-      <p v-else-if="!productsLoading && !productsError && !products.length">Нет товаров для этой интеграции.</p>
+      <p v-else-if="!productsLoading && !productsError && !tokenError && !products.length && searchTerm">Нет товаров, соответствующих вашему поиску.</p>
+      <p v-else-if="!productsLoading && !productsError && !tokenError && !products.length">Нет товаров для этой интеграции.</p>
 
       <PaginationControls
-        v-if="totalPages > 1"
+        v-if="totalPages > 1 && !tokenError"
         :current-page="currentPage"
         :total-pages="totalPages"
         :selected-all-pages="selectedAllPages"
@@ -156,6 +186,7 @@ import { useProducts } from './composables/useProducts.js';
 import { useProductActions } from './composables/useProductActions.js';
 import { useBulkActions } from './composables/useBulkActions.js';
 import { useSelection } from './composables/useSelection.js';
+import { useTokenCheck } from './composables/useTokenCheck.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const router = useRouter();
@@ -174,6 +205,15 @@ const {
   integrationsError,
   selectedIntegrationId,
 } = useIntegrationLinks(getToken);
+
+// Проверка токена
+const {
+  tokenValid,
+  tokenChecking,
+  tokenError,
+  checkToken,
+  resetTokenCheck
+} = useTokenCheck(getToken);
 
 const {
   products,
@@ -263,6 +303,14 @@ const triggerManualSync = async () => {
     alert('Пожалуйста, выберите интеграцию для синхронизации.');
     return;
   }
+
+  // Проверяем токен перед синхронизацией
+  await checkToken(selectedIntegrationId.value);
+  if (!tokenValid.value) {
+    alert('Ошибка проверки токена WB, синхронизация невозможна. Пожалуйста, обновите токен в настройках WB кабинетов.');
+    return;
+  }
+
   syncInProgress.value = true;
   individualActionMessage.value = 'Запущена синхронизация товаров с Wildberries... Это может занять некоторое время.';
   individualActionMessageType.value = 'info';
@@ -280,13 +328,18 @@ const triggerManualSync = async () => {
     individualActionMessageType.value = 'success';
     console.log('Результаты ручной синхронизации:', response.data.details);
 
-    // После успешной синхронизации, обновим список товаров
+    // Обновляем список товаров после синхронизации
     await fetchProducts();
-
   } catch (error) {
-    individualActionMessage.value = error.response?.data?.message || 'Ошибка при синхронизации товаров.';
-    individualActionMessageType.value = 'error';
     console.error('Ошибка ручной синхронизации:', error);
+    
+    // Проверяем, является ли это ошибкой авторизации пользователя
+    if (error.response?.status === 401) {
+      individualActionMessage.value = 'Ошибка авторизации. Пожалуйста, войдите в систему заново.';
+    } else {
+      individualActionMessage.value = `Ошибка синхронизации: ${error.response?.data?.message || error.message}`;
+    }
+    individualActionMessageType.value = 'error';
   } finally {
     syncInProgress.value = false;
   }
@@ -295,20 +348,24 @@ const triggerManualSync = async () => {
 
 
 // Обработчики, которые координируют работу composables
-const onIntegrationChange = () => {
-  currentPage.value = 1;
-  searchTerm.value = '';
-  resetSelection(); // Сброс выбора при смене интеграции
-  fetchProducts();
+const onIntegrationChange = async () => {
+  if (selectedIntegrationId.value) {
+    // Сначала проверяем токен
+    await checkToken(selectedIntegrationId.value);
+    // Затем загружаем товары только если токен валиден
+    if (tokenValid.value) {
+      currentPage.value = 1;
+      searchTerm.value = '';
+      resetSelection(); // Сброс выбора при смене интеграции
+      fetchProducts();
+    }
+  } else {
+    resetTokenCheck();
+  }
 };
 
-// Вотчеры могут быть здесь, если они координируют разные composables
-watch(selectedIntegrationId, (newVal, oldVal) => {
-  if (newVal && newVal !== oldVal) {
-    // Уже обрабатывается в useProducts, но можно добавить здесь дополнительные сбросы
-    resetSelection();
-  }
-});
+// Следим за изменением выбранной интеграции
+watch(selectedIntegrationId, onIntegrationChange);
 </script>
 
 <style scoped>
@@ -467,6 +524,119 @@ h3 {
   .bulk-actions-bar {
     width: 100%; /* Панель массовых действий также занимает всю ширину */
     justify-content: center;
+  }
+}
+
+/* Стили для ошибки токена */
+.token-error-container {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 2px solid #ffc107;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+}
+
+.token-error-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.token-error-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.token-error-message h4 {
+  color: #856404;
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.token-error-message p {
+  color: #856404;
+  margin: 0 0 15px 0;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.token-error-actions {
+  margin-top: 15px;
+}
+
+.token-error-btn {
+  background-color: #007bff;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  margin-right: 10px;
+  white-space: nowrap;
+}
+
+.token-error-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.token-error-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.token-error-link {
+  display: inline-block;
+  background-color: #ffc107;
+  color: #212529;
+  padding: 10px 20px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: 1px solid #e0a800;
+}
+
+.token-error-link:hover {
+  background-color: #e0a800;
+  color: #212529;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+/* Стили для контейнера проверки токена */
+.token-checking-container {
+  text-align: center;
+  margin-top: 20px;
+  color: #555;
+}
+
+.token-checking-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.token-checking-spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #007bff; /* Синий цвет для спиннера */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

@@ -28,18 +28,6 @@ exports.getProductsByIntegration = async (req, res) => {
     const searchTerm = req.query.searchTerm;
 
     try {
-        // --- АВТОМАТИЧЕСКИЙ ЗАПУСК СИНХРОНИЗАЦИИ ---
-        console.log(`[CONTROLLER] Запускаем автоматическую синхронизацию для связки ${integrationLinkId} перед получением товаров.`);
-        try {
-            // Передаем только необходимые аргументы для syncProducts
-            const syncResult = await syncProducts(integrationLinkId, userId);
-            console.log(`[CONTROLLER] Автоматическая синхронизация завершена: ${syncResult.message}`);
-        } catch (syncError) {
-            console.error(`[CONTROLLER ERROR] Ошибка при автоматической синхронизации: ${syncError.message}`);
-            // Логируем ошибку, но не прерываем запрос, чтобы пользователь получил хотя бы старые данные
-        }
-        // --- КОНЕЦ АВТОМАТИЧЕСКОГО ЗАПУСКА СИНХРОНИЗАЦИИ ---
-
         // Получаем товары из БД через сервис
         const msFilter = req.query.msFilter;
 
@@ -47,8 +35,8 @@ exports.getProductsByIntegration = async (req, res) => {
           integrationLinkId, userId, page, limit, searchTerm, msFilter
         );
 
-
         res.json({
+            success: true,
             products,
             currentPage,
             totalPages,
@@ -56,7 +44,10 @@ exports.getProductsByIntegration = async (req, res) => {
         });
     } catch (error) {
         console.error(`[CONTROLLER ERROR] Общая ошибка при получении товаров для связки ${integrationLinkId}: ${error.message}`);
-        res.status(500).json({ message: 'Ошибка сервера при получении товаров.' });
+        res.status(500).json({ 
+            success: false,
+            message: 'Ошибка сервера при получении товаров.' 
+        });
     }
 };
 

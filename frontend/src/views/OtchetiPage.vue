@@ -61,6 +61,13 @@
                 {{ loadingReportIds.has(report.id) ? 'Загрузка...' : 'Загрузить в БД' }}
               </button>
               <button 
+                @click="deleteFromDB(report)" 
+                :disabled="!report.loadedInDB || loadingReportIds.has(report.id)"
+                class="action-btn delete-btn"
+              >
+                Удалить из БД
+              </button>
+              <button 
                 @click="exportToMS(report)" 
                 :disabled="!report.loadedInDB || report.exportedToMS"
                 class="action-btn export-btn"
@@ -221,6 +228,45 @@ const loadToDB = async (report) => {
       showNotification('Ошибка авторизации. Пожалуйста, войдите в систему заново.', 'error');
     } else {
       showNotification('Ошибка загрузки отчета в БД: ' + (error.response?.data?.message || error.message), 'error');
+    }
+  } finally {
+    // Убираем отчет из списка загружающихся
+    loadingReportIds.value.delete(report.id);
+  }
+};
+
+// Удаление отчета из БД
+const deleteFromDB = async (report) => {
+  if (!selectedIntegrationId.value) return;
+  
+  // Запрашиваем подтверждение
+  if (!confirm(`Вы уверены, что хотите удалить отчет ${report.id} из БД? Это действие нельзя отменить.`)) {
+    return;
+  }
+  
+  // Добавляем отчет в список загружающихся
+  loadingReportIds.value.add(report.id);
+  
+  try {
+    console.log('Удаление отчета из БД:', report.id);
+    
+    const response = await axios.delete(`${API_BASE_URL}/reports/${selectedIntegrationId.value}/${report.id}`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    
+    if (response.data.success) {
+      showNotification(`Отчет ${report.id} успешно удален из БД! Удалено записей: ${response.data.deletedCount}`);
+      report.loadedInDB = false;
+      loadedReportsStatus.value.delete(report.id); // Обновляем статус в Set
+    } else {
+      showNotification('Ошибка удаления отчета из БД', 'error');
+    }
+  } catch (error) {
+    console.error('Ошибка удаления отчета из БД:', error);
+    if (error.response?.status === 401) {
+      showNotification('Ошибка авторизации. Пожалуйста, войдите в систему заново.', 'error');
+    } else {
+      showNotification('Ошибка удаления отчета из БД: ' + (error.response?.data?.message || error.message), 'error');
     }
   } finally {
     // Убираем отчет из списка загружающихся
@@ -464,6 +510,20 @@ h3 {
 }
 
 .load-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.delete-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.delete-btn:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.delete-btn:disabled {
   background-color: #6c757d;
   cursor: not-allowed;
 }

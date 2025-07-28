@@ -29,6 +29,7 @@ export function useProducts(selectedIntegrationId, getToken, msFilter) {
 
     productsLoading.value = true;
     productsError.value = '';
+    
     try {
       const params = {
         page: currentPage.value,
@@ -40,15 +41,30 @@ export function useProducts(selectedIntegrationId, getToken, msFilter) {
         headers: { Authorization: `Bearer ${getToken()}` },
         params
       });
-      products.value = response.data.products;
-      currentPage.value = response.data.currentPage;
-      totalPages.value = response.data.totalPages;
-      totalProducts.value = response.data.totalProducts;
-      pageInput.value = currentPage.value;
+      
+      if (response.data.success) {
+        products.value = response.data.products;
+        currentPage.value = response.data.currentPage;
+        totalPages.value = response.data.totalPages;
+        totalProducts.value = response.data.totalProducts;
+        pageInput.value = currentPage.value;
+      } else {
+        productsError.value = response.data.message || 'Ошибка при загрузке товаров.';
+        products.value = [];
+      }
     } catch (error) {
-      productsError.value = error.response?.data?.message || 'Ошибка при загрузке товаров.';
       console.error('Fetch products error:', error);
-      products.value = [];
+      
+      // Проверяем, является ли это ошибкой авторизации пользователя
+      if (error.response?.status === 401) {
+        // Это ошибка авторизации пользователя, не токена WB
+        productsError.value = 'Ошибка авторизации. Пожалуйста, войдите в систему заново.';
+        products.value = [];
+      } else {
+        // Другие ошибки (сеть, сервер и т.д.)
+        productsError.value = error.response?.data?.message || 'Ошибка при загрузке товаров.';
+        products.value = [];
+      }
     } finally {
       productsLoading.value = false;
     }
