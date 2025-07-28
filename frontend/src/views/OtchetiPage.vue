@@ -35,6 +35,8 @@
             <th>Период</th>
             <th>Загружен в БД</th>
             <th>Выгружен в МС</th>
+            <th>Приемки услуг в МС</th>
+            <th>Расходные ордера в МС</th>
             <th>Действия</th>
           </tr>
         </thead>
@@ -52,29 +54,55 @@
               <span v-if="report.exportedToMS" class="status-loaded">Да</span>
               <span v-else class="status-not-loaded">Нет</span>
             </td>
+            <td class="report-status">
+              <span v-if="report.serviceReceiptsCreated" class="status-loaded">Да</span>
+              <span v-else class="status-not-loaded">Нет</span>
+            </td>
+            <td class="report-status">
+              <span v-if="report.expenseOrdersCreated" class="status-loaded">Да</span>
+              <span v-else class="status-not-loaded">Нет</span>
+            </td>
             <td class="report-actions">
-              <button 
-                @click="loadToDB(report)" 
-                :disabled="report.loadedInDB || loadingReportIds.has(report.id)"
-                class="action-btn load-btn"
-              >
-                <span v-if="loadingReportIds.has(report.id)" class="loading-spinner"></span>
-                {{ loadingReportIds.has(report.id) ? 'Загрузка...' : 'Загрузить в БД' }}
-              </button>
-              <button 
-                @click="deleteFromDB(report)" 
-                :disabled="!report.loadedInDB || loadingReportIds.has(report.id)"
-                class="action-btn delete-btn"
-              >
-                Удалить из БД
-              </button>
-              <button 
-                @click="exportToMS(report)" 
-                :disabled="!report.loadedInDB || report.exportedToMS"
-                class="action-btn export-btn"
-              >
-                Выгрузить в МС
-              </button>
+              <div class="action-row">
+                <button 
+                  @click="loadToDB(report)" 
+                  :disabled="report.loadedInDB || loadingReportIds.has(report.id)"
+                  class="action-btn load-btn"
+                >
+                  <span v-if="loadingReportIds.has(report.id)" class="loading-spinner"></span>
+                  {{ loadingReportIds.has(report.id) ? 'Загрузка...' : 'Загрузить в БД' }}
+                </button>
+                <button 
+                  @click="deleteFromDB(report)" 
+                  :disabled="!report.loadedInDB || loadingReportIds.has(report.id)"
+                  class="action-btn delete-btn"
+                >
+                  Удалить из БД
+                </button>
+                <button 
+                  @click="exportToMS(report)" 
+                  :disabled="!report.loadedInDB || report.exportedToMS"
+                  class="action-btn export-btn"
+                >
+                  Выгрузить в МС
+                </button>
+              </div>
+              <div class="action-row">
+                <button 
+                  @click="createServiceReceipts(report)" 
+                  :disabled="!report.loadedInDB || !report.exportedToMS || report.serviceReceiptsCreated"
+                  class="action-btn service-btn"
+                >
+                  Создать приемки услуг
+                </button>
+                <button 
+                  @click="createExpenseOrders(report)" 
+                  :disabled="!report.loadedInDB || !report.exportedToMS || report.expenseOrdersCreated"
+                  class="action-btn expense-btn"
+                >
+                  Создать расходные ордера
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -328,6 +356,18 @@ const exportToMS = (report) => {
   alert('Функция выгрузки в МС пока не реализована');
 };
 
+// Заглушка создания приемки услуг в МС
+const createServiceReceipts = (report) => {
+  console.log('Создание приемок услуг в МС для отчета:', report.id);
+  alert('Функция создания приемок услуг пока не реализована');
+};
+
+// Заглушка создания расходных ордеров в МС
+const createExpenseOrders = (report) => {
+  console.log('Создание расходных ордеров в МС для отчета:', report.id);
+  alert('Функция создания расходных ордеров пока не реализована');
+};
+
 // Генерация отчетов по неделям за последние 3 месяца
 const generateReports = () => {
   const reportsList = [];
@@ -405,7 +445,9 @@ const generateReports = () => {
       startDate: weekStart,
       endDate: weekEnd,
       loadedInDB: isLoadedInDB,
-      exportedToMS: false // Пока всегда false, потом будет из БД
+      exportedToMS: false, // Пока всегда false, потом будет из БД
+      serviceReceiptsCreated: false,
+      expenseOrdersCreated: false
     });
     
     // Переходим к следующей неделе
@@ -581,8 +623,14 @@ h3 {
 
 .report-actions {
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.action-row {
+  display: flex;
+  gap: 6px;
 }
 
 .action-btn {
@@ -636,6 +684,34 @@ h3 {
 }
 
 .export-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.service-btn {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.service-btn:hover {
+  background-color: #138496;
+}
+
+.service-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.expense-btn {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.expense-btn:hover {
+  background-color: #5936a2;
+}
+
+.expense-btn:disabled {
   background-color: #6c757d;
   cursor: not-allowed;
 }
