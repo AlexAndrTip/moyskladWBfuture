@@ -21,6 +21,7 @@ async function getSettings(integrationLinkId, userId) {
         createServiceReceipts: false,
         createServiceExpenseOrders: false,
         exportFBSOrders: false,
+        reportDepthWeeks: 12, // Добавляем дефолтное значение
       });
       await settings.save();
     }

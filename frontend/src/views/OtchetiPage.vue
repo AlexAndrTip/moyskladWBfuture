@@ -26,7 +26,7 @@
     <div v-if="selectedIntegrationId && !loadingIntegrations" class="reports-section">
       <div class="reports-header">
         <h3>Список отчетов</h3>
-        <p class="reports-info">Отчеты по неделям за последние 3 месяца</p>
+        <p class="reports-info">Отчеты по неделям за последние 3 месяца (доступны через 2 дня после окончания периода)</p>
       </div>
 
       <table class="reports-table">
@@ -109,13 +109,41 @@ const loadingIntegrations = ref(false);
 const integrationsError = ref('');
 const selectedIntegrationId = ref('');
 
-// Состояние отчетов
+// Состояние для отчетов
 const reports = ref([]);
-const loadingReports = ref(false);
-const reportsError = ref('');
-const loadedReportsStatus = ref(new Set()); // Set для быстрой проверки загруженных отчетов
-const loadingReportIds = ref(new Set()); // Set для отслеживания загружающихся отчетов
-const notification = ref({ show: false, message: '', type: 'success' }); // Уведомление
+const loadedReportsStatus = ref(new Set());
+const loadingReportIds = ref(new Set());
+
+// Состояние для уведомлений
+const notification = ref({ show: false, message: '', type: 'success' });
+
+// Состояние для настроек
+const settings = ref({
+  reportDepthWeeks: 0 // Будет загружено из БД
+});
+
+// Загрузка настроек интеграции
+const fetchSettings = async () => {
+  if (!selectedIntegrationId.value) {
+    return;
+  }
+
+  try {
+    const response = await axios.get(`${API_BASE_URL}/settings/${selectedIntegrationId.value}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    
+    settings.value = {
+      reportDepthWeeks: response.data.reportDepthWeeks || 12
+    };
+    
+    console.log(`[OTCHETI] Загружены настройки. Глубина отчетов: ${settings.value.reportDepthWeeks} недель`);
+  } catch (error) {
+    console.error('Ошибка загрузки настроек:', error);
+    // Используем значение по умолчанию
+    settings.value.reportDepthWeeks = 12;
+  }
+};
 
 // Загрузка интеграций
 const fetchIntegrations = async () => {
@@ -146,8 +174,7 @@ const fetchIntegrations = async () => {
 // Обработчик изменения интеграции
 const onIntegrationChange = () => {
   if (selectedIntegrationId.value) {
-    generateReports();
-    loadReportsStatus();
+    // Настройки и отчеты будут загружены через watch
   } else {
     reports.value = [];
     loadedReportsStatus.value.clear();
@@ -285,22 +312,52 @@ const generateReports = () => {
   const reportsList = [];
   const today = new Date();
   
-  // Начинаем с 3 месяцев назад
+  console.log(`[OTCHETI] Генерация отчетов. Сегодня: ${today.toLocaleDateString()}`);
+  console.log(`[OTCHETI] Глубина отчетов: ${settings.value.reportDepthWeeks} недель`);
+  
+  // Начинаем с указанного количества недель назад
+  // Увеличиваем на 1 для корректного отображения количества отчетов
   const startDate = new Date(today);
-  startDate.setMonth(today.getMonth() - 3);
+  const weeksToSubtract = settings.value.reportDepthWeeks + 1;
+  startDate.setDate(startDate.getDate() - (weeksToSubtract * 7));
+  
+  console.log(`[OTCHETI] Начальная дата для генерации: ${startDate.toLocaleDateString()}`);
   
   // Устанавливаем начало недели (понедельник)
   const dayOfWeek = startDate.getDay();
   const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   startDate.setDate(startDate.getDate() - daysToMonday);
   
+  console.log(`[OTCHETI] Начальная дата после выравнивания на понедельник: ${startDate.toLocaleDateString()}`);
+  
   // Генерируем отчеты по неделям
   let currentDate = new Date(startDate);
+  let skippedCount = 0;
+  let addedCount = 0;
   
   while (currentDate <= today) {
     const weekStart = new Date(currentDate);
     const weekEnd = new Date(currentDate);
     weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    // Проверяем, что отчет не из будущего
+    if (weekStart > today) {
+      console.log(`[OTCHETI] Пропускаем отчет из будущего: ${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`);
+      skippedCount++;
+      // Переходим к следующей неделе
+      currentDate.setDate(currentDate.getDate() + 7);
+      continue;
+    }
+    
+    // Проверяем, что отчет доступен (прошло минимум 2 дня после окончания периода)
+    const daysAfterEnd = Math.floor((today - weekEnd) / (1000 * 60 * 60 * 24));
+    if (daysAfterEnd < 2) {
+      console.log(`[OTCHETI] Пропускаем недоступный отчет: ${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()} (прошло ${daysAfterEnd} дней)`);
+      skippedCount++;
+      // Переходим к следующей неделе
+      currentDate.setDate(currentDate.getDate() + 7);
+      continue;
+    }
     
     // Генерируем ID отчета в формате DDMMYYDDMMYY
     const startDay = weekStart.getDate().toString().padStart(2, '0');
@@ -318,6 +375,9 @@ const generateReports = () => {
     // Проверяем, загружен ли отчет в БД
     const isLoadedInDB = loadedReportsStatus.value.has(reportId);
     
+    console.log(`[OTCHETI] Добавляем отчет: ${period} (ID: ${reportId}, загружен: ${isLoadedInDB})`);
+    addedCount++;
+    
     reportsList.push({
       id: reportId,
       period: period,
@@ -331,6 +391,8 @@ const generateReports = () => {
     currentDate.setDate(currentDate.getDate() + 7);
   }
   
+  console.log(`[OTCHETI] Генерация завершена. Добавлено отчетов: ${addedCount}, пропущено: ${skippedCount}`);
+  
   reports.value = reportsList;
 };
 
@@ -342,8 +404,14 @@ onMounted(() => {
 // Следим за изменением выбранной интеграции
 watch(selectedIntegrationId, (newValue) => {
   if (newValue) {
-    generateReports();
-    loadReportsStatus();
+    // Сначала загружаем настройки, затем генерируем отчеты
+    fetchSettings().then(() => {
+      generateReports();
+      loadReportsStatus();
+    });
+  } else {
+    reports.value = [];
+    loadedReportsStatus.value.clear();
   }
 });
 </script>

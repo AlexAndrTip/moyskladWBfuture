@@ -109,6 +109,21 @@
           </label>
         </div>
 
+        <div class="setting-item">
+          <label class="setting-label">
+            <span class="setting-text">Глубина выгрузки отчетов (недель):</span>
+            <input 
+              type="number" 
+              v-model.number="settings.reportDepthWeeks"
+              @change="onSettingChange"
+              min="4"
+              max="25"
+              class="setting-number-input"
+            />
+            <span class="setting-hint">От 4 до 25 недель</span>
+          </label>
+        </div>
+
         <div class="settings-actions">
           <button 
             @click="saveSettings" 
@@ -168,6 +183,7 @@ const settings = ref({
   createServiceReceipts: false,
   createServiceExpenseOrders: false,
   exportFBSOrders: false,
+  reportDepthWeeks: 0, // Будет загружено из БД
 });
 
 const loadingSettings = ref(false);
@@ -202,6 +218,7 @@ const fetchSettings = async () => {
       createServiceReceipts: response.data.createServiceReceipts || false,
       createServiceExpenseOrders: response.data.createServiceExpenseOrders || false,
       exportFBSOrders: response.data.exportFBSOrders || false,
+      reportDepthWeeks: response.data.reportDepthWeeks || 12, // Загружаем точное значение из БД
     };
   } catch (error) {
     settingsError.value = error.response?.data?.message || 'Ошибка загрузки настроек.';
@@ -263,17 +280,15 @@ const onIntegrationChange = () => {
   }
 };
 
-// Watcher для автоматической загрузки настроек при изменении интеграции
-watch(selectedIntegrationId, (newVal) => {
-  if (newVal) {
+// Следим за изменением выбранной интеграции
+watch(selectedIntegrationId, (newValue) => {
+  if (newValue) {
     fetchSettings();
   }
 });
 
 onMounted(() => {
-  if (selectedIntegrationId.value) {
-    fetchSettings();
-  }
+  // Настройки будут загружены автоматически при выборе интеграции
 });
 
 // Логика для модального окна
@@ -433,6 +448,16 @@ h3 {
   font-size: 0.9em;
   color: #dc3545;
   font-style: italic;
+}
+
+.setting-number-input {
+  margin-left: 10px;
+  width: 60px;
+  padding: 5px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 1em;
 }
 
 .settings-actions {

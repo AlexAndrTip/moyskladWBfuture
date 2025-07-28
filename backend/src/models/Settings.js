@@ -41,6 +41,13 @@ const SettingsSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Глубина выгрузки отчетов (в неделях)
+  reportDepthWeeks: {
+    type: Number,
+    default: 12, // 12 недель по умолчанию
+    min: 4,
+    max: 25,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
