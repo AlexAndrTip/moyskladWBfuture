@@ -17,6 +17,7 @@ const cron = require('node-cron');
 const postavkiRoutes = require('./routes/postavkiRoutes');
 const reportRoutes = require('./routes/reportRoutes'); // <-- Импорт роутов отчетов
 // const queueRoutes = require('./routes/queueRoutes'); // <-- Временно отключаем очереди
+const reportCleanup = require('./services/reportsCleanupService');
 
 
 const app = express();
@@ -97,4 +98,6 @@ app.get('/', (req, res) => {
 // Запуск сервера
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  // Запускаем ежедневную очистку старых отчётов
+  reportCleanup.scheduleDailyCleanup();
 });

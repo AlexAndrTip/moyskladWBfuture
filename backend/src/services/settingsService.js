@@ -62,6 +62,11 @@ async function updateSettings(integrationLinkId, userId, settingsData) {
     }
     
     await settings.save();
+
+    // Запускаем очистку старых отчётов согласно новой глубине
+    const { cleanupForIntegration } = require('./reportsCleanupService');
+    cleanupForIntegration(userId, integrationLinkId, settings.reportDepthWeeks);
+
     return settings;
   } catch (error) {
     console.error('[SETTINGS_SERVICE] Ошибка при обновлении настроек:', error);
