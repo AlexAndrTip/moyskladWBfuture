@@ -455,7 +455,8 @@ const generateReports = () => {
   }
   
   console.log(`[OTCHETI] Генерация завершена. Добавлено отчетов: ${addedCount}, пропущено: ${skippedCount}`);
-  
+  // Сортируем по дате начала периода (от самого нового к раннему)
+  reportsList.sort((a, b) => b.startDate - a.startDate);
   reports.value = reportsList;
 };
 
