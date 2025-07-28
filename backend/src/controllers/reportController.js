@@ -1,5 +1,7 @@
 const { uploadReportToDB } = require('../reports/reportUploadService');
 const Report = require('../models/Report');
+const IntegrationLink = require('../models/IntegrationLink');
+const WbCabinet = require('../models/WbCabinet');
 
 // POST /api/reports/upload
 // { integrationLinkId, reportId, dateFrom, dateTo }
@@ -82,4 +84,70 @@ exports.getReportsStatus = async (req, res) => {
     console.error('[REPORT_CONTROLLER] Ошибка получения статуса отчетов:', error);
     res.status(500).json({ message: error.message || 'Ошибка сервера при получении статуса отчетов' });
   }
+};
+
+// GET /api/reports/details/:reportId?integrationLinkId=...
+exports.getReportDetails = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { reportId } = req.params;
+        const { integrationLinkId } = req.query;
+
+        if (!reportId || !integrationLinkId) {
+            return res.status(400).json({ message: 'Необходимы reportId и integrationLinkId' });
+        }
+
+        const reportEntries = await Report.find({
+            user: userId,
+            Report_id: reportId,
+            integrationlinks_id: integrationLinkId
+        }).lean();
+
+        if (!reportEntries || reportEntries.length === 0) {
+            return res.status(404).json({ message: 'Отчет не найден' });
+        }
+
+        const integrationLink = await IntegrationLink.findById(integrationLinkId).populate('wbCabinet');
+        if (!integrationLink || !integrationLink.wbCabinet) {
+            return res.status(404).json({ message: 'Связанный кабинет WB не найден.' });
+        }
+
+        const firstEntry = reportEntries[0];
+
+        const totalRetailPrice = reportEntries.reduce((sum, entry) => sum + (entry.retail_price || 0), 0);
+        const totalPpvzForPay = reportEntries.reduce((sum, entry) => sum + (entry.ppvz_for_pay || 0), 0);
+        const totalDeliveryRub = reportEntries.reduce((sum, entry) => sum + (entry.delivery_rub || 0), 0);
+
+        const realizationReportIds = [...new Set(reportEntries.map(e => e.realizationreport_id.toString()))].join(' / ');
+
+
+        const reportDetails = {
+            report_ids: realizationReportIds,
+            jur_name: integrationLink.wbCabinet.name,
+            period: `${firstEntry.date_from} - ${firstEntry.date_to}`,
+            create_dt: firstEntry.create_dt,
+            total_retail_price: totalRetailPrice,
+            total_ppvz_for_pay: totalPpvzForPay,
+            total_delivery_rub: totalDeliveryRub,
+            currency: firstEntry.currency_name,
+
+            // Заглушки для будущих расчетов
+            penalty: 0,
+            increased_logistics: 0,
+            other_fines: 0,
+            total_fines: 0,
+            reward_correction: 0,
+            wb_reward: 0,
+            storage_cost: 0,
+            paid_acceptance_cost: 0,
+            other_deductions_payouts: 0,
+            total_to_pay: 0,
+        };
+
+        res.json({ success: true, reportDetails });
+
+    } catch (error) {
+        console.error('[REPORT_CONTROLLER] Ошибка получения деталей отчета:', error);
+        res.status(500).json({ success: false, message: 'Ошибка сервера при получении деталей отчета: ' + error.message });
+    }
 }; 

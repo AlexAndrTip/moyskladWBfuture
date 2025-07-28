@@ -40,7 +40,9 @@
         </thead>
         <tbody>
           <tr v-for="report in reports" :key="report.id" class="report-row">
-            <td class="report-id">{{ report.id }}</td>
+            <td class="report-id">
+              <a href="#" @click.prevent="openReportDetails(report.id)">{{ report.id }}</a>
+            </td>
             <td class="report-period">{{ report.period }}</td>
             <td class="report-status">
               <span v-if="report.loadedInDB" class="status-loaded">Да</span>
@@ -90,17 +92,37 @@
         <button @click="hideNotification" class="notification-close">&times;</button>
       </div>
     </div>
+
+    <!-- Модальное окно для деталей отчета -->
+    <ReportDetailsModal
+      :is-open="isModalOpen"
+      :report-id="selectedReportId"
+      :integration-link-id="selectedIntegrationId"
+      :get-token="getToken"
+      @close="isModalOpen = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
+import ReportDetailsModal from './OtchetiPage/components/ReportDetailsModal.vue'; // Импортируем компонент
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 // Функция для получения токена
 const getToken = () => localStorage.getItem('token');
+
+// Состояние для модального окна
+const isModalOpen = ref(false);
+const selectedReportId = ref('');
+
+// Открыть модальное окно с деталями
+const openReportDetails = (reportId) => {
+  selectedReportId.value = reportId;
+  isModalOpen.value = true;
+};
 
 // Состояние интеграций
 const integrationLinks = ref([]);
@@ -527,6 +549,15 @@ h3 {
   font-family: 'Courier New', monospace;
   font-weight: bold;
   color: #007bff;
+}
+
+.report-id a {
+  text-decoration: none;
+  color: #007bff;
+  font-weight: bold;
+}
+.report-id a:hover {
+  text-decoration: underline;
 }
 
 .report-period {
