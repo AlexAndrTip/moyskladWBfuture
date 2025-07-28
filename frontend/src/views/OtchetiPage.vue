@@ -43,7 +43,12 @@
         <tbody>
           <tr v-for="report in reports" :key="report.id" class="report-row">
             <td class="report-id">
-              <a href="#" @click.prevent="openReportDetails(report.id)">{{ report.id }}</a>
+              <template v-if="report.loadedInDB">
+                <a href="#" @click.prevent="openReportDetails(report.id)">{{ report.id }}</a>
+              </template>
+              <template v-else>
+                {{ report.id }}
+              </template>
             </td>
             <td class="report-period">{{ report.period }}</td>
             <td class="report-status">
@@ -591,7 +596,7 @@ h3 {
 .report-id {
   font-family: 'Courier New', monospace;
   font-weight: bold;
-  color: #007bff;
+  color: #333;
 }
 
 .report-id a {
