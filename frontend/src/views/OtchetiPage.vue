@@ -26,7 +26,6 @@
     <div v-if="selectedIntegrationId && !loadingIntegrations" class="reports-section">
       <div class="reports-header">
         <h3>Список отчетов</h3>
-        <p class="reports-info">Отчеты по неделям за последние 3 месяца (доступны через 2 дня после окончания периода)</p>
       </div>
 
       <table class="reports-table">
