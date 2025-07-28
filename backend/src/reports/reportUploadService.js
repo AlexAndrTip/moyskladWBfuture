@@ -1,6 +1,7 @@
 const axios = require('axios');
 const Report = require('../models/Report');
 const IntegrationLink = require('../models/IntegrationLink');
+const Product = require('../models/Product'); // Для проверки баркодов перед загрузкой отчёта
 
 /**
  * Загружает отчет за период в БД для пользователя и интеграции
@@ -44,6 +45,43 @@ async function uploadReportToDB({ userId, integrationLinkId, reportId, dateFrom,
   if (!Array.isArray(data)) {
     console.error('[REPORT_SERVICE] Некорректный ответ WB API:', data);
     throw new Error('Некорректный ответ WB API');
+  }
+
+  // --- Предварительная валидация баркодов ---
+  console.log('[REPORT_SERVICE] Начинаю валидацию баркодов отчёта');
+  // Получаем все barcodes (skus) из коллекции Product для текущего пользователя и интеграции
+  const products = await Product.find(
+    { user: userId, integrationLink: integrationLinkId },
+    { 'sizes.skus': 1 }
+  ).lean();
+
+  const existingBarcodesSet = new Set();
+  for (const prod of products) {
+    if (Array.isArray(prod.sizes)) {
+      for (const size of prod.sizes) {
+        if (Array.isArray(size.skus)) {
+          size.skus.forEach((sku) => existingBarcodesSet.add(String(sku)));
+        }
+      }
+    }
+  }
+
+  console.log('[REPORT_SERVICE] В БД найдено уникальных barcode:', existingBarcodesSet.size);
+
+  // Проверяем только те строки, где barcode присутствует (не пустой)
+  const rowsWithBarcode = data.filter(
+    (row) => row.barcode && String(row.barcode).trim() !== ''
+  );
+
+  const missingRows = rowsWithBarcode.filter(
+    (row) => !existingBarcodesSet.has(String(row.barcode))
+  );
+
+  if (missingRows.length > 0) {
+    const firstMissing = missingRows[0];
+    const errorMsg = `Не удалось зашрузить отчёт "${reportId}", товар ${firstMissing.subject_name}, barcode ${firstMissing.barcode}, ${firstMissing.sa_name} - не найден в БД. Перейдите во вкладку товаров и нажмите - обновить. Проверьте наличие карточки товара в ЛК WB`;
+    console.error('[REPORT_SERVICE] Валидация не пройдена. Пример отсутствующего товара:', firstMissing);
+    throw new Error(errorMsg);
   }
   
   console.log('[REPORT_SERVICE] Получено записей от WB:', data.length);
