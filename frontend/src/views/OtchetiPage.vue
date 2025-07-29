@@ -356,6 +356,13 @@ const deleteFromDB = async (report) => {
       showNotification(`Отчет ${report.id} успешно удален из БД! Удалено записей: ${response.data.deletedCount}`);
       report.loadedInDB = false;
       loadedReportsStatus.value.delete(report.id); // Обновляем статус в Set
+      // сброс остальных статусов
+      report.exportedToMS = false;
+      report.serviceReceiptsCreated = false;
+      report.expenseOrdersCreated = false;
+      exportedReportsStatus.value.delete(report.id);
+      serviceLoadingIds.value.delete(report.id);
+      expenseLoadingIds.value.delete(report.id);
     } else {
       showNotification('Ошибка удаления отчета из БД', 'error');
     }
