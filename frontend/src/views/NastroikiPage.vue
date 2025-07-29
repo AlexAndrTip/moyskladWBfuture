@@ -91,10 +91,12 @@
               type="checkbox" 
               v-model="settings.createServiceExpenseOrders"
               @change="onSettingChange"
+              :disabled="!settings.createServiceReceipts"
               class="setting-checkbox"
             />
-            <span class="setting-text">Создавать расходные ордера по услугам совместно с отчетом</span>
+            <span class="setting-text" :class="{ 'disabled': !settings.createServiceReceipts }">Создавать расходные ордера по услугам совместно с отчетом</span>
           </label>
+          <p v-if="!settings.createServiceReceipts" class="setting-hint">Сначала включите создание приемок услуг</p>
         </div>
 
         <div class="setting-item">
@@ -256,6 +258,10 @@ const saveSettings = async () => {
 
 // Обработчик изменения настроек
 const onSettingChange = () => {
+  // зависимости
+  if (!settings.value.createServiceReceipts && settings.value.createServiceExpenseOrders) {
+    settings.value.createServiceExpenseOrders = false;
+  }
   // Если отключили выгрузку товаров, отключаем и выгрузку отчетов
   if (!settings.value.autoExportProducts && settings.value.autoExportReports) {
     settings.value.autoExportReports = false;

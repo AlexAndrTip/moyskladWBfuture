@@ -29,12 +29,12 @@ const SettingsSchema = new mongoose.Schema({
   // Создавать приемки услуг
   createServiceReceipts: {
     type: Boolean,
-    default: false,
+    default: true,
   },
   // Создавать расходные ордера по услугам
   createServiceExpenseOrders: {
     type: Boolean,
-    default: false,
+    default: true,
   },
   // Выгружать заказы FBS в МС
   exportFBSOrders: {

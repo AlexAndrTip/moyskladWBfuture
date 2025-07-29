@@ -180,7 +180,9 @@ const notification = ref({ show: false, message: '', type: 'success' });
 
 // Состояние для настроек
 const settings = ref({
-  reportDepthWeeks: 0 // Будет загружено из БД
+  reportDepthWeeks: 0, // Будет загружено из БД
+  createServiceReceipts: true, // Автоматически создавать приемки услуг
+  createServiceExpenseOrders: true // Автоматически создавать расходные ордера
 });
 
 // Загрузка настроек интеграции
@@ -195,7 +197,9 @@ const fetchSettings = async () => {
     });
     
     settings.value = {
-      reportDepthWeeks: response.data.reportDepthWeeks || 12
+      reportDepthWeeks: response.data.reportDepthWeeks || 12,
+      createServiceReceipts: response.data.createServiceReceipts || true,
+      createServiceExpenseOrders: response.data.createServiceExpenseOrders || true
     };
     
     console.log(`[OTCHETI] Загружены настройки. Глубина отчетов: ${settings.value.reportDepthWeeks} недель`);
@@ -393,6 +397,14 @@ const exportToMS = async (report) => {
       }
       report.exportedToMS = true;
       exportedReportsStatus.value.add(report.id);
+
+      // автоматические действия согласно настройкам
+      if (settings.value.createServiceReceipts && !report.serviceReceiptsCreated) {
+        await createServiceReceipts(report);
+        if (settings.value.createServiceExpenseOrders && !report.expenseOrdersCreated) {
+          await createExpenseOrders(report);
+        }
+      }
     } else {
       showNotification('Не удалось выгрузить отчет в МойСклад', 'error');
     }
