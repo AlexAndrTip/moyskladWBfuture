@@ -52,19 +52,19 @@
             </td>
             <td class="report-period">{{ report.period }}</td>
             <td class="report-status">
-              <span v-if="report.loadedInDB" class="status-loaded">✓</span>
+              <span v-if="report.loadedInDB" class="status-loaded"><i class="fas fa-check-circle"></i></span>
               <span v-else class="status-not-loaded">—</span>
             </td>
             <td class="report-status">
-              <span v-if="report.exportedToMS" class="status-loaded">✓</span>
+              <span v-if="report.exportedToMS" class="status-loaded"><i class="fas fa-check-circle"></i></span>
               <span v-else class="status-not-loaded">—</span>
             </td>
             <td class="report-status">
-              <span v-if="report.serviceReceiptsCreated" class="status-loaded">✓</span>
+              <span v-if="report.serviceReceiptsCreated" class="status-loaded"><i class="fas fa-check-circle"></i></span>
               <span v-else class="status-not-loaded">—</span>
             </td>
             <td class="report-status">
-              <span v-if="report.expenseOrdersCreated" class="status-loaded">✓</span>
+              <span v-if="report.expenseOrdersCreated" class="status-loaded"><i class="fas fa-check-circle"></i></span>
               <span v-else class="status-not-loaded">—</span>
             </td>
             <td class="report-actions">
