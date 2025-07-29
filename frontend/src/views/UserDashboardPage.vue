@@ -47,15 +47,16 @@ const isSidebarCollapsed = ref(false); // Состояние меню: свер�
 
 // Элементы меню
 const menuItems = ref([
-  { name: 'Skladi', label: 'Склады', path: '/dashboard/skladi', icon: 'fas fa-warehouse' },
+  { name: 'Skladi', label: 'МС Кабинеты', path: '/dashboard/skladi', icon: 'fas fa-warehouse' },
   { name: 'WBKabinety', label: 'WB Кабинеты', path: '/dashboard/wb-kabinety', icon: 'fas fa-store' },
   { name: 'Integracii', label: 'Интеграции', path: '/dashboard/integracii', icon: 'fas fa-puzzle-piece' },
   { name: 'Tovary', label: 'Товары', path: '/dashboard/tovary', icon: 'fas fa-box' },
   { name: 'Organizations', label: 'Организации', path: '/dashboard/organizations', icon: 'fas fa-users' }, // <-- ИЗМЕНЕНО: Исправлен путь и добавлена иконка
+  { name: 'FBS', label: 'Заказы FBS', path: '/dashboard/fbs', icon: 'fas fa-shopping-cart' },
   { name: 'Uslugi', label: 'Услуги', path: '/dashboard/uslugi', icon: 'fas fa-briefcase' },
   { name: 'Otcheti', label: 'Отчеты', path: '/dashboard/otcheti', icon: 'fas fa-chart-line' },
   { name: 'Postavki', label: 'Поставки', path: '/dashboard/postavki', icon: 'fas fa-truck' },
-   { name: 'Nastroiki', label: 'Настройки', path: '/dashboard/nastroiki', icon: 'fas fa-cog' },
+  { name: 'Nastroiki', label: 'Настройки', path: '/dashboard/nastroiki', icon: 'fas fa-cog' },
 ]);
 
 // Вычисляемое свойство для отображения заголовка текущего пункта меню

@@ -26,7 +26,8 @@ async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
   const organizationHref = orgLink.moyskladOrganizationHref;
   const counterpartyHref = orgLink.moyskladCounterpartyHref;
   const storeHref = orgLink.moyskladStoreExpensesHref || orgLink.moyskladStoreHref;
-  if (!organizationHref || !counterpartyHref || !storeHref) throw new Error('Не заполнены href организации/контрагента/склада');
+  const contractHref = orgLink.moyskladContractHref;
+  if (!organizationHref || !counterpartyHref || !storeHref || !contractHref) throw new Error('Не заполнены href организации/контрагента/договора/склада');
 
   // считаем суммы
   const sumFields = {
@@ -93,6 +94,7 @@ async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
   if (positions.length) {
     const supplyPayload = {
       organization: { meta: { href: organizationHref, type: 'organization', mediaType: 'application/json' } },
+      contract: { meta: { href: contractHref, type: 'contract', mediaType: 'application/json' } },
       name: String(reportId),
       agent: { meta: { href: counterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
       store: { meta: { href: storeHref, type: 'store', mediaType: 'application/json' } },
@@ -113,6 +115,7 @@ async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
   for (const ns of negativeServices) {
     const demandPayload = {
       organization: { meta: { href: organizationHref, type: 'organization', mediaType: 'application/json' } },
+      contract: { meta: { href: contractHref, type: 'contract', mediaType: 'application/json' } },
       agent: { meta: { href: counterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
       store: { meta: { href: storeHref, type: 'store', mediaType: 'application/json' } },
       moment: `${reportHeader.date_to} 00:00:00`,
@@ -145,6 +148,7 @@ async function createExpenseOrders({ userId, reportId, integrationLinkId }) {
   if (!orgLink) throw new Error('OrganizationLink не настроен');
   const organizationHref = orgLink.moyskladOrganizationHref;
   const counterpartyHref = orgLink.moyskladCounterpartyHref;
+  const contractHref = orgLink.moyskladContractHref;
 
   // функции для expense items
   const { findOrCreateMoySkladExpenseItem } = require('./moySkladExpenseItemService');
@@ -197,6 +201,7 @@ async function createExpenseOrders({ userId, reportId, integrationLinkId }) {
 
     const cashoutPayload = {
       organization: { meta: { href: organizationHref, type: 'organization', mediaType: 'application/json' } },
+      contract: { meta: { href: contractHref, type: 'contract', mediaType: 'application/json' } },
       agent: { meta: { href: counterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
       sum: Math.abs(sum),
       moment: `${reportRows[0].date_to} 00:00:00`,

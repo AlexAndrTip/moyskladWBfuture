@@ -14,6 +14,7 @@ import OtchetiPage from '../views/OtchetiPage.vue';
 import PostavkiPage from '../views/PostavkiPage.vue';
 import OrganizationPage from '../views/OrganizationPage/OrganizationPage.vue';
 import UslugiPage from '../views/UslugiPage/UslugiPage.vue';
+import FbsOrdersPage from '../views/FbsOrdersPage.vue';
 
 const routes = [
   {
@@ -90,6 +91,12 @@ const routes = [
         components: {
           dashboardContent: UslugiPage
         },
+        meta: { requiresAuth: true, roles: ['user', 'admin'] }
+      },
+      {
+        path: 'fbs',
+        name: 'FBSOrders',
+        components: { dashboardContent: FbsOrdersPage },
         meta: { requiresAuth: true, roles: ['user', 'admin'] }
       }
     ]
