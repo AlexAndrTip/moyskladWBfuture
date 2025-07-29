@@ -2,6 +2,7 @@ const { uploadReportToDB } = require('../reports/reportUploadService');
 const Report = require('../models/Report');
 const IntegrationLink = require('../models/IntegrationLink');
 const WbCabinet = require('../models/WbCabinet');
+const { exportReportToMS: exportReportToMSService } = require('../services/msReportExportService');
 
 // POST /api/reports/upload
 // { integrationLinkId, reportId, dateFrom, dateTo }
@@ -69,16 +70,25 @@ exports.getReportsStatus = async (req, res) => {
       return res.status(400).json({ message: 'Необходим integrationLinkId' });
     }
     
-    // Получаем уникальные Report_id для данной интеграции и пользователя
-    const reports = await Report.distinct('Report_id', {
+    // Берём все отчёты, чтобы понять какие выгружены в МС
+    const reportsCursor = await Report.find({
       user: userId,
       integrationlinks_id: integrationLinkId
-    });
-    
+    }).select('Report_id exportedToMS').lean();
+
+    const loadedReports = new Set();
+    const exportedReports = new Set();
+
+    for (const r of reportsCursor) {
+      loadedReports.add(r.Report_id);
+      if (r.exportedToMS) exportedReports.add(r.Report_id);
+    }
+
     res.json({ 
       success: true, 
-      loadedReports: reports,
-      count: reports.length 
+      loadedReports: Array.from(loadedReports),
+      exportedReports: Array.from(exportedReports),
+      count: loadedReports.size 
     });
   } catch (error) {
     console.error('[REPORT_CONTROLLER] Ошибка получения статуса отчетов:', error);
@@ -150,4 +160,23 @@ exports.getReportDetails = async (req, res) => {
         console.error('[REPORT_CONTROLLER] Ошибка получения деталей отчета:', error);
         res.status(500).json({ success: false, message: 'Ошибка сервера при получении деталей отчета: ' + error.message });
     }
+}; 
+
+// POST /api/reports/export-ms
+// { integrationLinkId, reportId }
+exports.exportReportToMS = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { integrationLinkId, reportId } = req.body;
+
+    if (!integrationLinkId || !reportId) {
+      return res.status(400).json({ message: 'Необходимы integrationLinkId и reportId' });
+    }
+
+    const result = await exportReportToMSService({ userId, integrationLinkId, reportId });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[REPORT_CONTROLLER] Ошибка выгрузки отчёта в МС:', error);
+    res.status(500).json({ message: error.message || 'Ошибка сервера при выгрузке отчёта в МС' });
+  }
 }; 

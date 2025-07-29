@@ -86,10 +86,11 @@
                 </button>
                 <button 
                   @click="exportToMS(report)" 
-                  :disabled="!report.loadedInDB || report.exportedToMS"
+                  :disabled="!report.loadedInDB || report.exportedToMS || exportLoadingIds.has(report.id)"
                   class="action-btn export-btn"
                 >
-                  Выгрузить в МС
+                  <span v-if="exportLoadingIds.has(report.id)" class="loading-spinner"></span>
+                  {{ exportLoadingIds.has(report.id) ? 'Выгрузка...' : 'Выгрузить в МС' }}
                 </button>
               </div>
               <div class="action-row">
@@ -167,6 +168,8 @@ const selectedIntegrationId = ref('');
 const reports = ref([]);
 const loadedReportsStatus = ref(new Set());
 const loadingReportIds = ref(new Set());
+const exportedReportsStatus = ref(new Set());
+const exportLoadingIds = ref(new Set());
 
 // Состояние для уведомлений
 const notification = ref({ show: false, message: '', type: 'success' });
@@ -235,7 +238,7 @@ const onIntegrationChange = () => {
   }
 };
 
-// Загрузка статуса отчетов из БД
+// Обновлённая загрузка статуса отчётов (БД + экспорт)
 const loadReportsStatus = async () => {
   if (!selectedIntegrationId.value) return;
   
@@ -245,12 +248,14 @@ const loadReportsStatus = async () => {
     });
     
     if (response.data.success) {
-      // Создаем Set из загруженных отчетов для быстрой проверки
+      // Создаем Set из загруженных и экспортированных отчетов для быстрой проверки
       loadedReportsStatus.value = new Set(response.data.loadedReports);
+      exportedReportsStatus.value = new Set(response.data.exportedReports || []);
       
       // Обновляем статус в списке отчетов
       reports.value.forEach(report => {
         report.loadedInDB = loadedReportsStatus.value.has(report.id);
+        report.exportedToMS = exportedReportsStatus.value.has(report.id);
       });
     }
   } catch (error) {
@@ -355,10 +360,44 @@ const deleteFromDB = async (report) => {
   }
 };
 
-// Выгрузка отчета в МС (пока заглушка)
-const exportToMS = (report) => {
-  console.log('Выгрузка отчета в МС:', report.id);
-  alert('Функция выгрузки в МС пока не реализована');
+// Выгрузка отчета в МС
+const exportToMS = async (report) => {
+  if (!selectedIntegrationId.value) return;
+
+  // Помечаем как загружающийся
+  exportLoadingIds.value.add(report.id);
+
+  try {
+    console.log('Выгрузка отчета в МС:', report.id);
+
+    const response = await axios.post(`${API_BASE_URL}/reports/export-ms`, {
+      integrationLinkId: selectedIntegrationId.value,
+      reportId: report.id
+    }, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+
+    if (response.data.success) {
+      if (response.data.alreadyExported) {
+        showNotification(`Отчет ${report.id} уже существует в МойСклад.`, 'info');
+      } else {
+        showNotification(`Отчет ${report.id} успешно выгружен в МойСклад!`);
+      }
+      report.exportedToMS = true;
+      exportedReportsStatus.value.add(report.id);
+    } else {
+      showNotification('Не удалось выгрузить отчет в МойСклад', 'error');
+    }
+  } catch (error) {
+    console.error('Ошибка выгрузки отчета в МС:', error);
+    if (error.response?.status === 401) {
+      showNotification('Ошибка авторизации. Пожалуйста, войдите заново.', 'error');
+    } else {
+      showNotification('Ошибка выгрузки отчета в МойСклад: ' + (error.response?.data?.message || error.message), 'error');
+    }
+  } finally {
+    exportLoadingIds.value.delete(report.id);
+  }
 };
 
 // Заглушка создания приемки услуг в МС

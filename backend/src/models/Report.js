@@ -60,6 +60,10 @@ const ReportSchema = new mongoose.Schema({
   srid: String,
   report_type: Number,
   lineSum: { type: Number, default: 0 },
+  exportedToMS: { type: Boolean, default: false },
+  msHref: { type: String },
+  serviceReceiptsCreated: { type: Boolean, default: false },
+  expenseOrdersCreated: { type: Boolean, default: false },
 }, { timestamps: true });
 
 ReportSchema.index({ user: 1, integrationlinks_id: 1, Report_id: 1 });

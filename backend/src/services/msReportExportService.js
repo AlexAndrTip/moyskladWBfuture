@@ -77,12 +77,18 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
     if (!prod) continue;
 
     let hrefMS = prod.ms_href_general;
-    let type = 'product';
+    let type = prod.complect ? 'bundle' : 'product';
     if (prod.sizes) {
       const sz = prod.sizes.find((s) => (s.skus || []).includes(r.barcode));
       if (sz && sz.ms_href) {
         hrefMS = sz.ms_href;
-        type = prod.complect ? 'bundle' : 'variant';
+        // Корректируем тип по href (product / variant / bundle)
+        let detectedType;
+        if (hrefMS.includes('/entity/bundle/')) detectedType = 'bundle';
+        else if (hrefMS.includes('/entity/variant/')) detectedType = 'variant';
+        else if (hrefMS.includes('/entity/product/')) detectedType = 'product';
+        if (!detectedType) detectedType = type; // fallback на ранее определённый
+        type = prod.complect ? 'bundle' : detectedType;
       }
     }
     if (!hrefMS) continue;
