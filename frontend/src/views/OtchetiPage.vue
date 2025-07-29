@@ -52,20 +52,20 @@
             </td>
             <td class="report-period">{{ report.period }}</td>
             <td class="report-status">
-              <span v-if="report.loadedInDB" class="status-loaded">Да</span>
-              <span v-else class="status-not-loaded">Нет</span>
+              <span v-if="report.loadedInDB" class="status-loaded">✓</span>
+              <span v-else class="status-not-loaded">—</span>
             </td>
             <td class="report-status">
-              <span v-if="report.exportedToMS" class="status-loaded">Да</span>
-              <span v-else class="status-not-loaded">Нет</span>
+              <span v-if="report.exportedToMS" class="status-loaded">✓</span>
+              <span v-else class="status-not-loaded">—</span>
             </td>
             <td class="report-status">
-              <span v-if="report.serviceReceiptsCreated" class="status-loaded">Да</span>
-              <span v-else class="status-not-loaded">Нет</span>
+              <span v-if="report.serviceReceiptsCreated" class="status-loaded">✓</span>
+              <span v-else class="status-not-loaded">—</span>
             </td>
             <td class="report-status">
-              <span v-if="report.expenseOrdersCreated" class="status-loaded">Да</span>
-              <span v-else class="status-not-loaded">Нет</span>
+              <span v-if="report.expenseOrdersCreated" class="status-loaded">✓</span>
+              <span v-else class="status-not-loaded">—</span>
             </td>
             <td class="report-actions">
               <div class="action-row">
@@ -663,7 +663,6 @@ h3 {
 
 .status-not-loaded {
   color: #6c757d;
-  font-style: italic;
 }
 
 .report-actions {
