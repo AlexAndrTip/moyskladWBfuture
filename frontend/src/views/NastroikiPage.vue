@@ -67,10 +67,11 @@
             <span class="setting-text" :class="{ 'disabled': !settings.autoExportProducts }">
               Автоматическая выгрузка отчетов
             </span>
-          </label>
-          <p v-if="!settings.autoExportProducts" class="setting-hint">
+                      <p v-if="!settings.autoExportProducts" class="setting-hint">
             Сначала следует включить Автоматическую выгрузку товаров
           </p>
+          </label>
+
         </div>
 
         <div class="setting-item">
@@ -95,8 +96,9 @@
               class="setting-checkbox"
             />
             <span class="setting-text" :class="{ 'disabled': !settings.createServiceReceipts }">Создавать расходные ордера по услугам совместно с отчетом</span>
+           <p v-if="!settings.createServiceReceipts" class="setting-hint">Сначала включите создание приемок услуг</p>
           </label>
-          <p v-if="!settings.createServiceReceipts" class="setting-hint">Сначала включите создание приемок услуг</p>
+         
         </div>
 
         <div class="setting-item">
@@ -122,7 +124,7 @@
               max="25"
               class="setting-number-input"
             />
-            <span class="setting-hint">От 4 до 25 недель</span>
+            <span class="setting-hint2">От 4 до 25 недель</span>
           </label>
         </div>
 
@@ -452,7 +454,14 @@ h3 {
   margin-top: 8px;
   margin-left: 30px;
   font-size: 0.9em;
-  color: #dc3545;
+  color:rgb(245, 7, 31);
+  font-style: italic;
+}
+.setting-hint2 {
+  margin-top: 8px;
+  margin-left: 30px;
+  font-size: 0.9em;
+  color:rgb(53, 122, 50);
   font-style: italic;
 }
 
