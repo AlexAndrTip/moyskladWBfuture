@@ -85,8 +85,7 @@ async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
   }
   if (!positions.length && !negativeServices.length) {
     console.log('[SERVICE_SUPPLY] Нет сумм для создания приёмок');
-    reportHeader.serviceReceiptsCreated = true;
-    await Report.updateMany({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId }, { serviceReceiptsCreated: true });
+    await Report.updateMany({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId }, { serviceReceiptsCreated: true, msSupplyHref: null });
     return { skipped: true };
   }
   // создаём supply, если есть позиции
@@ -125,7 +124,7 @@ async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
     console.log('[SERVICE_SUPPLY] Создана отгрузка для', ns.name);
   }
   // отметим в БД
-  await Report.updateMany({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId }, { serviceReceiptsCreated: true });
+  await Report.updateMany({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId }, { serviceReceiptsCreated: true, msSupplyHref: supplyHref });
   return { success: true, supplyHref };
 }
 
@@ -151,19 +150,20 @@ async function createExpenseOrders({ userId, reportId, integrationLinkId }) {
   const { findOrCreateMoySkladExpenseItem } = require('./moySkladExpenseItemService');
   const StatRashodov = require('../models/StatRashodov');
 
-  // найти supplyHref по имени отчёта
-  async function getSupplyHref() {
-    try {
-      const resp = await axios.get(`${MS_BASE_URL}/entity/supply`, {
-        headers: { Authorization: `Bearer ${msToken}`, 'Accept-Encoding': 'gzip' },
-        params: { filter: `name=${reportId}` }
-      });
-      const row = (resp.data.rows || []).find(r => r.name === String(reportId));
-      return row ? row.meta.href : null;
-    } catch (e) { return null; }
+  // supplyHref из БД
+  let supplyHref = reportRows[0].msSupplyHref;
+  if (!supplyHref) {
+    // резервный поиск по имени
+    const resp = await axios.get(`${MS_BASE_URL}/entity/supply`, {
+      headers: { Authorization: `Bearer ${msToken}`, 'Accept-Encoding': 'gzip' },
+      params: { filter: `name=${reportId}` }
+    });
+    const row = (resp.data.rows || []).find(r => r.name === String(reportId));
+    supplyHref = row ? row.meta.href : null;
+    if (supplyHref) {
+      await Report.updateMany({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId }, { msSupplyHref: supplyHref });
+    }
   }
-
-  const supplyHref = await getSupplyHref();
 
   // подсчёт сумм (положительные и отрицательные вместе)
   const serviceTotals = {

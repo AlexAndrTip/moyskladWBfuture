@@ -62,6 +62,7 @@ const ReportSchema = new mongoose.Schema({
   lineSum: { type: Number, default: 0 },
   exportedToMS: { type: Boolean, default: false },
   msHref: { type: String },
+  msSupplyHref: { type: String },
   serviceReceiptsCreated: { type: Boolean, default: false },
   expenseOrdersCreated: { type: Boolean, default: false },
 }, { timestamps: true });
