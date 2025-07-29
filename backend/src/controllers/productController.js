@@ -31,9 +31,26 @@ exports.getProductsByIntegration = async (req, res) => {
         // Получаем товары из БД через сервис
         const msFilter = req.query.msFilter;
 
-        const { products, currentPage, totalPages, totalProducts } = await getProductsFromDb(
+        let result = await getProductsFromDb(
           integrationLinkId, userId, page, limit, searchTerm, msFilter
         );
+
+        // Если товаров нет, пробуем выполнить синхронизацию с WB и повторить запрос
+        if (result.totalProducts === 0) {
+            console.log(`[CONTROLLER] Для связки ${integrationLinkId} в базе не найдено товаров. Запускаем автоматическую синхронизацию c WB...`);
+            try {
+                await syncProducts(integrationLinkId, userId);
+                // Повторяем запрос к БД после синхронизации
+                result = await getProductsFromDb(
+                  integrationLinkId, userId, page, limit, searchTerm, msFilter
+                );
+            } catch(syncErr) {
+                console.error(`[CONTROLLER ERROR] Ошибка автоматической синхронизации: ${syncErr.message}`);
+                // Не прерываем работу, просто логируем
+            }
+        }
+
+        const { products, currentPage, totalPages, totalProducts } = result;
 
         res.json({
             success: true,
