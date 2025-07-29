@@ -4,6 +4,7 @@ const IntegrationLink = require('../models/IntegrationLink');
 const WbCabinet = require('../models/WbCabinet');
 const { exportReportToMS: exportReportToMSService } = require('../services/msReportExportService');
 const { createServiceReceipts: createServiceReceiptsService } = require('../services/msServiceSupplyService');
+const { createExpenseOrders: createExpenseOrdersService } = require('../services/msServiceSupplyService');
 
 // POST /api/reports/upload
 // { integrationLinkId, reportId, dateFrom, dateTo }
@@ -203,5 +204,21 @@ exports.createServiceReceipts = async (req, res) => {
   } catch (error) {
     console.error('[REPORT_CONTROLLER] Ошибка создания приёмок услуг:', error);
     res.status(500).json({ message: error.message || 'Ошибка сервера при создании приёмок услуг' });
+  }
+}; 
+
+// POST /api/reports/expense-orders
+exports.createExpenseOrders = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { integrationLinkId, reportId } = req.body;
+    if (!integrationLinkId || !reportId) {
+      return res.status(400).json({ message: 'Необходимы integrationLinkId и reportId' });
+    }
+    const result = await createExpenseOrdersService({ userId, integrationLinkId, reportId });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[REPORT_CONTROLLER] Ошибка создания расходных ордеров:', error);
+    res.status(500).json({ message: error.message || 'Ошибка сервера при создании расходных ордеров' });
   }
 }; 

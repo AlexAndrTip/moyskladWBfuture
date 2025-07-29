@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
-const { uploadReport, deleteReport, getReportsStatus, getReportDetails, exportReportToMS, createServiceReceipts } = require('../controllers/reportController');
+const { uploadReport, deleteReport, getReportsStatus, getReportDetails, exportReportToMS, createServiceReceipts, createExpenseOrders } = require('../controllers/reportController');
 
 // POST /api/reports/upload
 router.post('/upload', protect, uploadReport);
@@ -20,5 +20,8 @@ router.post('/export-ms', protect, exportReportToMS);
 
 // POST /api/reports/service-receipts
 router.post('/service-receipts', protect, createServiceReceipts);
+
+// POST /api/reports/expense-orders
+router.post('/expense-orders', protect, createExpenseOrders);
 
 module.exports = router; 

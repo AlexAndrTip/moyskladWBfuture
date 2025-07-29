@@ -94,6 +94,7 @@ async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
   if (positions.length) {
     const supplyPayload = {
       organization: { meta: { href: organizationHref, type: 'organization', mediaType: 'application/json' } },
+      name: String(reportId),
       agent: { meta: { href: counterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
       store: { meta: { href: storeHref, type: 'store', mediaType: 'application/json' } },
       moment: `${reportHeader.date_to} 00:00:00`,
@@ -129,12 +130,86 @@ async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
 }
 
 async function createExpenseOrders({ userId, reportId, integrationLinkId }) {
-  const report = await Report.findOne({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId });
-  if (!report) throw new Error('Отчёт не найден');
-  if (report.expenseOrdersCreated) return { already: true };
-  console.log(`[EXPENSE_ORDERS] (stub) Создаём расходные ордера для отчёта ${reportId}`);
-  report.expenseOrdersCreated = true;
-  await report.save();
+  const reportRows = await Report.find({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId }).lean();
+  if (!reportRows.length) throw new Error('Отчёт не найден');
+  if (reportRows[0].expenseOrdersCreated) return { already: true };
+
+  // токен МС
+  const integrationLink = await IntegrationLink.findById(integrationLinkId).populate({ path: 'storage', select: '+token' });
+  if (!integrationLink || !integrationLink.storage || !integrationLink.storage.token) {
+    throw new Error('Не найден токен МС');
+  }
+  const msToken = integrationLink.storage.token;
+
+  // ссылки
+  const orgLink = await OrganizationLink.findOne({ user: userId, integrationLink: integrationLinkId });
+  if (!orgLink) throw new Error('OrganizationLink не настроен');
+  const organizationHref = orgLink.moyskladOrganizationHref;
+  const counterpartyHref = orgLink.moyskladCounterpartyHref;
+
+  // функции для expense items
+  const { findOrCreateMoySkladExpenseItem } = require('./moySkladExpenseItemService');
+  const StatRashodov = require('../models/StatRashodov');
+
+  // найти supplyHref по имени отчёта
+  async function getSupplyHref() {
+    try {
+      const resp = await axios.get(`${MS_BASE_URL}/entity/supply`, {
+        headers: { Authorization: `Bearer ${msToken}`, 'Accept-Encoding': 'gzip' },
+        params: { filter: `name=${reportId}` }
+      });
+      const row = (resp.data.rows || []).find(r => r.name === String(reportId));
+      return row ? row.meta.href : null;
+    } catch (e) { return null; }
+  }
+
+  const supplyHref = await getSupplyHref();
+
+  // подсчёт сумм (положительные и отрицательные вместе)
+  const serviceTotals = {
+    'Прочие удержания WB': 0,
+    'Платная приемка WB': 0,
+    'Хранение WB': 0,
+    'Штрафы WB': 0,
+    'Логистика WB': 0,
+  };
+  for (const r of reportRows) {
+    serviceTotals['Прочие удержания WB'] += r.deduction || 0;
+    serviceTotals['Платная приемка WB'] += r.acceptance || 0;
+    serviceTotals['Хранение WB'] += r.storage_fee || 0;
+    serviceTotals['Штрафы WB'] += r.penalty || 0;
+    serviceTotals['Логистика WB'] += r.delivery_rub || 0;
+  }
+  // копейки
+  Object.keys(serviceTotals).forEach(k => { serviceTotals[k] = Math.round(serviceTotals[k] * 100); });
+
+  for (const [name, sum] of Object.entries(serviceTotals)) {
+    if (sum === 0) continue;
+
+    // expense item
+    let stat = await StatRashodov.findOne({ user: userId, integrationLink: integrationLinkId, name });
+    if (!stat || !stat.ms_href) {
+      const { href } = await findOrCreateMoySkladExpenseItem(msToken, name);
+      if (stat) { stat.ms_href = href; await stat.save(); }
+      else { stat = await StatRashodov.create({ user: userId, integrationLink: integrationLinkId, name, ms_href: href }); }
+    }
+    if (!stat.ms_href) continue;
+
+    const cashoutPayload = {
+      organization: { meta: { href: organizationHref, type: 'organization', mediaType: 'application/json' } },
+      agent: { meta: { href: counterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
+      sum: Math.abs(sum),
+      moment: `${reportRows[0].date_to} 00:00:00`,
+      expenseItem: { meta: { href: stat.ms_href, type: 'expenseitem', mediaType: 'application/json' } },
+      operations: supplyHref ? [{ meta: { href: supplyHref, type: 'supply', mediaType: 'application/json' } }] : [],
+    };
+    await axios.post(`${MS_BASE_URL}/entity/cashout`, cashoutPayload, {
+      headers: { Authorization: `Bearer ${msToken}`, 'Content-Type': 'application/json', 'Accept-Encoding': 'gzip' },
+    });
+    console.log('[EXPENSE_ORDERS] Создан cashout', name, sum);
+  }
+
+  await Report.updateMany({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId }, { expenseOrdersCreated: true });
   return { success: true };
 }
 

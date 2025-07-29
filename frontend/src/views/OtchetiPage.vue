@@ -104,10 +104,11 @@
                 </button>
                 <button 
                   @click="createExpenseOrders(report)" 
-                  :disabled="!report.loadedInDB || !report.exportedToMS || report.expenseOrdersCreated"
+                  :disabled="!report.loadedInDB || !report.exportedToMS || report.expenseOrdersCreated || expenseLoadingIds.has(report.id)"
                   class="action-btn expense-btn"
                 >
-                  Создать расходные ордера
+                  <span v-if="expenseLoadingIds.has(report.id)" class="loading-spinner"></span>
+                  {{ expenseLoadingIds.has(report.id) ? 'Создание...' : 'Создать расходные ордера' }}
                 </button>
               </div>
             </td>
@@ -172,6 +173,7 @@ const loadingReportIds = ref(new Set());
 const exportedReportsStatus = ref(new Set());
 const exportLoadingIds = ref(new Set());
 const serviceLoadingIds = ref(new Set());
+const expenseLoadingIds = ref(new Set());
 
 // Состояние для уведомлений
 const notification = ref({ show: false, message: '', type: 'success' });
@@ -435,10 +437,33 @@ const createServiceReceipts = async (report) => {
   }
 };
 
-// Заглушка создания расходных ордеров в МС
-const createExpenseOrders = (report) => {
-  console.log('Создание расходных ордеров в МС для отчета:', report.id);
-  alert('Функция создания расходных ордеров пока не реализована');
+// Создание расходных ордеров
+const createExpenseOrders = async (report) => {
+  if (!selectedIntegrationId.value) return;
+  expenseLoadingIds.value.add(report.id);
+  try {
+    const response = await axios.post(`${API_BASE_URL}/reports/expense-orders`, {
+      integrationLinkId: selectedIntegrationId.value,
+      reportId: report.id
+    }, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    if (response.data.success) {
+      if (response.data.already) {
+        showNotification(`Расходные ордера для отчёта ${report.id} уже созданы.`, 'info');
+      } else {
+        showNotification(`Расходные ордера для отчёта ${report.id} успешно созданы!`);
+      }
+      report.expenseOrdersCreated = true;
+    } else {
+      showNotification('Не удалось создать расходные ордера', 'error');
+    }
+  } catch (error) {
+    console.error('Ошибка создания расходных ордеров:', error);
+    showNotification('Ошибка создания расходных ордеров: ' + (error.response?.data?.message || error.message), 'error');
+  } finally {
+    expenseLoadingIds.value.delete(report.id);
+  }
 };
 
 // Генерация отчетов по неделям за последние 3 месяца
