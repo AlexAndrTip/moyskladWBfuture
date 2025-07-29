@@ -81,7 +81,7 @@
               @change="onSettingChange"
               class="setting-checkbox"
             />
-            <span class="setting-text">Создавать приемки услуг</span>
+            <span class="setting-text">Создавать приемки услуг совместно с отчетом</span>
           </label>
         </div>
 
@@ -93,7 +93,7 @@
               @change="onSettingChange"
               class="setting-checkbox"
             />
-            <span class="setting-text">Создавать расходные ордера по услугам</span>
+            <span class="setting-text">Создавать расходные ордера по услугам совместно с отчетом</span>
           </label>
         </div>
 
