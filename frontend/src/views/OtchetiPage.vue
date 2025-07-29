@@ -96,10 +96,11 @@
               <div class="action-row">
                 <button 
                   @click="createServiceReceipts(report)" 
-                  :disabled="!report.loadedInDB || !report.exportedToMS || report.serviceReceiptsCreated"
+                  :disabled="!report.loadedInDB || !report.exportedToMS || report.serviceReceiptsCreated || serviceLoadingIds.has(report.id)"
                   class="action-btn service-btn"
                 >
-                  Создать приемки услуг
+                  <span v-if="serviceLoadingIds.has(report.id)" class="loading-spinner"></span>
+                  {{ serviceLoadingIds.has(report.id) ? 'Создание...' : 'Создать приемки услуг' }}
                 </button>
                 <button 
                   @click="createExpenseOrders(report)" 
@@ -170,6 +171,7 @@ const loadedReportsStatus = ref(new Set());
 const loadingReportIds = ref(new Set());
 const exportedReportsStatus = ref(new Set());
 const exportLoadingIds = ref(new Set());
+const serviceLoadingIds = ref(new Set());
 
 // Состояние для уведомлений
 const notification = ref({ show: false, message: '', type: 'success' });
@@ -251,11 +253,15 @@ const loadReportsStatus = async () => {
       // Создаем Set из загруженных и экспортированных отчетов для быстрой проверки
       loadedReportsStatus.value = new Set(response.data.loadedReports);
       exportedReportsStatus.value = new Set(response.data.exportedReports || []);
+      const receiptsSet = new Set(response.data.serviceReceipts || []);
+      const expensesSet = new Set(response.data.expenseOrders || []);
       
       // Обновляем статус в списке отчетов
       reports.value.forEach(report => {
         report.loadedInDB = loadedReportsStatus.value.has(report.id);
         report.exportedToMS = exportedReportsStatus.value.has(report.id);
+        report.serviceReceiptsCreated = receiptsSet.has(report.id);
+        report.expenseOrdersCreated = expensesSet.has(report.id);
       });
     }
   } catch (error) {
@@ -400,10 +406,33 @@ const exportToMS = async (report) => {
   }
 };
 
-// Заглушка создания приемки услуг в МС
-const createServiceReceipts = (report) => {
-  console.log('Создание приемок услуг в МС для отчета:', report.id);
-  alert('Функция создания приемок услуг пока не реализована');
+// Создание приемок услуг
+const createServiceReceipts = async (report) => {
+  if (!selectedIntegrationId.value) return;
+  serviceLoadingIds.value.add(report.id);
+  try {
+    const response = await axios.post(`${API_BASE_URL}/reports/service-receipts`, {
+      integrationLinkId: selectedIntegrationId.value,
+      reportId: report.id
+    }, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    if (response.data.success) {
+      if (response.data.already) {
+        showNotification(`Приёмки услуг для отчёта ${report.id} уже были созданы.`, 'info');
+      } else {
+        showNotification(`Приёмки услуг для отчёта ${report.id} успешно созданы!`);
+      }
+      report.serviceReceiptsCreated = true;
+    } else {
+      showNotification('Не удалось создать приёмки услуг', 'error');
+    }
+  } catch (error) {
+    console.error('Ошибка создания приёмок услуг:', error);
+    showNotification('Ошибка создания приёмок услуг: ' + (error.response?.data?.message || error.message), 'error');
+  } finally {
+    serviceLoadingIds.value.delete(report.id);
+  }
 };
 
 // Заглушка создания расходных ордеров в МС

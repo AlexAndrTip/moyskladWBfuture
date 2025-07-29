@@ -3,6 +3,7 @@ const Report = require('../models/Report');
 const IntegrationLink = require('../models/IntegrationLink');
 const WbCabinet = require('../models/WbCabinet');
 const { exportReportToMS: exportReportToMSService } = require('../services/msReportExportService');
+const { createServiceReceipts: createServiceReceiptsService } = require('../services/msServiceSupplyService');
 
 // POST /api/reports/upload
 // { integrationLinkId, reportId, dateFrom, dateTo }
@@ -74,7 +75,10 @@ exports.getReportsStatus = async (req, res) => {
     const reportsCursor = await Report.find({
       user: userId,
       integrationlinks_id: integrationLinkId
-    }).select('Report_id exportedToMS').lean();
+    }).select('Report_id exportedToMS serviceReceiptsCreated expenseOrdersCreated').lean();
+
+    const serviceReceipts = new Set();
+    const expenseOrders = new Set();
 
     const loadedReports = new Set();
     const exportedReports = new Set();
@@ -82,12 +86,16 @@ exports.getReportsStatus = async (req, res) => {
     for (const r of reportsCursor) {
       loadedReports.add(r.Report_id);
       if (r.exportedToMS) exportedReports.add(r.Report_id);
+      if (r.serviceReceiptsCreated) serviceReceipts.add(r.Report_id);
+      if (r.expenseOrdersCreated) expenseOrders.add(r.Report_id);
     }
 
     res.json({ 
       success: true, 
       loadedReports: Array.from(loadedReports),
       exportedReports: Array.from(exportedReports),
+      serviceReceipts: Array.from(serviceReceipts),
+      expenseOrders: Array.from(expenseOrders),
       count: loadedReports.size 
     });
   } catch (error) {
@@ -178,5 +186,22 @@ exports.exportReportToMS = async (req, res) => {
   } catch (error) {
     console.error('[REPORT_CONTROLLER] Ошибка выгрузки отчёта в МС:', error);
     res.status(500).json({ message: error.message || 'Ошибка сервера при выгрузке отчёта в МС' });
+  }
+}; 
+
+// POST /api/reports/service-receipts
+// { integrationLinkId, reportId }
+exports.createServiceReceipts = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { integrationLinkId, reportId } = req.body;
+    if (!integrationLinkId || !reportId) {
+      return res.status(400).json({ message: 'Необходимы integrationLinkId и reportId' });
+    }
+    const result = await createServiceReceiptsService({ userId, integrationLinkId, reportId });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[REPORT_CONTROLLER] Ошибка создания приёмок услуг:', error);
+    res.status(500).json({ message: error.message || 'Ошибка сервера при создании приёмок услуг' });
   }
 }; 

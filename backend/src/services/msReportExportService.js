@@ -220,4 +220,61 @@ async function exportReportToMS({ userId, reportId, integrationLinkId }) {
   return { success: true, href };
 }
 
-module.exports = { exportReportToMS }; 
+/**
+ * Обновляет commissionOverhead для уже существующего commissionreportin
+ * @param {Object} params { userId, reportId, integrationLinkId }
+ */
+async function updateCommissionOverheadForReport({ userId, reportId, integrationLinkId }) {
+  // Получаем токен МС
+  const integrationLink = await IntegrationLink.findById(integrationLinkId).populate({ path: 'storage', select: '+token' });
+  if (!integrationLink || !integrationLink.storage || !integrationLink.storage.token) {
+    throw new Error('Не найден токен МС для выбранного склада');
+  }
+  const msToken = integrationLink.storage.token;
+
+  // Берём строки отчёта
+  const rows = await Report.find({
+    user: userId,
+    integrationlinks_id: integrationLinkId,
+    Report_id: reportId,
+  }).lean();
+  if (!rows.length) throw new Error('Строки отчёта не найдены');
+
+  const overheadSum = rows
+    .filter((r) => OVERHEAD_OPER_NAMES.includes(r.supplier_oper_name))
+    .reduce((sum, r) => {
+      if (r.doc_type_name === 'Возврат') return sum + (r.ppvz_for_pay || 0);
+      if (r.doc_type_name === 'Продажа') return sum - (r.ppvz_for_pay || 0);
+      return sum;
+    }, 0);
+
+  if (overheadSum === 0) {
+    console.log('[MS_OVERHEAD] Нет операции overhead – обновление не требуется');
+    return { skipped: true };
+  }
+
+  // Получаем href отчёта из БД или ищем в МС
+  let href = rows[0].msHref;
+  if (!href) {
+    href = await checkReportExists(reportId, msToken);
+    if (!href) throw new Error('Документ отчёта не найден в МС');
+  }
+  const cleanId = href.split('/').pop();
+  const url = `${MS_BASE_URL}/entity/commissionreportin/${cleanId}`;
+
+  await axios.put(
+    url,
+    { commissionOverhead: { sum: Math.round(overheadSum * 100) } },
+    {
+      headers: {
+        Authorization: `Bearer ${msToken}`,
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+  console.log(`[MS_OVERHEAD] commissionOverhead обновлён, сумма = ${overheadSum}`);
+  return { success: true, sum: overheadSum };
+}
+
+// экспортируем новую функцию
+module.exports = { exportReportToMS, updateCommissionOverheadForReport }; 
