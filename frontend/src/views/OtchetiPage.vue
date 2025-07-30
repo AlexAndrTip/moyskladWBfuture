@@ -261,16 +261,8 @@ async function executeBulkAction(action) {
   bulkActionInProgress.value = true;
   try {
     const selectedReports = reports.value.filter(r => selectedIds.value.includes(r.id));
-    // Закрываем модальное окно сразу для операций, требующих длительной обработки
-    if (action === 'loadToDB') {
-      closeBulkModal();
-    }
-    if (action === 'deleteFromDB') {
-      if (!confirm(`Вы уверены, что хотите удалить ${selectedReports.length} отчётов из БД? Это действие нельзя отменить.`)) {
-        bulkActionInProgress.value = false;
-        return;
-      }
-    }
+    // Закрываем модальное окно перед началом выполнения операций
+    closeBulkModal();
     switch (action) {
       case 'loadToDB':
         for (const rep of selectedReports) {
@@ -313,9 +305,6 @@ async function executeBulkAction(action) {
     // после выполнения перезагружаем статусы
     await loadReportsStatus();
     clearSelection();
-    if (action !== 'loadToDB') {
-      closeBulkModal();
-    }
   } catch (e) {
     console.error('Ошибка массового действия:', e);
     showNotification('Ошибка массовой операции: ' + (e.response?.data?.message || e.message), 'error');
