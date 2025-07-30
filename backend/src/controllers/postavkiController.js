@@ -125,27 +125,36 @@ exports.createDemand = async (req, res) => {
     // Формируем позиции для отгрузки
     let positions = [];
     // Найти product по barcode (ищем по sizes.skus)
-    const product = await Product.findOne({
-      'sizes.skus': income.barcode
-    });
+    const product = await Product.findOne({ 'sizes.skus': income.barcode });
     if (!product) {
       return res.status(400).json({ message: 'Товар не найден' });
     }
-    const size = product.sizes.find(s => s.skus && s.skus.includes(income.barcode));
-    const existingMsHref = size?.ms_href;
-    console.log(`[POSTAVKI] Извлечён ms_href для позиции:`, existingMsHref, `| nmID: ${product.nmID} | chrtID: ${size?.chrtID}`);
-    if (size && existingMsHref) {
-      positions.push({
-        quantity: income.quantity,
-        assortment: {
-          meta: {
-            href: existingMsHref,
-            type: existingMsHref && existingMsHref.includes('/bundle/') ? 'bundle' : 'product',
-            mediaType: 'application/json'
-          }
-        }
-      });
+
+    // Пытаемся найти размер с данным баркодом и его ms_href
+    const sizeEntry = product.sizes.find(s => Array.isArray(s.skus) && s.skus.includes(income.barcode));
+    let hrefToUse = null;
+
+    if (sizeEntry && sizeEntry.ms_href) {
+      hrefToUse = sizeEntry.ms_href;
+    } else if (product.ms_href_general) {
+      hrefToUse = product.ms_href_general;
     }
+
+    if (!hrefToUse) {
+      return res.status(400).json({ message: 'Не найдено ms_href для товара. Сначала выгрузите товар в МС.' });
+    }
+
+    console.log(`[POSTAVKI] href для Demand: ${hrefToUse} | nmID: ${product.nmID}`);
+    positions.push({
+      quantity: income.quantity,
+      assortment: {
+        meta: {
+          href: hrefToUse,
+          type: hrefToUse.includes('/bundle/') ? 'bundle' : 'product',
+          mediaType: 'application/json'
+        }
+      }
+    });
     // Преобразуем дату в формат 'YYYY-MM-DD HH:mm:ss'
     let momentStr = income.date;
     if (momentStr.includes('T')) {
