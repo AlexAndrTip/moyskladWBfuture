@@ -133,8 +133,24 @@ exports.getReportDetails = async (req, res) => {
 
         const firstEntry = reportEntries[0];
 
-        const totalRetailPrice = reportEntries.reduce((sum, entry) => sum + (entry.retail_price || 0), 0);
-        const totalPpvzForPay = reportEntries.reduce((sum, entry) => sum + (entry.ppvz_for_pay || 0), 0);
+        const totalRetailPrice = reportEntries.reduce((sum, entry) => {
+            if (entry.doc_type_name === 'Продажа') {
+                return sum + (entry.retail_amount || 0);
+            }
+            if (entry.doc_type_name === 'Возврат') {
+                return sum - (entry.retail_amount || 0);
+            }
+            return sum;
+        }, 0);
+        const totalPpvzForPay = reportEntries.reduce((sum, entry) => {
+            if (entry.doc_type_name === 'Продажа') {
+                return sum + (entry.ppvz_for_pay || 0);
+            }
+            if (entry.doc_type_name === 'Возврат') {
+                return sum - (entry.ppvz_for_pay || 0);
+            }
+            return sum;
+        }, 0);
         const totalDeliveryRub = reportEntries.reduce((sum, entry) => sum + (entry.delivery_rub || 0), 0);
 
         const realizationReportIds = [...new Set(reportEntries.map(e => e.realizationreport_id.toString()))].join(' / ');

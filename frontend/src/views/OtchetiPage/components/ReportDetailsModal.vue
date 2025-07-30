@@ -41,15 +41,15 @@
             <strong>К перечислению за товар:</strong>
             <span>{{ reportDetails.total_ppvz_for_pay.toFixed(2) }}</span>
           </div>
-          <div class="detail-item">
-            <strong>Стоимость логистики:</strong>
-            <span>{{ reportDetails.total_delivery_rub.toFixed(2) }}</span>
+          <div class="detail-item total-item">
+            <strong>Итого к оплате:</strong>
+            <span>{{ reportDetails.total_to_pay }}</span>
           </div>
         </div>
 
         <hr />
 
-        <h4>Штрафы и удержания (в разработке)</h4>
+        <h4>Удержания</h4>
         <div class="detail-grid placeholder-section">
           <div class="detail-item"><strong>Штраф:</strong><span>{{ reportDetails.penalty }}</span></div>
           <div class="detail-item"><strong>Повышенная логистика:</strong><span>{{ reportDetails.increased_logistics }}</span></div>
@@ -60,7 +60,7 @@
           <div class="detail-item"><strong>Стоимость хранения:</strong><span>{{ reportDetails.storage_cost }}</span></div>
           <div class="detail-item"><strong>Стоимость платной приемки:</strong><span>{{ reportDetails.paid_acceptance_cost }}</span></div>
           <div class="detail-item"><strong>Прочие удержания/выплаты:</strong><span>{{ reportDetails.other_deductions_payouts }}</span></div>
-          <div class="detail-item total-item"><strong>Итого к оплате:</strong><span>{{ reportDetails.total_to_pay }}</span></div>
+          <div class="detail-item"><strong>Стоимость логистики:</strong><span>{{ reportDetails.total_delivery_rub.toFixed(2) }}</span></div>
         </div>
       </div>
     </div>
