@@ -275,7 +275,8 @@ exports.refreshPostavkiFromWB = async (req, res) => {
         const existingIncome = await WbIncome.findOne({
           user: userId,
           integrationLink: integrationLinkId,
-          date: income.date,
+          incomeId: income.incomeId,
+          warehouseName: income.warehouseName,
           barcode: income.barcode,
           supplierArticle: income.supplierArticle
         });
@@ -287,8 +288,8 @@ exports.refreshPostavkiFromWB = async (req, res) => {
             {
               $set: {
                 quantity: income.quantity,
-                warehouseName: income.warehouseName,
-                status: income.status
+                status: income.status,
+                date: income.date,
               }
             }
           );
@@ -298,6 +299,7 @@ exports.refreshPostavkiFromWB = async (req, res) => {
           await WbIncome.create({
             user: userId,
             integrationLink: integrationLinkId,
+            incomeId: income.incomeId,
             date: income.date,
             supplierArticle: income.supplierArticle,
             barcode: income.barcode,

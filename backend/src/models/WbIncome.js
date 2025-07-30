@@ -11,6 +11,10 @@ const WbIncomeSchema = new mongoose.Schema({
     ref: 'IntegrationLink',
     required: true,
   },
+  incomeId: {
+    type: Number,
+    required: true,
+  },
   date: String,
   supplierArticle: String,
   barcode: String,
@@ -24,6 +28,6 @@ const WbIncomeSchema = new mongoose.Schema({
   // Можно добавить другие поля из WB при необходимости
 }, { timestamps: true });
 
-WbIncomeSchema.index({ user: 1, integrationLink: 1, date: 1, barcode: 1, supplierArticle: 1 }, { unique: true });
+WbIncomeSchema.index({ user: 1, integrationLink: 1, incomeId: 1, warehouseName: 1, barcode: 1, supplierArticle: 1 }, { unique: true });
 
 module.exports = mongoose.model('WbIncome', WbIncomeSchema); 
