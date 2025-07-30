@@ -54,7 +54,7 @@ exports.getPostavki = async (req, res) => {
     
     // Получаем поставки с пагинацией
     const incomes = await WbIncome.find(filter)
-      .sort({ date: -1 })
+      .sort({ date: -1, _id: -1 })
       .skip(skip)
       .limit(limitPerPage);
     
@@ -346,7 +346,7 @@ exports.refreshPostavkiFromWB = async (req, res) => {
     
     // Получаем поставки с пагинацией
     const incomes = await WbIncome.find(filter)
-      .sort({ date: -1 })
+      .sort({ date: -1, _id: -1 })
       .skip(skip)
       .limit(limitPerPage);
     
