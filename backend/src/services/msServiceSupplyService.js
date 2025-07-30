@@ -7,13 +7,6 @@ const axios = require('axios');
 const MS_BASE_URL = 'https://api.moysklad.ru/api/remap/1.2';
 
 async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
-  // Проверяем настройку createServiceReceipts
-  const { getSettings } = require('./settingsService');
-  const currentSettings = await getSettings(integrationLinkId, userId);
-  if (!currentSettings.createServiceReceipts) {
-    console.log('[SERVICE_SUPPLY] Создание приёмок услуг отключено настройками');
-    return { skipped: true, disabledBySettings: true };
-  }
   const reportRows = await Report.find({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId }).lean();
   if (!reportRows.length) throw new Error('Отчёт не найден');
   // берём любой документ отчёта как "шапку"
@@ -139,13 +132,6 @@ async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
 }
 
 async function createExpenseOrders({ userId, reportId, integrationLinkId }) {
-  // Проверяем настройку createServiceExpenseOrders
-  const { getSettings } = require('./settingsService');
-  const currentSettings = await getSettings(integrationLinkId, userId);
-  if (!currentSettings.createServiceExpenseOrders) {
-    console.log('[EXPENSE_ORDERS] Создание расходных ордеров отключено настройками');
-    return { skipped: true, disabledBySettings: true };
-  }
   const reportRows = await Report.find({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId }).lean();
   if (!reportRows.length) throw new Error('Отчёт не найден');
   if (reportRows[0].expenseOrdersCreated) return { already: true };
