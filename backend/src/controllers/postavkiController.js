@@ -98,8 +98,8 @@ exports.createDemand = async (req, res) => {
     }
     // Находим organizationLink по integrationLink
     const orgLink = await OrganizationLink.findOne({ integrationLink: integrationLinkId });
-    if (!orgLink || !orgLink.moyskladOrganizationHref || !orgLink.moyskladCounterpartyHref || !orgLink.moyskladStoreHref) {
-      return res.status(400).json({ message: 'Не найдены все необходимые href в organizationlinks' });
+    if (!orgLink || !orgLink.moyskladOrganizationHref || !orgLink.moyskladCounterpartyHref || !orgLink.moyskladStoreHref || !orgLink.moyskladContractHref) {
+      return res.status(400).json({ message: 'Не найдены все необходимые href (организация/контрагент/договор/склад) в organizationlinks' });
     }
     // Находим поставку
     const income = await WbIncome.findOne({ _id: incomeId, integrationLink: integrationLinkId, user: userId });
@@ -166,7 +166,9 @@ exports.createDemand = async (req, res) => {
     const payload = {
       organization: { meta: { href: orgLink.moyskladOrganizationHref, type: 'organization', mediaType: 'application/json' } },
       agent: { meta: { href: orgLink.moyskladCounterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
+      contract: { meta: { href: orgLink.moyskladContractHref, type: 'contract', mediaType: 'application/json' } },
       store: { meta: { href: orgLink.moyskladStoreHref, type: 'store', mediaType: 'application/json' } },
+      description: income.warehouseName || '',
       moment: momentStr,
       code: income._id.toString(),
       positions // <-- снова передаём позиции
