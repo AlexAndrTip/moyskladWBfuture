@@ -88,9 +88,24 @@
         :is-top="true"
       />
 
+      <!-- ДОБАВЛЕНО: панель массовых действий -->
+      <div v-if="selectedIds.length" class="bulk-actions-bar">
+        <span>Выбрано: {{ selectedIds.length }}</span>
+        <button class="bulk-btn" @click="selectAllAcrossPages">Выбрать все</button>
+        <button class="bulk-btn" @click="openBulkModal">Редактировать выбранные</button>
+        <button class="bulk-btn" @click="clearSelection">Снять выделение</button>
+      </div>
+
       <table v-if="!loadingPostavki && postavki.length" class="postavki-table">
         <thead>
           <tr>
+            <th>
+              <input
+                type="checkbox"
+                :checked="allPageSelected"
+                @change="toggleSelectPage"
+              />
+            </th>
             <th>Дата</th>
             <th>Артикул</th>
             <th>Штрихкод</th>
@@ -103,6 +118,9 @@
         </thead>
         <tbody>
           <tr v-for="item in postavki" :key="item._id">
+            <td>
+              <input type="checkbox" :checked="isSelected(item._id)" @change="toggleSelection(item._id)" />
+            </td>
             <td>{{ item.date }}</td>
             <td>{{ item.supplierArticle }}</td>
             <td>{{ item.barcode }}</td>
@@ -135,11 +153,24 @@
         :is-top="false"
       />
     </div>
+
+    <!-- ДОБАВЛЕНО: модальное окно массовых действий -->
+    <div v-if="showBulkModal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>Редактирование выбранных ({{ selectedIds.length }})</h3>
+        <div class="modal-actions">
+          <button class="ms-btn" @click="bulkCreateDemand" :disabled="bulkLoading">Выгрузить в МС</button>
+          <button class="del-btn" @click="bulkDeleteMsHref" :disabled="bulkLoading">Удалить в БД</button>
+          <button class="reset-btn" @click="closeBulkModal" :disabled="bulkLoading">Отмена</button>
+        </div>
+        <p v-if="bulkLoading" class="loading-message" style="margin-top:10px;">Обработка...</p>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useIntegrationLinks } from './TovaryPage/composables/useIntegrationLinks.js';
 import { usePostavki } from './PostavkiPage/composables/usePostavki.js';
@@ -217,6 +248,125 @@ const deleteMsHref = async (item) => {
     alert('Ошибка удаления ms_href: ' + (error.response?.data?.message || error.message));
   }
 };
+
+// === ДОБАВЛЕНО: логика выбора и массовых действий ===
+const selectedIds = ref([]);
+const showBulkModal = ref(false);
+const bulkLoading = ref(false);
+
+const isSelected = (id) => selectedIds.value.includes(id);
+
+function toggleSelection(id) {
+  if (isSelected(id)) {
+    selectedIds.value = selectedIds.value.filter((x) => x !== id);
+  } else {
+    selectedIds.value.push(id);
+  }
+}
+
+function clearSelection() {
+  selectedIds.value = [];
+}
+
+async function selectAllAcrossPages() {
+  if (!selectedIntegrationId.value) return;
+  try {
+    const params = {
+      page: 1,
+      limit: totalPostavki.value || 10000,
+    };
+    // применяем активные фильтры
+    if (search.value) params.search = search.value;
+    if (dateFrom.value) params.dateFrom = dateFrom.value;
+    if (dateTo.value) params.dateTo = dateTo.value;
+    if (status.value) params.status = status.value;
+    if (exported.value) params.exported = exported.value;
+
+    const response = await axios.get(`${API_BASE_URL}/postavki/${selectedIntegrationId.value}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+      params,
+    });
+    const allItems = response.data.data ? response.data.data : response.data;
+    selectedIds.value = allItems.map((i) => i._id);
+  } catch (e) {
+    alert('Ошибка выборки всех поставок: ' + (e.response?.data?.message || e.message));
+  }
+}
+
+function openBulkModal() {
+  showBulkModal.value = true;
+}
+function closeBulkModal() {
+  showBulkModal.value = false;
+}
+
+async function bulkCreateDemand() {
+  if (!selectedIds.value.length) return;
+  if (!confirm(`Выгрузить ${selectedIds.value.length} выбранных поставок в МойСклад?`)) return;
+  bulkLoading.value = true;
+  try {
+    await Promise.all(
+      selectedIds.value.map((id) =>
+        axios.post(`${API_BASE_URL}/postavki/${selectedIntegrationId.value}/demand/${id}`, {}, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        })
+      )
+    );
+    alert('Отгрузки успешно созданы!');
+    await fetchPostavki();
+    clearSelection();
+    closeBulkModal();
+  } catch (e) {
+    alert('Ошибка массовой выгрузки: ' + (e.response?.data?.message || e.message));
+  } finally {
+    bulkLoading.value = false;
+  }
+}
+
+async function bulkDeleteMsHref() {
+  if (!selectedIds.value.length) return;
+  if (!confirm(`Удалить ms_href у ${selectedIds.value.length} выбранных поставок?`)) return;
+  bulkLoading.value = true;
+  try {
+    await Promise.all(
+      selectedIds.value.map((id) =>
+        axios.delete(`${API_BASE_URL}/postavki/${selectedIntegrationId.value}/demand/${id}`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        })
+      )
+    );
+    alert('Ссылки ms_href успешно удалены!');
+    await fetchPostavki();
+    clearSelection();
+    closeBulkModal();
+  } catch (e) {
+    alert('Ошибка массового удаления: ' + (e.response?.data?.message || e.message));
+  } finally {
+    bulkLoading.value = false;
+  }
+}
+// === КОНЕЦ добавленного кода ===
+
+// === Чекбокс «выбрать всё на странице» ===
+const allPageSelected = computed(() =>
+  postavki.value.length > 0 && postavki.value.every((item) => selectedIds.value.includes(item._id))
+);
+
+function toggleSelectPage() {
+  if (allPageSelected.value) {
+    // снять выделение с элементов текущей страницы
+    const pageIds = postavki.value.map((i) => i._id);
+    selectedIds.value = selectedIds.value.filter((id) => !pageIds.includes(id));
+  } else {
+    // добавить все элементы текущей страницы
+    postavki.value.forEach((item) => {
+      if (!selectedIds.value.includes(item._id)) {
+        selectedIds.value.push(item._id);
+      }
+    });
+  }
+}
+// === конец добавленного ===
 
 onMounted(async () => {
   await fetchIntegrationLinks();
@@ -434,5 +584,53 @@ onMounted(async () => {
 }
 .reset-btn:hover {
   background: #bdbdbd;
+}
+.bulk-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 10px;
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  border-radius: 4px;
+}
+.bulk-btn {
+  background: #17a2b8;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.3s;
+}
+.bulk-btn:hover {
+  background: #138496;
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 6px;
+  width: 300px;
+  text-align: center;
+}
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
 }
 </style>
