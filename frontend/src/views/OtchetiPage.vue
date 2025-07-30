@@ -26,11 +26,20 @@
     <div v-if="selectedIntegrationId && !loadingIntegrations" class="reports-section">
       <div class="reports-header">
         <h3>Список отчетов</h3>
+        <!-- панель массовых действий -->
+        <div v-if="selectedIds.length" class="bulk-actions-bar">
+          <span>Выбрано: {{ selectedIds.length }}</span>
+          <button class="bulk-btn" @click="openBulkModal">Редактировать выбранные</button>
+          <button class="bulk-btn" @click="clearSelection">Снять выделение</button>
+        </div>
       </div>
 
       <table class="reports-table">
         <thead>
           <tr>
+            <th>
+              <input type="checkbox" :checked="allSelected" @change="toggleSelectAll" />
+            </th>
             <th>ID</th>
             <th>Период</th>
             <th>Загружен в БД</th>
@@ -42,6 +51,9 @@
         </thead>
         <tbody>
           <tr v-for="report in reports" :key="report.id" class="report-row">
+            <td>
+              <input type="checkbox" :checked="isSelected(report.id)" @change="toggleSelection(report.id)" />
+            </td>
             <td class="report-id">
               <template v-if="report.loadedInDB">
                 <a href="#" @click.prevent="openReportDetails(report.id)">{{ report.id }}</a>
@@ -137,13 +149,24 @@
       :get-token="getToken"
       @close="isModalOpen = false"
     />
+
+    <!-- Модальное окно массовых действий -->
+    <BulkEditReportsModal
+      :is-open="showBulkModal"
+      :selected-count="selectedIds.length"
+      :available-actions="availableActions"
+      :bulk-action-in-progress="bulkActionInProgress"
+      @close="closeBulkModal"
+      @bulk-action="executeBulkAction"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import ReportDetailsModal from './OtchetiPage/components/ReportDetailsModal.vue'; // Импортируем компонент
+import BulkEditReportsModal from './OtchetiPage/modals/BulkEditReportsModal.vue'; // Модальное окно массовых действий
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
@@ -174,6 +197,120 @@ const exportedReportsStatus = ref(new Set());
 const exportLoadingIds = ref(new Set());
 const serviceLoadingIds = ref(new Set());
 const expenseLoadingIds = ref(new Set());
+
+// === Выбор отчётов и массовые действия ===
+const selectedIds = ref([]); // выбранные ID отчётов
+const showBulkModal = ref(false);
+const bulkActionInProgress = ref(false);
+
+const isSelected = (id) => selectedIds.value.includes(id);
+
+function toggleSelection(id) {
+  if (isSelected(id)) {
+    selectedIds.value = selectedIds.value.filter((x) => x !== id);
+  } else {
+    selectedIds.value.push(id);
+  }
+}
+
+function clearSelection() {
+  selectedIds.value = [];
+}
+
+const allSelected = computed(() => reports.value.length > 0 && reports.value.every(r => selectedIds.value.includes(r.id)));
+
+function toggleSelectAll() {
+  if (allSelected.value) {
+    clearSelection();
+  } else {
+    selectedIds.value = reports.value.map(r => r.id);
+  }
+}
+
+function openBulkModal() {
+  showBulkModal.value = true;
+}
+
+function closeBulkModal() {
+  showBulkModal.value = false;
+}
+
+const availableActions = computed(() => {
+  if (!selectedIds.value.length) return [];
+  const sel = reports.value.filter(r => selectedIds.value.includes(r.id));
+  const allLoaded = sel.every(r => r.loadedInDB);
+  const noneLoaded = sel.every(r => !r.loadedInDB);
+  const allExported = sel.every(r => r.exportedToMS);
+  const noneExported = sel.every(r => !r.exportedToMS);
+  const allReceiptsDone = sel.every(r => r.serviceReceiptsCreated);
+  const noneReceiptsDone = sel.every(r => !r.serviceReceiptsCreated);
+  const allExpensesDone = sel.every(r => r.expenseOrdersCreated);
+  const noneExpensesDone = sel.every(r => !r.expenseOrdersCreated);
+
+  const actions = [];
+  if (noneLoaded) actions.push('loadToDB');
+  if (allLoaded) actions.push('deleteFromDB');
+  if (allLoaded && noneExported) actions.push('exportToMS');
+  if (allLoaded && allExported && noneReceiptsDone) actions.push('createServiceReceipts');
+  if (allLoaded && allExported && noneExpensesDone) actions.push('createExpenseOrders');
+  return actions;
+});
+
+async function executeBulkAction(action) {
+  if (!selectedIds.value.length) return;
+  bulkActionInProgress.value = true;
+  try {
+    const selectedReports = reports.value.filter(r => selectedIds.value.includes(r.id));
+    switch (action) {
+      case 'loadToDB':
+        for (const rep of selectedReports) {
+          if (!rep.loadedInDB) {
+            await loadToDB(rep);
+          }
+        }
+        break;
+      case 'deleteFromDB':
+        for (const rep of selectedReports) {
+          if (rep.loadedInDB) {
+            await deleteFromDB(rep);
+          }
+        }
+        break;
+      case 'exportToMS':
+        for (const rep of selectedReports) {
+          if (!rep.exportedToMS && rep.loadedInDB) {
+            await exportToMS(rep);
+          }
+        }
+        break;
+      case 'createServiceReceipts':
+        for (const rep of selectedReports) {
+          if (!rep.serviceReceiptsCreated && rep.exportedToMS && rep.loadedInDB) {
+            await createServiceReceipts(rep);
+          }
+        }
+        break;
+      case 'createExpenseOrders':
+        for (const rep of selectedReports) {
+          if (!rep.expenseOrdersCreated && rep.exportedToMS && rep.loadedInDB) {
+            await createExpenseOrders(rep);
+          }
+        }
+        break;
+      default:
+        break;
+    }
+    // после выполнения перезагружаем статусы
+    await loadReportsStatus();
+    clearSelection();
+    closeBulkModal();
+  } catch (e) {
+    console.error('Ошибка массового действия:', e);
+    showNotification('Ошибка массовой операции: ' + (e.response?.data?.message || e.message), 'error');
+  } finally {
+    bulkActionInProgress.value = false;
+  }
+}
 
 // Состояние для уведомлений
 const notification = ref({ show: false, message: '', type: 'success' });
@@ -243,6 +380,7 @@ const onIntegrationChange = () => {
   } else {
     reports.value = [];
     loadedReportsStatus.value.clear();
+    clearSelection(); // Очищаем выделение при смене интеграции
   }
 };
 
@@ -593,6 +731,7 @@ watch(selectedIntegrationId, (newValue) => {
   } else {
     reports.value = [];
     loadedReportsStatus.value.clear();
+    clearSelection();
   }
 });
 </script>
@@ -925,5 +1064,30 @@ h3 {
     transform: translateX(0);
     opacity: 1;
   }
+}
+
+/* Стили для панели массовых действий */
+.bulk-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 10px;
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  border-radius: 4px;
+}
+.bulk-btn {
+  background: #17a2b8;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.3s;
+}
+.bulk-btn:hover {
+  background: #138496;
 }
 </style>
