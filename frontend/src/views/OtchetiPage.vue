@@ -330,8 +330,8 @@ const notification = ref({ show: false, message: '', type: 'success' });
 // Состояние для настроек
 const settings = ref({
   reportDepthWeeks: 0, // Будет загружено из БД
-  createServiceReceipts: true, // Автоматически создавать приемки услуг
-  createServiceExpenseOrders: true // Автоматически создавать расходные ордера
+  createServiceReceipts: false, // Автоматически создавать приемки услуг
+  createServiceExpenseOrders: false // Автоматически создавать расходные ордера
 });
 
 // Загрузка настроек интеграции
@@ -346,9 +346,9 @@ const fetchSettings = async () => {
     });
     
     settings.value = {
-      reportDepthWeeks: response.data.reportDepthWeeks || 12,
-      createServiceReceipts: response.data.createServiceReceipts || true,
-      createServiceExpenseOrders: response.data.createServiceExpenseOrders || true
+      reportDepthWeeks: response.data.reportDepthWeeks ?? 12,
+      createServiceReceipts: response.data.createServiceReceipts ?? false,
+      createServiceExpenseOrders: response.data.createServiceExpenseOrders ?? false
     };
     
     console.log(`[OTCHETI] Загружены настройки. Глубина отчетов: ${settings.value.reportDepthWeeks} недель`);
