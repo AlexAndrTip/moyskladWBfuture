@@ -83,12 +83,12 @@ function bulkActionLabel(action) {
 }
 .modal-content {
   background-color: #ffffff;
-  padding: 35px 40px;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-  width: 95%;
-  max-width: 600px;
-  text-align: left;
+  padding: 20px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 300px;
+  max-width: 90%;
+  text-align: center;
   animation: slideIn 0.3s ease-out;
 }
 .modal-content h3 {
@@ -106,16 +106,16 @@ function bulkActionLabel(action) {
   color: #666;
 }
 .modal-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  margin-top: 20px;
-  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  margin-bottom: 20px;
 }
 .big-btn {
-  padding: 15px 20px;
-  font-size: 1.05em;
-  font-weight: bold;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
 }
 .action-btn:disabled {
   background-color: #cccccc !important;
@@ -159,23 +159,21 @@ function bulkActionLabel(action) {
   background-color: #5936a2;
 }
 .cancel-button {
-  background-color: #909399;
-  color: white;
-  padding: 13px 28px;
+  background-color: #6c757d;
+  color: #fff;
+  padding: 8px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 600;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  transition: background-color 0.3s ease;
   display: block;
   width: 100%;
-  max-width: 200px;
   margin: 0 auto;
 }
 .cancel-button:hover {
-  background-color: #a6a9ad;
-  transform: translateY(-2px);
+  background-color: #5a6268;
 }
 @keyframes fadeIn {
   from { opacity: 0; }
