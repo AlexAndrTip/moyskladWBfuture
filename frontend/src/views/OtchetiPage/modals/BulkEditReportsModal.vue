@@ -33,20 +33,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'bulk-action']);
 
 function actionClass(action) {
-  switch (action) {
-    case 'loadToDB':
-      return 'load-db';
-    case 'deleteFromDB':
-      return 'delete-db';
-    case 'exportToMS':
-      return 'export-ms';
-    case 'createServiceReceipts':
-      return 'service-receipts';
-    case 'createExpenseOrders':
-      return 'expense-orders';
-    default:
-      return '';
-  }
+  return action === 'deleteFromDB' ? 'del-btn' : 'ms-btn';
 }
 
 function bulkActionLabel(action) {
@@ -83,8 +70,8 @@ function bulkActionLabel(action) {
 }
 .modal-content {
   background-color: #ffffff;
-  padding: 20px 24px;
-  border-radius: 8px;
+  padding: 20px;
+  border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   width: 300px;
   max-width: 90%;
@@ -96,7 +83,7 @@ function bulkActionLabel(action) {
   margin-bottom: 25px;
   color: #333;
   text-align: center;
-  font-size: 1.8em;
+  font-size: 1.2m;
   font-weight: 600;
 }
 .modal-content p {
@@ -113,55 +100,53 @@ function bulkActionLabel(action) {
   margin-bottom: 20px;
 }
 .big-btn {
-  padding: 8px 12px;
-  font-size: 14px;
+  padding: 6px 12px;
+  font-size: 13px;
   font-weight: 600;
+}
+.ms-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.3s;
+}
+.ms-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+.ms-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+.del-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.3s;
+}
+.del-btn:hover:not(:disabled) {
+  background-color: #a71d2a;
+}
+.del-btn:disabled {
+  background-color: #e0aeb2;
+  cursor: not-allowed;
 }
 .action-btn:disabled {
   background-color: #cccccc !important;
   cursor: not-allowed;
   opacity: 0.8;
 }
-/* Цвета кнопок */
-.load-db {
-  background-color: #007bff;
-  color: #fff;
-}
-.load-db:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-.delete-db {
-  background-color: #dc3545;
-  color: #fff;
-}
-.delete-db:hover:not(:disabled) {
-  background-color: #c82333;
-}
-.export-ms {
-  background-color: #28a745;
-  color: #fff;
-}
-.export-ms:hover:not(:disabled) {
-  background-color: #218838;
-}
-.service-receipts {
-  background-color: #17a2b8;
-  color: #fff;
-}
-.service-receipts:hover:not(:disabled) {
-  background-color: #138496;
-}
-.expense-orders {
-  background-color: #6f42c1;
-  color: #fff;
-}
-.expense-orders:hover:not(:disabled) {
-  background-color: #5936a2;
-}
 .cancel-button {
-  background-color: #6c757d;
-  color: #fff;
-  padding: 8px 20px;
+  background-color: #e0e0e0;
+  color: #333;
+  padding: 7px 16px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -173,7 +158,7 @@ function bulkActionLabel(action) {
   margin: 0 auto;
 }
 .cancel-button:hover {
-  background-color: #5a6268;
+  background-color: #bdbdbd;
 }
 @keyframes fadeIn {
   from { opacity: 0; }
