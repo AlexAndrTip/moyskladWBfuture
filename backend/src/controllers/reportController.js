@@ -153,6 +153,11 @@ exports.getReportDetails = async (req, res) => {
         }, 0);
         const totalDeliveryRub = reportEntries.reduce((sum, entry) => sum + (entry.delivery_rub || 0), 0);
 
+        // Штрафы
+        const penaltySum = reportEntries
+          .filter(e => e.supplier_oper_name === 'Штраф')
+          .reduce((s, e) => s + (e.penalty || 0), 0);
+
         const realizationReportIds = [...new Set(reportEntries.map(e => e.realizationreport_id.toString()))].join(' / ');
 
 
@@ -167,7 +172,7 @@ exports.getReportDetails = async (req, res) => {
             currency: firstEntry.currency_name,
 
             // Заглушки для будущих расчетов
-            penalty: 0,
+            penalty: penaltySum,
             increased_logistics: 0,
             other_fines: 0,
             total_fines: 0,

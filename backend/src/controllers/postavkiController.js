@@ -168,7 +168,7 @@ exports.createDemand = async (req, res) => {
       agent: { meta: { href: orgLink.moyskladCounterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
       contract: { meta: { href: orgLink.moyskladContractHref, type: 'contract', mediaType: 'application/json' } },
       store: { meta: { href: orgLink.moyskladStoreHref, type: 'store', mediaType: 'application/json' } },
-      description: income.warehouseName || '',
+      description:"Принято на склад:  " + income.warehouseName + "\nНомер поставки:  " + income.incomeId,
       moment: momentStr,
       code: income._id.toString(),
       positions // <-- снова передаём позиции
