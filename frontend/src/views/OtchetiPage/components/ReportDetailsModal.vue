@@ -50,13 +50,11 @@
         <hr />
 
         <h4>Удержания</h4>
-        <div class="detail-grid placeholder-section">
-          <div class="detail-item"><strong>Штраф:</strong><span>{{ Number(reportDetails.penalty).toFixed(2) }}</span></div>
-          <div class="detail-item"><strong>Повышенная логистика:</strong><span>{{ Number(reportDetails.increased_logistics).toFixed(2) }}</span></div>
-          <div class="detail-item"><strong>Другие виды штрафов:</strong><span>{{ Number(reportDetails.other_fines).toFixed(2) }}</span></div>
-          <div class="detail-item"><strong>Общая сумма штрафов:</strong><span>{{ Number(reportDetails.total_fines).toFixed(2) }}</span></div>
-          <div class="detail-item"><strong>Корректировка Вознаграждения:</strong><span>{{ Number(reportDetails.reward_correction).toFixed(2) }}</span></div>
-          <div class="detail-item"><strong>Вознаграждение Вайлдберриз (ВВ):</strong><span>{{ Number(reportDetails.wb_reward).toFixed(2) }}</span></div>
+        <div class="detail-grid">
+          <div class="detail-item total-item"><strong>Общая сумма штрафов:</strong><span>{{ Number(reportDetails.total_fines).toFixed(2) }}</span></div>
+          <template v-for="(sum, name) in reportDetails.fines_breakdown" :key="name">
+            <div class="detail-item"><strong>{{ name }}:</strong><span>{{ Number(sum).toFixed(2) }}</span></div>
+          </template>
           <div class="detail-item"><strong>Стоимость хранения:</strong><span>{{ Number(reportDetails.storage_cost).toFixed(2) }}</span></div>
           <div class="detail-item"><strong>Стоимость платной приемки:</strong><span>{{ Number(reportDetails.paid_acceptance_cost).toFixed(2) }}</span></div>
           <template v-for="(sum, name) in reportDetails.other_deductions_payouts" :key="name">
@@ -211,11 +209,6 @@ h3 {
 .detail-item span {
   font-size: 1.05em;
   font-weight: 500;
-}
-
-.placeholder-section .detail-item {
-    border-left-color: #6c757d;
-    opacity: 0.7;
 }
 
 .total-item {

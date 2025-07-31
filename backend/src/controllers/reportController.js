@@ -153,10 +153,15 @@ exports.getReportDetails = async (req, res) => {
         }, 0);
         const totalDeliveryRub = reportEntries.reduce((sum, entry) => sum + (entry.delivery_rub || 0), 0);
 
-        // Штрафы
-        const penaltySum = reportEntries
+        // Штрафы: группируем по bonus_type_name
+        const finesMap = {};
+        reportEntries
           .filter(e => e.supplier_oper_name === 'Штраф')
-          .reduce((s, e) => s + (e.penalty || 0), 0);
+          .forEach(e => {
+            const key = e.bonus_type_name || 'Штраф';
+            finesMap[key] = (finesMap[key] || 0) + (e.penalty || 0);
+          });
+        const totalFines = Object.values(finesMap).reduce((a, b) => a + b, 0);
 
         // Стоимость платной приемки
         const acceptanceSum = reportEntries
@@ -177,6 +182,10 @@ exports.getReportDetails = async (req, res) => {
             otherDeductionsMap[key] = (otherDeductionsMap[key] || 0) + (e.deduction || 0);
           });
 
+        const otherDeductionsTotal = Object.values(otherDeductionsMap).reduce((a,b)=>a+b,0);
+
+        // Итог к оплате
+        const totalToPay = totalPpvzForPay - totalDeliveryRub - totalFines - storageFeeSum - acceptanceSum - otherDeductionsTotal;
 
         const realizationReportIds = [...new Set(reportEntries.map(e => e.realizationreport_id.toString()))].join(' / ');
 
@@ -192,17 +201,14 @@ exports.getReportDetails = async (req, res) => {
             currency: firstEntry.currency_name,
 
             // Заглушки для будущих расчетов
-            penalty: penaltySum,
-            increased_logistics: 0,
-            other_fines: 0,
-            total_fines: 0,
+            total_fines: totalFines,
+            fines_breakdown: finesMap,
             reward_correction: 0,
             wb_reward: 0,
             storage_cost: storageFeeSum,
-
             paid_acceptance_cost: acceptanceSum,
             other_deductions_payouts: otherDeductionsMap,
-            total_to_pay: 0,
+            total_to_pay: totalToPay,
         };
 
         res.json({ success: true, reportDetails });
