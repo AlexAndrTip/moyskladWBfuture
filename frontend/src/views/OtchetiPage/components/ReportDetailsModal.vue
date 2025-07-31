@@ -35,15 +35,15 @@
         <div class="detail-grid">
           <div class="detail-item">
             <strong>Продажа:</strong>
-            <span>{{ reportDetails.total_retail_price.toFixed(2) }}</span>
+            <span>{{ Number(reportDetails.total_retail_price).toFixed(2) }}</span>
           </div>
           <div class="detail-item">
             <strong>К перечислению за товар:</strong>
-            <span>{{ reportDetails.total_ppvz_for_pay.toFixed(2) }}</span>
+            <span>{{ Number(reportDetails.total_ppvz_for_pay).toFixed(2) }}</span>
           </div>
           <div class="detail-item total-item">
             <strong>Итого к оплате:</strong>
-            <span>{{ reportDetails.total_to_pay }}</span>
+            <span>{{ Number(reportDetails.total_to_pay).toFixed(2) }}</span>
           </div>
         </div>
 
@@ -51,16 +51,18 @@
 
         <h4>Удержания</h4>
         <div class="detail-grid placeholder-section">
-          <div class="detail-item"><strong>Штраф:</strong><span>{{ reportDetails.penalty }}</span></div>
-          <div class="detail-item"><strong>Повышенная логистика:</strong><span>{{ reportDetails.increased_logistics }}</span></div>
-          <div class="detail-item"><strong>Другие виды штрафов:</strong><span>{{ reportDetails.other_fines }}</span></div>
-          <div class="detail-item"><strong>Общая сумма штрафов:</strong><span>{{ reportDetails.total_fines }}</span></div>
-          <div class="detail-item"><strong>Корректировка Вознаграждения:</strong><span>{{ reportDetails.reward_correction }}</span></div>
-          <div class="detail-item"><strong>Вознаграждение Вайлдберриз (ВВ):</strong><span>{{ reportDetails.wb_reward }}</span></div>
-          <div class="detail-item"><strong>Стоимость хранения:</strong><span>{{ reportDetails.storage_cost }}</span></div>
-          <div class="detail-item"><strong>Стоимость платной приемки:</strong><span>{{ reportDetails.paid_acceptance_cost }}</span></div>
-          <div class="detail-item"><strong>Прочие удержания/выплаты:</strong><span>{{ reportDetails.other_deductions_payouts }}</span></div>
-          <div class="detail-item"><strong>Стоимость логистики:</strong><span>{{ reportDetails.total_delivery_rub.toFixed(2) }}</span></div>
+          <div class="detail-item"><strong>Штраф:</strong><span>{{ Number(reportDetails.penalty).toFixed(2) }}</span></div>
+          <div class="detail-item"><strong>Повышенная логистика:</strong><span>{{ Number(reportDetails.increased_logistics).toFixed(2) }}</span></div>
+          <div class="detail-item"><strong>Другие виды штрафов:</strong><span>{{ Number(reportDetails.other_fines).toFixed(2) }}</span></div>
+          <div class="detail-item"><strong>Общая сумма штрафов:</strong><span>{{ Number(reportDetails.total_fines).toFixed(2) }}</span></div>
+          <div class="detail-item"><strong>Корректировка Вознаграждения:</strong><span>{{ Number(reportDetails.reward_correction).toFixed(2) }}</span></div>
+          <div class="detail-item"><strong>Вознаграждение Вайлдберриз (ВВ):</strong><span>{{ Number(reportDetails.wb_reward).toFixed(2) }}</span></div>
+          <div class="detail-item"><strong>Стоимость хранения:</strong><span>{{ Number(reportDetails.storage_cost).toFixed(2) }}</span></div>
+          <div class="detail-item"><strong>Стоимость платной приемки:</strong><span>{{ Number(reportDetails.paid_acceptance_cost).toFixed(2) }}</span></div>
+          <template v-for="(sum, name) in reportDetails.other_deductions_payouts" :key="name">
+            <div class="detail-item"><strong>{{ name }}:</strong><span>{{ sum.toFixed(2) }}</span></div>
+          </template>
+          <div class="detail-item"><strong>Стоимость логистики:</strong><span>{{ Number(reportDetails.total_delivery_rub).toFixed(2) }}</span></div>
         </div>
       </div>
     </div>

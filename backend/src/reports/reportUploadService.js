@@ -79,9 +79,8 @@ async function uploadReportToDB({ userId, integrationLinkId, reportId, dateFrom,
 
   if (missingRows.length > 0) {
     const firstMissing = missingRows[0];
-    const errorMsg = `Не удалось зашрузить отчёт "${reportId}", товар ${firstMissing.subject_name}, barcode ${firstMissing.barcode}, ${firstMissing.sa_name} - не найден в БД. Перейдите во вкладку товаров и нажмите - обновить. Проверьте наличие карточки товара в ЛК WB`;
-    console.error('[REPORT_SERVICE] Валидация не пройдена. Пример отсутствующего товара:', firstMissing);
-    throw new Error(errorMsg);
+    console.warn('[REPORT_SERVICE] Найдено', missingRows.length, 'barcode(ов) без соответствия товарам в БД. Пример:', firstMissing);
+    console.warn('[REPORT_SERVICE] Продолжаем загрузку отчёта без проверки баркодов.');
   }
   
   console.log('[REPORT_SERVICE] Получено записей от WB:', data.length);

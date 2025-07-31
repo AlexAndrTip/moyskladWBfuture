@@ -158,6 +158,26 @@ exports.getReportDetails = async (req, res) => {
           .filter(e => e.supplier_oper_name === 'Штраф')
           .reduce((s, e) => s + (e.penalty || 0), 0);
 
+        // Стоимость платной приемки
+        const acceptanceSum = reportEntries
+          .filter(e => e.supplier_oper_name === 'Платная приемка')
+          .reduce((s, e) => s + (e.acceptance || 0), 0);
+
+        // Стоимость хранения
+        const storageFeeSum = reportEntries
+          .filter(e => e.supplier_oper_name === 'Хранение')
+          .reduce((s, e) => s + (e.storage_fee || 0), 0);
+
+        // Прочие удержания / выплаты по bonus_type_name
+        const otherDeductionsMap = {};
+        reportEntries
+          .filter(e => e.supplier_oper_name === 'Удержание')
+          .forEach(e => {
+            const key = e.bonus_type_name || 'Прочее';
+            otherDeductionsMap[key] = (otherDeductionsMap[key] || 0) + (e.deduction || 0);
+          });
+
+
         const realizationReportIds = [...new Set(reportEntries.map(e => e.realizationreport_id.toString()))].join(' / ');
 
 
@@ -178,9 +198,10 @@ exports.getReportDetails = async (req, res) => {
             total_fines: 0,
             reward_correction: 0,
             wb_reward: 0,
-            storage_cost: 0,
-            paid_acceptance_cost: 0,
-            other_deductions_payouts: 0,
+            storage_cost: storageFeeSum,
+
+            paid_acceptance_cost: acceptanceSum,
+            other_deductions_payouts: otherDeductionsMap,
             total_to_pay: 0,
         };
 
