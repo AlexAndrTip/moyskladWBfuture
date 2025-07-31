@@ -46,6 +46,7 @@
             <th>Выгружен в МС</th>
             <th>Приемки услуг в МС</th>
             <th>Расходные ордера в МС</th>
+            <th>Приходный ордер МС</th>
             <th>Действия</th>
           </tr>
         </thead>
@@ -77,6 +78,10 @@
             </td>
             <td class="report-status">
               <span v-if="report.expenseOrdersCreated" class="status-loaded"><i class="fas fa-check-circle"></i></span>
+              <span v-else class="status-not-loaded">—</span>
+            </td>
+            <td class="report-status">
+              <span v-if="report.incomeOrdersCreated" class="status-loaded"><i class="fas fa-check-circle"></i></span>
               <span v-else class="status-not-loaded">—</span>
             </td>
             <td class="report-actions">
@@ -400,6 +405,7 @@ const loadReportsStatus = async () => {
       exportedReportsStatus.value = new Set(response.data.exportedReports || []);
       const receiptsSet = new Set(response.data.serviceReceipts || []);
       const expensesSet = new Set(response.data.expenseOrders || []);
+      const incomeOrdersSet = new Set(response.data.incomeOrders || []);
       
       // Обновляем статус в списке отчетов
       reports.value.forEach(report => {
@@ -407,6 +413,7 @@ const loadReportsStatus = async () => {
         report.exportedToMS = exportedReportsStatus.value.has(report.id);
         report.serviceReceiptsCreated = receiptsSet.has(report.id);
         report.expenseOrdersCreated = expensesSet.has(report.id);
+        report.incomeOrdersCreated = incomeOrdersSet.has(report.id);
       });
     }
   } catch (error) {
@@ -501,6 +508,7 @@ const deleteFromDB = async (report, skipConfirm = false) => {
       report.exportedToMS = false;
       report.serviceReceiptsCreated = false;
       report.expenseOrdersCreated = false;
+      report.incomeOrdersCreated = false;
       exportedReportsStatus.value.delete(report.id);
       serviceLoadingIds.value.delete(report.id);
       expenseLoadingIds.value.delete(report.id);
@@ -705,7 +713,8 @@ const generateReports = () => {
       loadedInDB: isLoadedInDB,
       exportedToMS: false, // Пока всегда false, потом будет из БД
       serviceReceiptsCreated: false,
-      expenseOrdersCreated: false
+      expenseOrdersCreated: false,
+      incomeOrdersCreated: false
     });
     
     // Переходим к следующей неделе

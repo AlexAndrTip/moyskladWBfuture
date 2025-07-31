@@ -105,6 +105,18 @@
           <label class="setting-label">
             <input 
               type="checkbox" 
+              v-model="settings.createIncomeOrders"
+              @change="onSettingChange"
+              class="setting-checkbox"
+            />
+            <span class="setting-text">Создавать приходные ордера совместно с отчетом</span>
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">
+            <input 
+              type="checkbox" 
               v-model="settings.exportFBSOrders"
               @change="onSettingChange"
               class="setting-checkbox"
@@ -186,6 +198,7 @@ const settings = ref({
   autoExportReports: false,
   createServiceReceipts: false,
   createServiceExpenseOrders: false,
+  createIncomeOrders: false,
   exportFBSOrders: false,
   reportDepthWeeks: 0, // Будет загружено из БД
 });
@@ -221,6 +234,7 @@ const fetchSettings = async () => {
       autoExportReports: response.data.autoExportReports || false,
       createServiceReceipts: response.data.createServiceReceipts || false,
       createServiceExpenseOrders: response.data.createServiceExpenseOrders || false,
+      createIncomeOrders: response.data.createIncomeOrders || false,
       exportFBSOrders: response.data.exportFBSOrders || false,
       reportDepthWeeks: response.data.reportDepthWeeks || 12, // Загружаем точное значение из БД
     };
@@ -264,6 +278,7 @@ const onSettingChange = () => {
   if (!settings.value.createServiceReceipts && settings.value.createServiceExpenseOrders) {
     settings.value.createServiceExpenseOrders = false;
   }
+  // Нет зависимостей для приходных ордеров пока
   // Если отключили выгрузку товаров, отключаем и выгрузку отчетов
   if (!settings.value.autoExportProducts && settings.value.autoExportReports) {
     settings.value.autoExportReports = false;
