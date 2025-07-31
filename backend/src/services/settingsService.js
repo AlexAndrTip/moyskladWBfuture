@@ -61,6 +61,7 @@ async function updateSettings(integrationLinkId, userId, settingsData) {
       // Обновляем существующие настройки
       Object.assign(settings, settingsData);
       if (settingsData.createIncomeOrders !== undefined) settings.createIncomeOrders = settingsData.createIncomeOrders;
+      if (settingsData.createServiceExpenseOrders !== undefined) settings.createServiceExpenseOrders = settingsData.createServiceExpenseOrders;
     }
     
     await settings.save();

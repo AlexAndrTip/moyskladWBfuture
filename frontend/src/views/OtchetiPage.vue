@@ -342,7 +342,8 @@ const notification = ref({ show: false, message: '', type: 'success' });
 const settings = ref({
   reportDepthWeeks: 0, // Будет загружено из БД
   createServiceReceipts: false, // Автоматически создавать приемки услуг
-  createServiceExpenseOrders: false // Автоматически создавать расходные ордера
+  createServiceExpenseOrders: false, // Автоматически создавать расходные ордера
+  createIncomeOrders: false // Автоматически создавать приходные ордера
 });
 
 // Загрузка настроек интеграции
@@ -359,7 +360,8 @@ const fetchSettings = async () => {
     settings.value = {
       reportDepthWeeks: response.data.reportDepthWeeks ?? 12,
       createServiceReceipts: response.data.createServiceReceipts ?? false,
-      createServiceExpenseOrders: response.data.createServiceExpenseOrders ?? false
+      createServiceExpenseOrders: response.data.createServiceExpenseOrders ?? false,
+      createIncomeOrders: response.data.createIncomeOrders ?? false
     };
     
     console.log(`[OTCHETI] Загружены настройки. Глубина отчетов: ${settings.value.reportDepthWeeks} недель`);
@@ -577,7 +579,15 @@ const exportToMS = async (report) => {
         await createServiceReceipts(report);
         if (settings.value.createServiceExpenseOrders && !report.expenseOrdersCreated) {
           await createExpenseOrders(report);
+          // также создаём приходный ордер, если включена соответствующая настройка
+          if (settings.value.createIncomeOrders && !report.incomeOrdersCreated) {
+            await createIncomeOrders(report);
+          }
         }
+      }
+      // Если настроена только автоматическая генерация приходных ордеров без расходных
+      if (settings.value.createIncomeOrders && !report.incomeOrdersCreated && !settings.value.createServiceExpenseOrders) {
+        await createIncomeOrders(report);
       }
     } else {
       showNotification('Не удалось выгрузить отчет в МойСклад', 'error');

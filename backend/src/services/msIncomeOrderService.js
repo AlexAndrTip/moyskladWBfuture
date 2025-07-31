@@ -17,6 +17,7 @@ async function createIncomeOrder({ userId, reportId, integrationLinkId }) {
   if (!orgLink) throw new Error('OrganizationLink не настроен');
   const organizationHref = orgLink.moyskladOrganizationHref;
   const counterpartyHref = orgLink.moyskladCounterpartyHref;
+  const contractHref = orgLink.moyskladContractHref;
   if (!organizationHref || !counterpartyHref) throw new Error('Не заполнены href организации или контрагента');
 
   // Сумма к поступлению: ppvz_for_pay продажи минус возвраты
@@ -35,6 +36,7 @@ async function createIncomeOrder({ userId, reportId, integrationLinkId }) {
   const payload = {
     organization: { meta: { href: organizationHref, type: 'organization', mediaType: 'application/json' } },
     agent: { meta: { href: counterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
+    contract: contractHref ? { meta: { href: contractHref, type: 'contract', mediaType: 'application/json' } } : undefined,
     sum: cents,
     moment: `${reportRows[0].date_to} 00:00:00`,
     operations: reportHref ? [{ meta: { href: reportHref, type: 'commissionreportin', mediaType: 'application/json' } }] : [],
