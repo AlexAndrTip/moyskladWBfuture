@@ -5,6 +5,7 @@ const WbCabinet = require('../models/WbCabinet');
 const { exportReportToMS: exportReportToMSService } = require('../services/msReportExportService');
 const { createServiceReceipts: createServiceReceiptsService } = require('../services/msServiceSupplyService');
 const { createExpenseOrders: createExpenseOrdersService } = require('../services/msServiceSupplyService');
+const { createIncomeOrder: createIncomeOrderService } = require('../services/msIncomeOrderService');
 
 // POST /api/reports/upload
 // { integrationLinkId, reportId, dateFrom, dateTo }
@@ -76,10 +77,11 @@ exports.getReportsStatus = async (req, res) => {
     const reportsCursor = await Report.find({
       user: userId,
       integrationlinks_id: integrationLinkId
-    }).select('Report_id exportedToMS serviceReceiptsCreated expenseOrdersCreated').lean();
+    }).select('Report_id exportedToMS serviceReceiptsCreated expenseOrdersCreated incomeOrdersCreated').lean();
 
     const serviceReceipts = new Set();
     const expenseOrders = new Set();
+    const incomeOrders = new Set();
 
     const loadedReports = new Set();
     const exportedReports = new Set();
@@ -89,6 +91,7 @@ exports.getReportsStatus = async (req, res) => {
       if (r.exportedToMS) exportedReports.add(r.Report_id);
       if (r.serviceReceiptsCreated) serviceReceipts.add(r.Report_id);
       if (r.expenseOrdersCreated) expenseOrders.add(r.Report_id);
+      if (r.incomeOrdersCreated) incomeOrders.add(r.Report_id);
     }
 
     res.json({ 
@@ -97,6 +100,7 @@ exports.getReportsStatus = async (req, res) => {
       exportedReports: Array.from(exportedReports),
       serviceReceipts: Array.from(serviceReceipts),
       expenseOrders: Array.from(expenseOrders),
+      incomeOrders: Array.from(incomeOrders),
       count: loadedReports.size 
     });
   } catch (error) {
@@ -268,5 +272,21 @@ exports.createExpenseOrders = async (req, res) => {
   } catch (error) {
     console.error('[REPORT_CONTROLLER] Ошибка создания расходных ордеров:', error);
     res.status(500).json({ message: error.message || 'Ошибка сервера при создании расходных ордеров' });
+  }
+}; 
+
+// POST /api/reports/income-orders
+exports.createIncomeOrders = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { integrationLinkId, reportId } = req.body;
+    if (!integrationLinkId || !reportId) {
+      return res.status(400).json({ message: 'Необходимы integrationLinkId и reportId' });
+    }
+    const result = await createIncomeOrderService({ userId, integrationLinkId, reportId });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[REPORT_CONTROLLER] Ошибка создания приходных ордеров:', error);
+    res.status(500).json({ message: error.message || 'Ошибка сервера при создании приходных ордеров' });
   }
 }; 

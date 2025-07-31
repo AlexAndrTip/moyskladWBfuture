@@ -48,6 +48,8 @@ function bulkActionLabel(action) {
       return props.bulkActionInProgress ? 'Создание…' : 'Создать приемки услуг';
     case 'createExpenseOrders':
       return props.bulkActionInProgress ? 'Создание…' : 'Создать расходные ордера';
+    case 'createIncomeOrders':
+      return props.bulkActionInProgress ? 'Создание…' : 'Создать приходный ордер';
     default:
       return '';
   }

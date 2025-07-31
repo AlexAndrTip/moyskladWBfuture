@@ -65,6 +65,7 @@ const ReportSchema = new mongoose.Schema({
   msSupplyHref: { type: String },
   serviceReceiptsCreated: { type: Boolean, default: false },
   expenseOrdersCreated: { type: Boolean, default: false },
+  incomeOrdersCreated: { type: Boolean, default: false },
 }, { timestamps: true });
 
 ReportSchema.index({ user: 1, integrationlinks_id: 1, Report_id: 1 });

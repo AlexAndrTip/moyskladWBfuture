@@ -20,6 +20,7 @@ async function getSettings(integrationLinkId, userId) {
         autoExportReports: false,
         createServiceReceipts: false,
         createServiceExpenseOrders: false,
+        createIncomeOrders: false,
         exportFBSOrders: false,
         reportDepthWeeks: 12, // Добавляем дефолтное значение
       });
@@ -59,6 +60,7 @@ async function updateSettings(integrationLinkId, userId, settingsData) {
     } else {
       // Обновляем существующие настройки
       Object.assign(settings, settingsData);
+      if (settingsData.createIncomeOrders !== undefined) settings.createIncomeOrders = settingsData.createIncomeOrders;
     }
     
     await settings.save();

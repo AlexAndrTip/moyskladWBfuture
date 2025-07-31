@@ -117,7 +117,7 @@
                   class="action-btn service-btn"
                 >
                   <span v-if="serviceLoadingIds.has(report.id)" class="loading-spinner"></span>
-                  {{ serviceLoadingIds.has(report.id) ? 'Создание...' : 'Создать приемки услуг' }}
+                  {{ serviceLoadingIds.has(report.id) ? 'Создание...' : 'Приемки услуг' }}
                 </button>
                 <button 
                   @click="createExpenseOrders(report)" 
@@ -125,7 +125,15 @@
                   class="action-btn expense-btn"
                 >
                   <span v-if="expenseLoadingIds.has(report.id)" class="loading-spinner"></span>
-                  {{ expenseLoadingIds.has(report.id) ? 'Создание...' : 'Создать расходные ордера' }}
+                  {{ expenseLoadingIds.has(report.id) ? 'Создание...' : 'Расходные ордера' }}
+                </button>
+                <button 
+                  @click="createIncomeOrders(report)" 
+                  :disabled="!report.loadedInDB || !report.exportedToMS || report.incomeOrdersCreated || incomeLoadingIds.has(report.id)"
+                  class="action-btn income-btn"
+                >
+                  <span v-if="incomeLoadingIds.has(report.id)" class="loading-spinner"></span>
+                  {{ incomeLoadingIds.has(report.id) ? 'Создание...' : 'Приходный ордер' }}
                 </button>
               </div>
             </td>
@@ -202,6 +210,7 @@ const exportedReportsStatus = ref(new Set());
 const exportLoadingIds = ref(new Set());
 const serviceLoadingIds = ref(new Set());
 const expenseLoadingIds = ref(new Set());
+const incomeLoadingIds = ref(new Set());
 
 // === Выбор отчётов и массовые действия ===
 const selectedIds = ref([]); // выбранные ID отчётов
@@ -258,6 +267,7 @@ const availableActions = computed(() => {
   if (allLoaded && noneExported) actions.push('exportToMS');
   if (allLoaded && allExported && noneReceiptsDone) actions.push('createServiceReceipts');
   if (allLoaded && allExported && noneExpensesDone) actions.push('createExpenseOrders');
+  if (allLoaded && allExported && sel.every(r=>!r.incomeOrdersCreated)) actions.push('createIncomeOrders');
   return actions;
 });
 
@@ -301,6 +311,13 @@ async function executeBulkAction(action) {
         for (const rep of selectedReports) {
           if (!rep.expenseOrdersCreated && rep.exportedToMS && rep.loadedInDB) {
             await createExpenseOrders(rep);
+          }
+        }
+        break;
+      case 'createIncomeOrders':
+        for (const rep of selectedReports) {
+          if (!rep.incomeOrdersCreated && rep.exportedToMS && rep.loadedInDB) {
+            await createIncomeOrders(rep);
           }
         }
         break;
@@ -512,6 +529,7 @@ const deleteFromDB = async (report, skipConfirm = false) => {
       exportedReportsStatus.value.delete(report.id);
       serviceLoadingIds.value.delete(report.id);
       expenseLoadingIds.value.delete(report.id);
+      incomeLoadingIds.value.delete(report.id);
     } else {
       showNotification('Ошибка удаления отчета из БД', 'error');
     }
@@ -631,6 +649,35 @@ const createExpenseOrders = async (report) => {
     showNotification('Ошибка создания расходных ордеров: ' + (error.response?.data?.message || error.message), 'error');
   } finally {
     expenseLoadingIds.value.delete(report.id);
+  }
+};
+
+// Создание приходных ордеров
+const createIncomeOrders = async (report) => {
+  if (!selectedIntegrationId.value) return;
+  incomeLoadingIds.value.add(report.id);
+  try {
+    const response = await axios.post(`${API_BASE_URL}/reports/income-orders`, {
+      integrationLinkId: selectedIntegrationId.value,
+      reportId: report.id
+    }, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    if (response.data.success) {
+      if (response.data.already) {
+        showNotification(`Приходный ордер для отчёта ${report.id} уже создан.`, 'info');
+      } else {
+        showNotification(`Приходный ордер для отчёта ${report.id} успешно создан!`);
+      }
+      report.incomeOrdersCreated = true;
+    } else {
+      showNotification('Не удалось создать приходный ордер', 'error');
+    }
+  } catch (error) {
+    console.error('Ошибка создания приходного ордера:', error);
+    showNotification('Ошибка создания приходного ордера: ' + (error.response?.data?.message || error.message), 'error');
+  } finally {
+    incomeLoadingIds.value.delete(report.id);
   }
 };
 
@@ -980,6 +1027,20 @@ h3 {
 }
 
 .expense-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.income-btn {
+  background-color: #007bff; /* Синий цвет для приходных ордеров */
+  color: white;
+}
+
+.income-btn:hover {
+  background-color: #0056b3;
+}
+
+.income-btn:disabled {
   background-color: #6c757d;
   cursor: not-allowed;
 }

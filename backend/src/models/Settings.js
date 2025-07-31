@@ -36,6 +36,11 @@ const SettingsSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  // Создавать приходные ордера совместно с отчётами
+  createIncomeOrders: {
+    type: Boolean,
+    default: false,
+  },
   // Выгружать заказы FBS в МС
   exportFBSOrders: {
     type: Boolean,
