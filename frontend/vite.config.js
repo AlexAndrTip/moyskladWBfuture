@@ -10,6 +10,8 @@ export default defineConfig({
   // Если у вас есть другие конфигурации, они могут быть здесь.
   // Например, для CORS прокси, если понадобится:
   server: {
+    host: '0.0.0.0',
+    port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:3900', // URL вашего бэкенда

@@ -36,13 +36,18 @@ console.log('------------------------------------');
 const PORT = process.env.PORT || 3900;
 const MONGO_URI = process.env.MONGO_URI;
 
-// --- Добавляем CORS middleware сюда ---
+// --- Обновлённый CORS middleware ---
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  'http://localhost:5173'
+].filter(Boolean);
+
 app.use(cors({
-  origin: 'http://localhost:5173', // <-- Разрешаем запросы только с вашего фронтенда
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // <-- Разрешаем необходимые HTTP-методы
-  credentials: true // <-- Разрешаем передачу куки и заголовков авторизации
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
 }));
-// --- Конец CORS middleware ---
+// --- Конец обновлённого CORS middleware ---
 
 // Middleware для парсинга JSON-тела запросов
 app.use(express.json());
