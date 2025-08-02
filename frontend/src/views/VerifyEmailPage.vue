@@ -1,83 +1,120 @@
 <template>
   <div class="verify-container">
-    <div v-if="!isLoading && !error" class="success-content">
-      <div class="success-icon">✓</div>
-      <h2>Email подтвержден!</h2>
-      <p>{{ message }}</p>
-      <button @click="goToLogin" class="login-btn">Войти в систему</button>
+    <div v-if="isLoading" class="loading">
+      <h2>Подтверждение email...</h2>
+      <p>Пожалуйста, подождите...</p>
     </div>
     
-    <div v-if="!isLoading && error" class="error-content">
-      <div class="error-icon">✗</div>
-      <h2>Ошибка подтверждения</h2>
-      <p>{{ error }}</p>
+    <div v-else-if="isSuccess" class="success">
+      <h2>Email подтвержден!</h2>
+      <p>{{ successMessage }}</p>
       <div class="actions">
-        <button @click="resendVerification" class="resend-btn">Отправить повторно</button>
-        <button @click="goToLogin" class="login-btn">Вернуться к входу</button>
+        <router-link to="/" class="btn btn-primary">Войти в систему</router-link>
       </div>
     </div>
     
-    <div v-if="isLoading" class="loading-content">
-      <div class="loading-spinner"></div>
-      <p>Проверяем токен подтверждения...</p>
+    <div v-else-if="isError" class="error">
+      <h2>Ошибка подтверждения</h2>
+      <p>{{ errorMessage }}</p>
+      <div class="actions">
+        <button @click="resendVerification" class="btn btn-secondary" :disabled="resendLoading">
+          {{ resendLoading ? 'Отправка...' : 'Отправить повторно' }}
+        </button>
+        <router-link to="/" class="btn btn-primary">Вернуться к входу</router-link>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
-// Определяем базовый URL API с запасным вариантом
-const API_BASE_URL = import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_BASE_URL || '/api');
-console.log('DEV mode?', import.meta.env.DEV, ' | API_BASE_URL (verify):', API_BASE_URL);
-
-const router = useRouter();
 const route = useRoute();
-const isLoading = ref(true);
-const error = ref('');
-const message = ref('');
+const router = useRouter();
 
-onMounted(async () => {
+const isLoading = ref(true);
+const isSuccess = ref(false);
+const isError = ref(false);
+const successMessage = ref('');
+const errorMessage = ref('');
+const resendLoading = ref(false);
+
+const verifyEmail = async () => {
   const token = route.query.token;
   
   if (!token) {
-    error.value = 'Отсутствует токен подтверждения';
+    isError.value = true;
+    errorMessage.value = 'Токен подтверждения отсутствует';
     isLoading.value = false;
     return;
   }
-  
+
   try {
-    const response = await axios.get(`${API_BASE_URL}/auth/verify-email?token=${token}`);
-    message.value = response.data.message;
-    isLoading.value = false;
-  } catch (err) {
-    console.error('Verification error:', err);
-    if (err.response && err.response.data && err.response.data.message) {
-      error.value = err.response.data.message;
-    } else {
-      error.value = 'Произошла ошибка при подтверждении email';
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/auth/verify-email?token=${token}`);
+    
+    if (response.data.message) {
+      isSuccess.value = true;
+      successMessage.value = response.data.message;
     }
+  } catch (error) {
+    console.error('Verification error:', error);
+    isError.value = true;
+    
+    if (error.response && error.response.data && error.response.data.message) {
+      errorMessage.value = error.response.data.message;
+    } else {
+      errorMessage.value = 'Произошла ошибка при подтверждении email. Попробуйте позже.';
+    }
+  } finally {
     isLoading.value = false;
   }
-});
-
-const goToLogin = () => {
-  router.push('/login');
 };
 
 const resendVerification = async () => {
-  // Здесь можно добавить логику для повторной отправки email
-  // Пока просто перенаправляем на страницу входа
-  router.push('/login');
+  resendLoading.value = true;
+  
+  try {
+    // Здесь нужно получить email пользователя
+    // Для простоты показываем форму для ввода email
+    const email = prompt('Введите ваш email для повторной отправки подтверждения:');
+    
+    if (!email) {
+      resendLoading.value = false;
+      return;
+    }
+
+    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/resend-verification`, {
+      email: email
+    });
+    
+    if (response.data.message) {
+      alert(response.data.message);
+      router.push('/');
+    }
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    
+    if (error.response && error.response.data && error.response.data.message) {
+      alert(error.response.data.message);
+    } else {
+      alert('Ошибка при повторной отправке подтверждения. Попробуйте позже.');
+    }
+  } finally {
+    resendLoading.value = false;
+  }
 };
+
+onMounted(() => {
+  verifyEmail();
+});
 </script>
 
 <style scoped>
 .verify-container {
   max-width: 500px;
-  margin: 100px auto;
+  margin: 50px auto;
   padding: 40px;
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -86,102 +123,83 @@ const resendVerification = async () => {
   text-align: center;
 }
 
-.success-content,
-.error-content,
-.loading-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.success-icon {
-  width: 80px;
-  height: 80px;
-  background-color: #28a745;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  font-weight: bold;
-}
-
-.error-icon {
-  width: 80px;
-  height: 80px;
-  background-color: #dc3545;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  font-weight: bold;
-}
-
-.loading-spinner {
-  width: 60px;
-  height: 60px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #007bff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-h2 {
+.loading h2,
+.success h2,
+.error h2 {
   color: #333;
-  margin: 0;
-  font-size: 24px;
+  margin-bottom: 20px;
 }
 
-p {
+.loading p,
+.success p,
+.error p {
   color: #666;
-  margin: 0;
+  margin-bottom: 30px;
   font-size: 16px;
-  line-height: 1.5;
+}
+
+.success h2 {
+  color: #27ae60;
+}
+
+.error h2 {
+  color: #e74c3c;
 }
 
 .actions {
   display: flex;
   gap: 15px;
-  flex-wrap: wrap;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
-.login-btn,
-.resend-btn {
+.btn {
   padding: 12px 24px;
   border: none;
   border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
   text-decoration: none;
-  display: inline-block;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
   transition: background-color 0.3s ease;
+  display: inline-block;
 }
 
-.login-btn {
-  background-color: #007bff;
+.btn-primary {
+  background-color: #4CAF50;
   color: white;
 }
 
-.login-btn:hover {
-  background-color: #0056b3;
+.btn-primary:hover {
+  background-color: #45a049;
 }
 
-.resend-btn {
+.btn-secondary {
   background-color: #6c757d;
   color: white;
 }
 
-.resend-btn:hover {
-  background-color: #545b62;
+.btn-secondary:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .verify-container {
+    margin: 20px;
+    padding: 20px;
+  }
+  
+  .actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+  }
 }
 </style> 

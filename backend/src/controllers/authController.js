@@ -3,6 +3,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const Limit = require('../models/Limit');
 const bcrypt = require('bcryptjs');
+const { sendVerificationEmail } = require('../services/emailService');
 
 // Генерация JWT токена
 const generateToken = (id, role) => {
@@ -21,9 +22,17 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ username });
 
     if (user && (await user.matchPassword(password))) {
+      // Проверяем, верифицирован ли email
+      if (!user.isVerified) {
+        return res.status(401).json({ 
+          message: 'Пожалуйста, подтвердите ваш email адрес перед входом в систему' 
+        });
+      }
+
       res.json({
         _id: user._id,
         username: user.username,
+        email: user.email,
         role: user.role,
         token: generateToken(user._id, user.role),
       });
@@ -35,26 +44,54 @@ exports.login = async (req, res) => {
   }
 };
 
-// @desc    Регистрация нового пользователя (для начального создания админа, если его нет)
+// @desc    Регистрация нового пользователя с подтверждением email
 // @route   POST /api/auth/register
-// @access  Public (обычно защищен, но для первого админа можно сделать публичным)
+// @access  Public
 exports.register = async (req, res) => {
-  const { username, password, role } = req.body;
+  const { username, email, password, confirmPassword } = req.body;
 
   try {
-    const userExists = await User.findOne({ username });
+    // Проверяем, что пароли совпадают
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: 'Пароли не совпадают' });
+    }
 
+    // Проверяем, что пользователь с таким именем не существует
+    const userExists = await User.findOne({ username });
     if (userExists) {
       return res.status(400).json({ message: 'Пользователь с таким именем уже существует' });
     }
 
+    // Проверяем, что email не занят
+    const emailExists = await User.findOne({ email });
+    if (emailExists) {
+      return res.status(400).json({ message: 'Пользователь с таким email уже существует' });
+    }
+
+    // Создаем пользователя
     const user = await User.create({
       username,
+      email,
       password,
-      role: role || 'user',
+      role: 'user', // Все новые пользователи получают роль user
     });
 
     if (user) {
+      // Генерируем токен верификации
+      const verificationToken = user.generateVerificationToken();
+      await user.save();
+
+      // Отправляем email для подтверждения
+      const emailSent = await sendVerificationEmail(email, username, verificationToken);
+      
+      if (!emailSent) {
+        // Если email не отправлен, удаляем пользователя
+        await User.findByIdAndDelete(user._id);
+        return res.status(500).json({ 
+          message: 'Ошибка отправки email подтверждения. Попробуйте позже.' 
+        });
+      }
+
       // --- Инициализируем лимиты для нового пользователя ---
       await Limit.create({
         user: user._id,
@@ -65,15 +102,93 @@ exports.register = async (req, res) => {
       // --- Конец инициализации лимитов ---
 
       res.status(201).json({
+        message: 'Регистрация успешна! Проверьте ваш email для подтверждения аккаунта.',
         _id: user._id,
         username: user.username,
+        email: user.email,
         role: user.role,
-        token: generateToken(user._id, user.role),
+        isVerified: user.isVerified
       });
     } else {
       res.status(400).json({ message: 'Неверные данные пользователя' });
     }
   } catch (error) {
     res.status(500).json({ message: 'Ошибка сервера при регистрации', error: error.message });
+  }
+};
+
+// @desc    Подтверждение email
+// @route   GET /api/auth/verify-email
+// @access  Public
+exports.verifyEmail = async (req, res) => {
+  const { token } = req.query;
+
+  try {
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'Недействительный или истекший токен подтверждения' 
+      });
+    }
+
+    // Подтверждаем email
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationExpires = undefined;
+    await user.save();
+
+    res.json({ 
+      message: 'Email успешно подтвержден! Теперь вы можете войти в систему.' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Ошибка сервера при подтверждении email', 
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Повторная отправка email подтверждения
+// @route   POST /api/auth/resend-verification
+// @access  Public
+exports.resendVerification = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь с таким email не найден' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'Email уже подтвержден' });
+    }
+
+    // Генерируем новый токен верификации
+    const verificationToken = user.generateVerificationToken();
+    await user.save();
+
+    // Отправляем email для подтверждения
+    const emailSent = await sendVerificationEmail(email, user.username, verificationToken);
+    
+    if (!emailSent) {
+      return res.status(500).json({ 
+        message: 'Ошибка отправки email подтверждения. Попробуйте позже.' 
+      });
+    }
+
+    res.json({ 
+      message: 'Email подтверждения отправлен повторно. Проверьте вашу почту.' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Ошибка сервера при повторной отправке email', 
+      error: error.message 
+    });
   }
 };

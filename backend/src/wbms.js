@@ -1,5 +1,14 @@
 // backend/src/wbms.js
-require('dotenv').config();; // Загружаем переменные окружения
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') }); // Загружаем переменные окружения
+
+// Проверяем загрузку переменных сразу после dotenv
+console.log('=== Проверка после загрузки dotenv ===');
+console.log('SMTP_HOST:', process.env.SMTP_HOST);
+console.log('SMTP_USER:', process.env.SMTP_USER);
+console.log('SMTP_PASS:', process.env.SMTP_PASS ? '*****' : 'UNDEFINED');
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+console.log('=====================================');
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -28,6 +37,10 @@ console.log('--- Проверка переменных окружения ---');
 console.log('process.env.PORT:', process.env.PORT);
 console.log('process.env.MONGO_URI:', process.env.MONGO_URI);
 console.log('process.env.JWT_SECRET:', process.env.JWT_SECRET ? '*****' : 'UNDEFINED'); // Скрываем реальный секрет
+console.log('process.env.SMTP_HOST:', process.env.SMTP_HOST);
+console.log('process.env.SMTP_USER:', process.env.SMTP_USER);
+console.log('process.env.SMTP_PASS:', process.env.SMTP_PASS ? '*****' : 'UNDEFINED');
+console.log('process.env.FRONTEND_URL:', process.env.FRONTEND_URL);
 
 console.log('------------------------------------');
 // --- Конец добавленных строк ---
@@ -37,14 +50,10 @@ const PORT = process.env.PORT || 3900;
 const MONGO_URI = process.env.MONGO_URI;
 
 // --- Обновлённый CORS middleware ---
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
-  'http://localhost:5173'
-].filter(Boolean);
-
 app.use(cors({
-  origin: allowedOrigins,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: ['http://localhost:5173', 'http://217.15.53.224:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true
 }));
 // --- Конец обновлённого CORS middleware ---

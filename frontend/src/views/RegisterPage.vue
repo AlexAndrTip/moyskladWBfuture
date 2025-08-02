@@ -8,20 +8,20 @@
           type="text" 
           id="username" 
           v-model="formData.username" 
-          :class="{ 'error': errors.username }"
           required 
+          :class="{ 'error': errors.username }"
         />
         <span v-if="errors.username" class="error-text">{{ errors.username }}</span>
       </div>
       
       <div class="form-group">
-        <label for="email">Email адрес:</label>
+        <label for="email">Электронная почта:</label>
         <input 
           type="email" 
           id="email" 
           v-model="formData.email" 
-          :class="{ 'error': errors.email }"
           required 
+          :class="{ 'error': errors.email }"
         />
         <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
       </div>
@@ -32,8 +32,8 @@
           type="password" 
           id="password" 
           v-model="formData.password" 
-          :class="{ 'error': errors.password }"
           required 
+          :class="{ 'error': errors.password }"
         />
         <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
       </div>
@@ -44,24 +44,23 @@
           type="password" 
           id="confirmPassword" 
           v-model="formData.confirmPassword" 
-          :class="{ 'error': errors.confirmPassword }"
           required 
+          :class="{ 'error': errors.confirmPassword }"
         />
         <span v-if="errors.confirmPassword" class="error-text">{{ errors.confirmPassword }}</span>
       </div>
       
       <button type="submit" :disabled="isLoading">
-        <span v-if="isLoading" class="loading-spinner"></span>
         {{ isLoading ? 'Регистрация...' : 'Зарегистрироваться' }}
       </button>
     </form>
     
     <div class="login-link">
-      <p>Уже есть аккаунт? <router-link to="/login">Войти</router-link></p>
+      <p>Уже есть аккаунт? <router-link to="/">Войти</router-link></p>
     </div>
     
-    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
     <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
   </div>
 </template>
 
@@ -72,8 +71,8 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const isLoading = ref(false);
-const errorMessage = ref('');
 const successMessage = ref('');
+const errorMessage = ref('');
 
 const formData = reactive({
   username: '',
@@ -99,11 +98,6 @@ const validateForm = () => {
   // Валидация имени пользователя
   if (formData.username.length < 3) {
     errors.username = 'Имя пользователя должно содержать минимум 3 символа';
-    isValid = false;
-  }
-  
-  if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-    errors.username = 'Имя пользователя может содержать только буквы, цифры и знак подчеркивания';
     isValid = false;
   }
   
@@ -142,19 +136,14 @@ const register = async () => {
     const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/register`, {
       username: formData.username,
       email: formData.email,
-      password: formData.password
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
     });
 
     if (response.data.message) {
       successMessage.value = response.data.message;
-      
-      // Очищаем форму
+      // Очищаем форму после успешной регистрации
       Object.keys(formData).forEach(key => formData[key] = '');
-      
-      // Перенаправляем на страницу входа через 3 секунды
-      setTimeout(() => {
-        router.push('/login');
-      }, 3000);
     }
   } catch (error) {
     console.error('Registration error:', error);
@@ -231,10 +220,6 @@ button {
   font-size: 18px;
   width: 100%;
   transition: background-color 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
 }
 
 button:hover:not(:disabled) {
@@ -242,22 +227,8 @@ button:hover:not(:disabled) {
 }
 
 button:disabled {
-  background-color: #6c757d;
+  background-color: #cccccc;
   cursor: not-allowed;
-}
-
-.loading-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #ffffff;
-  border-top: 2px solid transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 .login-link {
@@ -266,12 +237,23 @@ button:disabled {
 }
 
 .login-link a {
-  color: #007bff;
+  color: #4CAF50;
   text-decoration: none;
+  font-weight: bold;
 }
 
 .login-link a:hover {
   text-decoration: underline;
+}
+
+.success-message {
+  color: #27ae60;
+  margin-top: 15px;
+  font-weight: bold;
+  text-align: center;
+  padding: 10px;
+  background-color: #d5f4e6;
+  border-radius: 5px;
 }
 
 .error-message {
@@ -279,12 +261,8 @@ button:disabled {
   margin-top: 15px;
   font-weight: bold;
   text-align: center;
-}
-
-.success-message {
-  color: #28a745;
-  margin-top: 15px;
-  font-weight: bold;
-  text-align: center;
+  padding: 10px;
+  background-color: #fadbd8;
+  border-radius: 5px;
 }
 </style> 

@@ -1,9 +1,5 @@
 const nodemailer = require('nodemailer');
 const path = require('path');
-// Подстраховка: если FRONTEND_URL не задан, пробуем загрузить .env
-if (!process.env.FRONTEND_URL) {
-  require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
-}
 
 // Создаем транспортер для отправки email
 const createTransporter = () => {
@@ -36,6 +32,11 @@ const createTransporter = () => {
     secure: config.secure,
     user: config.auth.user
   });
+  
+  console.log('Environment variables check:');
+  console.log('SMTP_HOST:', process.env.SMTP_HOST);
+  console.log('SMTP_USER:', process.env.SMTP_USER);
+  console.log('SMTP_PASS:', process.env.SMTP_PASS ? '*****' : 'UNDEFINED');
 
   return nodemailer.createTransport(config);
 };

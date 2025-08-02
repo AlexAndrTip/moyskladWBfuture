@@ -1,6 +1,8 @@
 // frontend/src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router';
 import LoginPage from '../views/LoginPage.vue'; // Путь к LoginPage
+import RegisterPage from '../views/RegisterPage.vue'; // Путь к RegisterPage
+import VerifyEmailPage from '../views/VerifyEmailPage.vue'; // Путь к VerifyEmailPage
 import AdminPanelPage from '../views/AdminPanelPage.vue'; // Путь к AdminPanelPage
 import UserDashboardPage from '../views/UserDashboardPage.vue';
 
@@ -21,6 +23,16 @@ const routes = [
     path: '/',
     name: 'Login',
     component: LoginPage,
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: RegisterPage,
+  },
+  {
+    path: '/verify-email',
+    name: 'VerifyEmail',
+    component: VerifyEmailPage,
   },
   {
     path: '/admin',

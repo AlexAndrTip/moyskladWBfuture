@@ -12,6 +12,9 @@
       </div>
       <button type="submit">Войти</button>
     </form>
+    <div class="register-link">
+      <p>Нет аккаунта? <router-link to="/register">Зарегистрироваться</router-link></p>
+    </div>
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
   </div>
 </template>
@@ -73,6 +76,7 @@ const login = async () => {
 h2 {
   color: #333;
   margin-bottom: 25px;
+  text-align: center;
 }
 
 .form-group {
@@ -113,9 +117,28 @@ button:hover {
   background-color: #45a049;
 }
 
+.register-link {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.register-link a {
+  color: #4CAF50;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.register-link a:hover {
+  text-decoration: underline;
+}
+
 .error-message {
   color: #e74c3c;
   margin-top: 15px;
   font-weight: bold;
+  text-align: center;
+  padding: 10px;
+  background-color: #fadbd8;
+  border-radius: 5px;
 }
 </style>
