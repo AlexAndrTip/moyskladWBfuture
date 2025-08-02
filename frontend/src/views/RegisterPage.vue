@@ -59,7 +59,11 @@
       <p>Уже есть аккаунт? <router-link to="/">Войти</router-link></p>
     </div>
     
-    <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+          <p v-if="successMessage" class="success-message">
+        {{ successMessage }}
+        <br>
+        <small>Через 3 секунды вы будете перенаправлены на страницу входа...</small>
+      </p>
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
   </div>
 </template>
@@ -144,6 +148,11 @@ const register = async () => {
       successMessage.value = response.data.message;
       // Очищаем форму после успешной регистрации
       Object.keys(formData).forEach(key => formData[key] = '');
+      
+      // Перенаправляем на страницу входа через 3 секунды
+      setTimeout(() => {
+        router.push('/');
+      }, 3000);
     }
   } catch (error) {
     console.error('Registration error:', error);

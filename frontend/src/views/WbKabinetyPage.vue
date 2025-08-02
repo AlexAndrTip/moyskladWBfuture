@@ -190,11 +190,6 @@ h2 {
   font-size: 16px;
   margin-bottom: 25px;
   transition: background-color 0.3s ease;
-  display: block;
-  width: 100%;
-  max-width: 280px; /* Немного шире для "WB Кабинет" */
-  margin-left: auto;
-  margin-right: auto;
 }
 .add-button:hover {
   background-color: #218838;
