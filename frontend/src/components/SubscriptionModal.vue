@@ -19,7 +19,23 @@
           <p class="description">
             Выберите подходящий план подписки для доступа ко всем функциям системы
           </p>
-          
+
+          <!-- Управление лимитами -->
+          <div class="limits-controls">
+            <div class="limit-item">
+              <span>Кабинеты WB:</span>
+              <button class="limit-btn" @click="decrementWbCabinets" :disabled="wbCabinetsCount <= MIN_LIMIT">-</button>
+              <span class="limit-value">{{ wbCabinetsCount }}</span>
+              <button class="limit-btn" @click="incrementWbCabinets">+</button>
+            </div>
+            <div class="limit-item">
+              <span>Кабинеты МС:</span>
+              <button class="limit-btn" @click="decrementMsStorages" :disabled="msStoragesCount <= MIN_LIMIT">-</button>
+              <span class="limit-value">{{ msStoragesCount }}</span>
+              <button class="limit-btn" @click="incrementMsStorages">+</button>
+            </div>
+          </div>
+
           <!-- Отладочная информация -->
           <div v-if="plans.length === 0 && !isLoading" class="debug-info">
             <p>Планы не загружены. Количество планов: {{ plans.length }}</p>
@@ -42,14 +58,14 @@
               </div>
               
               <div class="plan-price">
-                <div class="final-price">{{ formatPrice(plan.finalPrice) }} ₽</div>
+                <div class="final-price">{{ formatPrice(getFinalPrice(plan)) }} ₽</div>
                 <div v-if="plan.discount > 0" class="original-price">
-                  {{ formatPrice(plan.price) }} ₽
+                  {{ formatPrice(plan.price + ((Math.max(msStoragesCount - MIN_LIMIT, 0) * 750 + Math.max(wbCabinetsCount - MIN_LIMIT, 0) * 500) * plan.months)) }} ₽
                 </div>
               </div>
               
-              <div v-if="plan.savings > 0" class="savings">
-                Экономия: {{ formatPrice(plan.savings) }} ₽
+              <div v-if="getSavings(plan) > 0" class="savings">
+                Экономия: {{ formatPrice(getSavings(plan)) }} ₽
               </div>
               
               <div class="plan-features">
@@ -65,9 +81,9 @@
           
           <div class="selected-plan-info" v-if="selectedPlan">
             <h4>Выбранный план: {{ selectedPlan.name }}</h4>
-            <p>Стоимость: {{ formatPrice(selectedPlan.finalPrice) }} ₽</p>
-            <p v-if="selectedPlan.savings > 0">
-              Экономия: {{ formatPrice(selectedPlan.savings) }} ₽
+            <p>Стоимость: {{ formatPrice(getFinalPrice(selectedPlan)) }} ₽</p>
+            <p v-if="getSavings(selectedPlan) > 0">
+              Экономия: {{ formatPrice(getSavings(selectedPlan)) }} ₽
             </p>
           </div>
           
@@ -112,6 +128,11 @@ const isLoading = ref(false);
 const isProcessing = ref(false);
 const error = ref('');
 
+// Добавляем реактивные значения лимитов
+const wbCabinetsCount = ref(3);
+const msStoragesCount = ref(3);
+const MIN_LIMIT = 3;
+
 const formatPrice = (price) => {
   return new Intl.NumberFormat('ru-RU').format(price);
 };
@@ -149,7 +170,11 @@ const processSubscription = async () => {
     const token = localStorage.getItem('token');
     const response = await axios.post(
       `${import.meta.env.VITE_API_BASE_URL}/subscription/update`,
-      { months: selectedPlan.value.months },
+      { 
+        months: selectedPlan.value.months,
+        maxStorages: msStoragesCount.value,
+        maxWbCabinets: wbCabinetsCount.value
+      },
       {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -182,16 +207,64 @@ const closeModal = () => {
   emit('close');
 };
 
-// Загружаем планы при открытии модального окна
+// Загрузка лимитов пользователя
+const loadUserLimits = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const resp = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/limits`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    wbCabinetsCount.value = resp.data.maxWbCabinets || 3;
+    msStoragesCount.value = resp.data.maxStorages || 3;
+  } catch (err) {
+    console.error('Error loading user limits:', err);
+  }
+};
+
+// Изменение значений (кнопки +/-)
+function incrementWbCabinets() { wbCabinetsCount.value++; }
+function decrementWbCabinets() { if (wbCabinetsCount.value > MIN_LIMIT) wbCabinetsCount.value--; }
+function incrementMsStorages() { msStoragesCount.value++; }
+function decrementMsStorages() { if (msStoragesCount.value > MIN_LIMIT) msStoragesCount.value--; }
+
+// Вычисление итоговой цены с учётом лимитов и скидки
+const getFinalPrice = (plan) => {
+  if (!plan) return 0;
+  // Базовая стоимость (уже за months без скидки)
+  const basePrice = plan.price;
+  const extraStorages = Math.max(0, msStoragesCount.value - MIN_LIMIT);
+  const extraCabinets = Math.max(0, wbCabinetsCount.value - MIN_LIMIT);
+  const extraCost = (extraStorages * 750 + extraCabinets * 500) * plan.months;
+  const rawCost = basePrice + extraCost;
+  const discounted = Math.round(rawCost * (1 - plan.discount / 100));
+  return discounted;
+};
+
+const getSavings = (plan) => {
+  if (!plan) return 0;
+  const extraStorages = Math.max(0, msStoragesCount.value - MIN_LIMIT);
+  const extraCabinets = Math.max(0, wbCabinetsCount.value - MIN_LIMIT);
+  const original = plan.price + (extraStorages * 750 + extraCabinets * 500) * plan.months;
+  return original - getFinalPrice(plan);
+};
+
+// Обновляем loadPlans вызов чтобы после загрузки лимитов пересчитать цены
+const loadInitialData = async () => {
+  await loadUserLimits();
+  await loadPlans();
+};
+
+// Заменяем вызовы loadPlans на loadInitialData
 watch(() => props.isVisible, (newValue) => {
   if (newValue) {
-    loadPlans();
+    loadInitialData();
   }
 });
 
 onMounted(() => {
   if (props.isVisible) {
-    loadPlans();
+    loadInitialData();
   }
 });
 </script>
@@ -435,6 +508,52 @@ onMounted(() => {
 
 .debug-info p {
   margin: 5px 0;
+}
+
+.limits-controls {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 30px;
+  padding: 15px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+}
+
+.limit-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #333;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.limit-btn {
+  background-color: #eee;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.limit-btn:hover:not(:disabled) {
+  background-color: #ddd;
+}
+
+.limit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.limit-value {
+  font-weight: bold;
+  color: #4CAF50;
 }
 
 @media (max-width: 768px) {

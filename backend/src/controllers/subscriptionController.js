@@ -81,7 +81,7 @@ exports.getSubscriptionPlans = async (req, res) => {
 // @access  Private
 exports.updateSubscription = async (req, res) => {
   try {
-    const { months } = req.body;
+    const { months, maxStorages, maxWbCabinets } = req.body;
     
     if (!months || ![1, 3, 6, 12].includes(months)) {
       return res.status(400).json({ 
@@ -89,7 +89,8 @@ exports.updateSubscription = async (req, res) => {
       });
     }
 
-    const user = await User.findById(req.user.id);
+    const userId = req.user.id;
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
@@ -97,6 +98,18 @@ exports.updateSubscription = async (req, res) => {
     // Обновляем подписку
     user.updateSubscription(months);
     await user.save();
+
+    // Обновляем лимиты, если переданы значения и они >= 3
+    if ((maxStorages && maxStorages >= 3) || (maxWbCabinets && maxWbCabinets >= 3)) {
+      const Limit = require('../models/Limit');
+      let limits = await Limit.findOne({ user: userId });
+      if (!limits) {
+        limits = await Limit.create({ user: userId });
+      }
+      if (maxStorages && maxStorages >= 3) limits.maxStorages = maxStorages;
+      if (maxWbCabinets && maxWbCabinets >= 3) limits.maxWbCabinets = maxWbCabinets;
+      await limits.save();
+    }
 
     const subscriptionStatus = user.getSubscriptionStatus();
     
