@@ -1,11 +1,20 @@
 const express = require('express');
-const { getSubscription, updateSubscription, getAllSubscriptions } = require('../controllers/subscriptionController');
+const { 
+  getSubscriptionStatus, 
+  getSubscriptionPlans, 
+  updateSubscription 
+} = require('../controllers/subscriptionController');
 const { protect } = require('../middleware/authMiddleware');
+
 const router = express.Router();
 
-// Маршруты для подписок
-router.get('/', protect, getSubscription);
-router.put('/:userId', protect, updateSubscription);
-router.get('/all', protect, getAllSubscriptions);
+// Получить статус подписки пользователя (требует авторизации)
+router.get('/status', protect, getSubscriptionStatus);
+
+// Получить доступные планы подписки (публичный доступ)
+router.get('/plans', getSubscriptionPlans);
+
+// Обновить подписку пользователя (требует авторизации)
+router.post('/update', protect, updateSubscription);
 
 module.exports = router; 

@@ -96,6 +96,14 @@ UserSchema.methods.generateResetPasswordToken = function() {
 
 // Метод для проверки активности подписки
 UserSchema.methods.isSubscriptionActive = function() {
+  // Если подписка истекла, переводим в демо режим
+  if (this.subscription.expiresAt && this.subscription.expiresAt < new Date()) {
+    this.subscription.type = 'demo';
+    this.subscription.isActive = true;
+    this.subscription.expiresAt = null;
+    return true; // Демо всегда активно
+  }
+  
   if (this.subscription.type === 'demo') {
     return true; // Демо всегда активно, но с ограничениями
   }
@@ -104,16 +112,14 @@ UserSchema.methods.isSubscriptionActive = function() {
     return false;
   }
   
-  if (this.subscription.expiresAt && this.subscription.expiresAt < new Date()) {
-    this.subscription.isActive = false;
-    return false;
-  }
-  
   return true;
 };
 
 // Метод для получения статуса подписки
 UserSchema.methods.getSubscriptionStatus = function() {
+  // Проверяем, не истекла ли подписка
+  this.isSubscriptionActive();
+  
   if (this.subscription.type === 'demo') {
     return {
       type: 'demo',
@@ -123,21 +129,34 @@ UserSchema.methods.getSubscriptionStatus = function() {
     };
   }
   
-  if (!this.isSubscriptionActive()) {
-    return {
-      type: this.subscription.type,
-      status: 'expired',
-      expiresAt: this.subscription.expiresAt,
-      message: 'Подписка истекла'
-    };
-  }
-  
   return {
     type: this.subscription.type,
     status: 'active',
     expiresAt: this.subscription.expiresAt,
     message: `Подписка активна до ${this.subscription.expiresAt ? new Date(this.subscription.expiresAt).toLocaleDateString('ru-RU') : 'бессрочно'}`
   };
+};
+
+// Метод для обновления подписки
+UserSchema.methods.updateSubscription = function(months) {
+  const now = new Date();
+  let newExpiresAt;
+  
+  if (this.subscription.expiresAt && this.subscription.expiresAt > now) {
+    // Если подписка еще активна, добавляем месяцы к текущей дате окончания
+    newExpiresAt = new Date(this.subscription.expiresAt);
+    newExpiresAt.setMonth(newExpiresAt.getMonth() + months);
+  } else {
+    // Если подписка истекла или демо, начинаем с текущей даты
+    newExpiresAt = new Date();
+    newExpiresAt.setMonth(newExpiresAt.getMonth() + months);
+  }
+  
+  this.subscription.type = 'basic';
+  this.subscription.isActive = true;
+  this.subscription.expiresAt = newExpiresAt;
+  
+  return this;
 };
 
 module.exports = mongoose.model('User', UserSchema);

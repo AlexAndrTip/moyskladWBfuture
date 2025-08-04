@@ -75,6 +75,11 @@ exports.register = async (req, res) => {
       email,
       password,
       role: 'user', // Все новые пользователи получают роль user
+      subscription: {
+        type: 'demo',
+        isActive: true,
+        expiresAt: null
+      }
     });
 
     if (user) {

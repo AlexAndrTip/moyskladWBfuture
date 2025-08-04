@@ -5,7 +5,20 @@
         <div class="header-content">
           <h3>{{ isSidebarCollapsed ? 'WBMS' : 'Uniseller WBMS' }}</h3>
           <div v-if="!isSidebarCollapsed" class="subscription-info">
-            <span class="subscription-status">{{ subscriptionMessage }}</span>
+            <span 
+              class="subscription-status" 
+              :class="{ 'clickable': subscriptionInfo?.type === 'demo' }"
+              @click="subscriptionInfo?.type === 'demo' ? showSubscriptionModal() : null"
+            >
+              {{ subscriptionMessage }}
+            </span>
+            <button 
+              v-if="subscriptionInfo?.type !== 'demo'" 
+              @click="showSubscriptionModal" 
+              class="update-subscription-btn"
+            >
+              Обновить подписку
+            </button>
           </div>
         </div>
         <button @click="toggleSidebar" class="sidebar-toggle-btn">
@@ -38,6 +51,13 @@
       <div class="content-area">
         <router-view name="dashboardContent" /> </div>
     </main>
+    
+    <!-- Модальное окно подписки -->
+    <SubscriptionModal 
+      :is-visible="isSubscriptionModalVisible"
+      @close="hideSubscriptionModal"
+      @subscription-updated="onSubscriptionUpdated"
+    />
   </div>
 </template>
 
@@ -45,6 +65,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
+import SubscriptionModal from '../components/SubscriptionModal.vue';
 
 const router = useRouter();
 const route = useRoute(); // Для отслеживания текущего маршрута
@@ -52,6 +73,7 @@ const route = useRoute(); // Для отслеживания текущего м
 const isSidebarCollapsed = ref(false); // Состояние меню: свернуто/развернуто
 const subscriptionInfo = ref(null);
 const subscriptionMessage = ref('Подписка: Демо');
+const isSubscriptionModalVisible = ref(false);
 
 // Элементы меню
 const menuItems = ref([
@@ -90,19 +112,25 @@ const fetchSubscriptionInfo = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/subscription`, {
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/subscription/status`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
 
-    subscriptionInfo.value = response.data.subscription;
+    subscriptionInfo.value = response.data;
     
     // Формируем сообщение о подписке
     if (subscriptionInfo.value.type === 'demo') {
       subscriptionMessage.value = 'Подписка: Демо';
     } else if (subscriptionInfo.value.status === 'active') {
-      subscriptionMessage.value = `Подписка активна до: ${subscriptionInfo.value.expiresAt ? new Date(subscriptionInfo.value.expiresAt).toLocaleDateString('ru-RU') : 'бессрочно'}`;
+      const expiresAt = subscriptionInfo.value.expiresAt;
+      if (expiresAt) {
+        const date = new Date(expiresAt);
+        subscriptionMessage.value = `Подписка: до ${date.toLocaleDateString('ru-RU')} ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+      } else {
+        subscriptionMessage.value = 'Подписка: бессрочно';
+      }
     } else {
       subscriptionMessage.value = 'Подписка истекла';
     }
@@ -110,6 +138,20 @@ const fetchSubscriptionInfo = async () => {
     console.error('Error fetching subscription info:', error);
     subscriptionMessage.value = 'Подписка: Демо';
   }
+};
+
+// Функции для управления модальным окном подписки
+const showSubscriptionModal = () => {
+  isSubscriptionModalVisible.value = true;
+};
+
+const hideSubscriptionModal = () => {
+  isSubscriptionModalVisible.value = false;
+};
+
+const onSubscriptionUpdated = (updatedSubscription) => {
+  subscriptionInfo.value = updatedSubscription;
+  fetchSubscriptionInfo(); // Обновляем информацию о подписке
 };
 
 const logout = () => {
@@ -198,6 +240,38 @@ aside:not(.sidebar-collapsed) {
 .subscription-info {
   font-size: 12px;
   color: #bdc3c7;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.subscription-status {
+  cursor: default;
+}
+
+.subscription-status.clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  color: #3498db;
+}
+
+.subscription-status.clickable:hover {
+  color: #2980b9;
+}
+
+.update-subscription-btn {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.update-subscription-btn:hover {
+  background-color: #2980b9;
 }
 
 .subscription-status {
