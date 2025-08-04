@@ -114,7 +114,9 @@
     :qrc-id="paymentData.qrcId"
     :lifetime="paymentData.lifetime"
     @close="showPaymentModal = false"
-    @paid="onPaymentSuccess" />
+    @paid="onPaymentSuccess"
+    @failed="onPaymentFailed"
+  />
 </template>
 
 <script setup>
@@ -293,6 +295,11 @@ async function onPaymentSuccess() {
   } finally {
     showPaymentModal.value = false;
   }
+}
+
+function onPaymentFailed() {
+  alert('Операция отклонена банком. Попробуйте другую карту или позже.');
+  showPaymentModal.value = false;
 }
 </script>
 

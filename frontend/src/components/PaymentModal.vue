@@ -21,7 +21,7 @@ const props = defineProps({
   lifetime: { type: Number, default: 300 } // секунд
 });
 
-const emit = defineEmits(['close','paid']);
+const emit = defineEmits(['close','paid','failed']);
 
 const remaining = ref(props.lifetime);
 let intervalId;
@@ -51,6 +51,9 @@ function startPolling() {
         clearInterval(pollId);
         clearInterval(intervalId);
         emit('paid');
+      } else if (data.status === 'Rejected') {
+        clearInterval(pollId);
+        emit('failed');
       } else if (data.status === 'TimedOut') {
         clearInterval(pollId);
         emit('close');
