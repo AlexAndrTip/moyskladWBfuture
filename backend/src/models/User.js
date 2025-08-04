@@ -96,29 +96,22 @@ UserSchema.methods.generateResetPasswordToken = function() {
 
 // Метод для проверки активности подписки
 UserSchema.methods.isSubscriptionActive = function() {
-  // Если подписка истекла, переводим в демо режим
+  // Если подписка истекла, возвращаем false
   if (this.subscription.expiresAt && this.subscription.expiresAt < new Date()) {
-    this.subscription.type = 'demo';
-    this.subscription.isActive = true;
-    this.subscription.expiresAt = null;
-    return true; // Демо всегда активно
+    return false;
   }
   
   if (this.subscription.type === 'demo') {
     return true; // Демо всегда активно, но с ограничениями
   }
   
-  if (!this.subscription.isActive) {
-    return false;
-  }
-  
-  return true;
+  return this.subscription.isActive;
 };
 
 // Метод для получения статуса подписки
 UserSchema.methods.getSubscriptionStatus = function() {
   // Проверяем, не истекла ли подписка
-  this.isSubscriptionActive();
+  const isActive = this.isSubscriptionActive();
   
   if (this.subscription.type === 'demo') {
     return {
@@ -129,9 +122,19 @@ UserSchema.methods.getSubscriptionStatus = function() {
     };
   }
   
+  // Проверяем, истекла ли подписка
+  if (this.subscription.expiresAt && this.subscription.expiresAt < new Date()) {
+    return {
+      type: 'demo',
+      status: 'inactive',
+      expiresAt: this.subscription.expiresAt,
+      message: 'Подписка истекла'
+    };
+  }
+  
   return {
     type: this.subscription.type,
-    status: 'active',
+    status: this.subscription.isActive ? 'active' : 'inactive',
     expiresAt: this.subscription.expiresAt,
     message: `Подписка активна до ${this.subscription.expiresAt ? new Date(this.subscription.expiresAt).toLocaleDateString('ru-RU') : 'бессрочно'}`
   };

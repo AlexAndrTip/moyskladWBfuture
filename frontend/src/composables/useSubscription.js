@@ -1,4 +1,5 @@
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
 
 export function useSubscription() {
   const subscriptionInfo = ref(null);
@@ -12,6 +13,34 @@ export function useSubscription() {
     } catch (error) {
       console.error('Error parsing subscription from storage:', error);
       return null;
+    }
+  };
+
+  // Загрузка информации о подписке из API
+  const fetchSubscriptionInfo = async () => {
+    try {
+      isLoading.value = true;
+      const token = localStorage.getItem('token');
+      if (!token) {
+        subscriptionInfo.value = { type: 'demo', status: 'inactive' };
+        return;
+      }
+
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/subscription/status`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      subscriptionInfo.value = response.data;
+      // Сохраняем в localStorage
+      localStorage.setItem('subscription', JSON.stringify(response.data));
+    } catch (error) {
+      console.error('Error fetching subscription info:', error);
+      // При ошибке используем данные из localStorage или демо
+      subscriptionInfo.value = getSubscriptionFromStorage() || { type: 'demo', status: 'inactive' };
+    } finally {
+      isLoading.value = false;
     }
   };
 
@@ -55,6 +84,11 @@ export function useSubscription() {
     }
   };
 
+  // Автоматическая загрузка при инициализации
+  onMounted(() => {
+    fetchSubscriptionInfo();
+  });
+
   return {
     subscriptionInfo,
     isLoading,
@@ -63,6 +97,7 @@ export function useSubscription() {
     canUseFeatures,
     getSubscriptionMessage,
     updateSubscriptionInfo,
-    getSubscriptionFromStorage
+    getSubscriptionFromStorage,
+    fetchSubscriptionInfo
   };
 } 

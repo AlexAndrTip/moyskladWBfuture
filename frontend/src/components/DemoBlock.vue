@@ -1,5 +1,13 @@
 <template>
-  <div v-if="isDemo" class="demo-block">
+  <div v-if="isLoading" class="demo-block">
+    <div class="demo-overlay">
+      <div class="demo-content">
+        <div class="loading-spinner"></div>
+        <p>Загрузка информации о подписке...</p>
+      </div>
+    </div>
+  </div>
+  <div v-else-if="isDemo" class="demo-block">
     <div class="demo-overlay">
       <div class="demo-content">
         <div class="demo-icon">🔒</div>
@@ -21,7 +29,7 @@
 <script setup>
 import { useSubscription } from '../composables/useSubscription';
 
-const { isDemo } = useSubscription();
+const { isDemo, isLoading } = useSubscription();
 
 const showUpgradeModal = () => {
   // Здесь можно добавить логику для показа модального окна обновления подписки
@@ -53,6 +61,21 @@ const showUpgradeModal = () => {
   text-align: center;
   padding: 40px;
   max-width: 400px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .demo-icon {
