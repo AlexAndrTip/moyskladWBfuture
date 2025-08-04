@@ -855,9 +855,21 @@ h3 {
 }
 
 .no-integrations-message {
+  padding: 20px;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  background-color: #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  margin-top: 30px;
   text-align: center;
-  padding: 40px;
   color: #6c757d;
+}
+
+.no-integrations-message p {
+  margin: 0;
 }
 
 .link-button {
