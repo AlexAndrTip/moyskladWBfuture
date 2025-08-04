@@ -2,7 +2,12 @@
   <div class="dashboard-layout">
     <aside :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
       <div class="sidebar-header">
-        <h3>{{ isSidebarCollapsed ? 'WBMS' : 'Uniseller WBMS' }}</h3>
+        <div class="header-content">
+          <h3>{{ isSidebarCollapsed ? 'WBMS' : 'Uniseller WBMS' }}</h3>
+          <div v-if="!isSidebarCollapsed" class="subscription-info">
+            <span class="subscription-status">{{ subscriptionMessage }}</span>
+          </div>
+        </div>
         <button @click="toggleSidebar" class="sidebar-toggle-btn">
           <span v-if="isSidebarCollapsed">&gt;</span>
           <span v-else>&lt;</span>
@@ -37,13 +42,16 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import axios from 'axios';
 
 const router = useRouter();
 const route = useRoute(); // Для отслеживания текущего маршрута
 
 const isSidebarCollapsed = ref(false); // Состояние меню: свернуто/развернуто
+const subscriptionInfo = ref(null);
+const subscriptionMessage = ref('Подписка: Демо');
 
 // Элементы меню
 const menuItems = ref([
@@ -76,12 +84,46 @@ const selectMenuItem = (itemName) => {
   console.log(`Выбран пункт меню: ${itemName}`);
 };
 
+// Функция для получения информации о подписке
+const fetchSubscriptionInfo = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/subscription`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    subscriptionInfo.value = response.data.subscription;
+    
+    // Формируем сообщение о подписке
+    if (subscriptionInfo.value.type === 'demo') {
+      subscriptionMessage.value = 'Подписка: Демо';
+    } else if (subscriptionInfo.value.status === 'active') {
+      subscriptionMessage.value = `Подписка активна до: ${subscriptionInfo.value.expiresAt ? new Date(subscriptionInfo.value.expiresAt).toLocaleDateString('ru-RU') : 'бессрочно'}`;
+    } else {
+      subscriptionMessage.value = 'Подписка истекла';
+    }
+  } catch (error) {
+    console.error('Error fetching subscription info:', error);
+    subscriptionMessage.value = 'Подписка: Демо';
+  }
+};
+
 const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('username');
   localStorage.removeItem('userRole');
+  localStorage.removeItem('subscription');
   router.push('/'); // Перенаправляем на страницу входа
 };
+
+// Загружаем информацию о подписке при монтировании компонента
+onMounted(() => {
+  fetchSubscriptionInfo();
+});
 </script>
 
 <style scoped>
@@ -140,11 +182,26 @@ aside:not(.sidebar-collapsed) {
   overflow: hidden; /* Скрываем, если не помещается */
 }
 
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
 .sidebar-header h3 {
   margin: 0;
   color: #ecf0f1;
   font-size: 20px;
   transition: opacity 0.3s ease;
+}
+
+.subscription-info {
+  font-size: 12px;
+  color: #bdc3c7;
+}
+
+.subscription-status {
+  font-weight: 500;
 }
 
 .sidebar-collapsed .sidebar-header h3 {

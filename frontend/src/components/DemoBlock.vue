@@ -1,0 +1,93 @@
+<template>
+  <div v-if="isDemo" class="demo-block">
+    <div class="demo-overlay">
+      <div class="demo-content">
+        <div class="demo-icon">🔒</div>
+        <h3>Функция недоступна в демо версии</h3>
+        <p>Для использования этой функции необходимо обновить подписку.</p>
+        <div class="demo-actions">
+          <button @click="showUpgradeModal" class="upgrade-button">
+            Обновить подписку
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div v-else>
+    <slot />
+  </div>
+</template>
+
+<script setup>
+import { useSubscription } from '../composables/useSubscription';
+
+const { isDemo } = useSubscription();
+
+const showUpgradeModal = () => {
+  // Здесь можно добавить логику для показа модального окна обновления подписки
+  alert('Для обновления подписки обратитесь к администратору.');
+};
+</script>
+
+<style scoped>
+.demo-block {
+  position: relative;
+  min-height: 200px;
+}
+
+.demo-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 8px;
+}
+
+.demo-content {
+  text-align: center;
+  padding: 40px;
+  max-width: 400px;
+}
+
+.demo-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.demo-content h3 {
+  color: #333;
+  margin-bottom: 15px;
+  font-size: 20px;
+}
+
+.demo-content p {
+  color: #666;
+  margin-bottom: 25px;
+  line-height: 1.5;
+}
+
+.demo-actions {
+  margin-top: 20px;
+}
+
+.upgrade-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.upgrade-button:hover {
+  background-color: #218838;
+}
+</style> 

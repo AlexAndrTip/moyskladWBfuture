@@ -2,8 +2,9 @@
   <div class="otcheti-page-container">
     <h2>Отчеты Wildberries</h2>
     
-    <!-- Выпадающее меню интеграций -->
-    <div class="integration-selector-section">
+    <DemoBlock>
+      <!-- Выпадающее меню интеграций -->
+      <div class="integration-selector-section">
       <h3>Выберите Интеграцию:</h3>
       <p v-if="loadingIntegrations" class="loading-message">Загрузка интеграций...</p>
       <p v-if="integrationsError" class="error-message">{{ integrationsError }}</p>
@@ -172,6 +173,7 @@
       @close="closeBulkModal"
       @bulk-action="executeBulkAction"
     />
+    </DemoBlock>
   </div>
 </template>
 
@@ -180,6 +182,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import ReportDetailsModal from './OtchetiPage/components/ReportDetailsModal.vue'; // Импортируем компонент
 import BulkEditReportsModal from './OtchetiPage/modals/BulkEditReportsModal.vue'; // Модальное окно массовых действий
+import DemoBlock from '../components/DemoBlock.vue';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 

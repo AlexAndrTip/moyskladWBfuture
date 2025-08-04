@@ -1,8 +1,10 @@
 <template>
   <div class="postavki-page-container">
     <h2>Поставки Wildberries</h2>
-    <p v-if="loadingIntegrations" class="loading-message">Загрузка интеграций...</p>
-    <p v-if="integrationsError" class="error-message">{{ integrationsError }}</p>
+    
+    <DemoBlock>
+      <p v-if="loadingIntegrations" class="loading-message">Загрузка интеграций...</p>
+      <p v-if="integrationsError" class="error-message">{{ integrationsError }}</p>
     <div v-if="!loadingIntegrations && integrationLinks.length > 0" class="integration-selector-section">
       <h3>Выберите Интеграцию:</h3>
       <select v-model="selectedIntegrationId" @change="onIntegrationChange" class="integration-select">
@@ -166,6 +168,7 @@
         <p v-if="bulkLoading" class="loading-message" style="margin-top:10px;">Обработка...</p>
       </div>
     </div>
+    </DemoBlock>
   </div>
 </template>
 
@@ -175,6 +178,7 @@ import axios from 'axios';
 import { useIntegrationLinks } from './TovaryPage/composables/useIntegrationLinks.js';
 import { usePostavki } from './PostavkiPage/composables/usePostavki.js';
 import PaginationControls from './PostavkiPage/components/PaginationControls.vue';
+import DemoBlock from '../components/DemoBlock.vue';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const getToken = () => localStorage.getItem('token');

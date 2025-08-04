@@ -14,6 +14,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const cors = require('cors'); // <-- Добавляем импорт пакета 'cors'
 const storageRoutes = require('./routes/storageRoutes'); // ипорт управления складами
 const wbCabinetRoutes = require('./routes/wbCabinetRoutes'); // ЛК WB
@@ -84,6 +85,7 @@ mongoose.connect(MONGO_URI)
 
 // Маршруты
 app.use('/api/auth', authRoutes); // Маршруты для аутентификации
+app.use('/api/subscription', subscriptionRoutes); // Маршруты для подписок
 app.use('/api/users', userRoutes); // Маршруты для управления пользователями (защищенные)
 app.use('/api/storages', storageRoutes);
 app.use('/api/wbcabinets', wbCabinetRoutes);

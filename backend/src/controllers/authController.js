@@ -34,6 +34,7 @@ exports.login = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        subscription: user.getSubscriptionStatus(),
         token: generateToken(user._id, user.role),
       });
     } else {

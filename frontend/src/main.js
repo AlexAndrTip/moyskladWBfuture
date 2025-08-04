@@ -15,7 +15,6 @@ axios.interceptors.response.use(
   response => response, // Если ответ успешен, просто возвращаем его
   async error => {
     // Проверяем, является ли ошибка ответом от сервера и имеет ли статус 401 (Unauthorized)
-    // Исключаем ошибки токена WB API из глобальной обработки
     if (error.response && error.response.status === 401) {
       // Проверяем, не является ли это ошибкой токена WB API
       const isWbTokenError = error.config?.url?.includes('/integration-links/') && 
@@ -24,7 +23,10 @@ axios.interceptors.response.use(
       // Также исключаем ошибки синхронизации товаров, которые могут быть связаны с токеном WB
       const isWbSyncError = error.config?.url?.includes('/products/sync-now');
       
-      if (!isWbTokenError && !isWbSyncError) {
+      // Исключаем ошибки аутентификации (логин/пароль)
+      const isAuthError = error.config?.url?.includes('/auth/login');
+      
+      if (!isWbTokenError && !isWbSyncError && !isAuthError) {
         console.warn('Токен просрочен или недействителен. Перенаправление на страницу входа.');
 
         // Очищаем данные аутентификации

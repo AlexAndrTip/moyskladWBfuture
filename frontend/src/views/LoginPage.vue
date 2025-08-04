@@ -40,6 +40,7 @@ const login = async () => {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('username', response.data.username); // Сохраняем имя пользователя
       localStorage.setItem('userRole', response.data.role); // Сохраняем роль пользователя
+      localStorage.setItem('subscription', JSON.stringify(response.data.subscription)); // Сохраняем информацию о подписке
 
       // Перенаправляем в зависимости от роли
       if (response.data.role === 'admin') {

@@ -2,13 +2,14 @@
   <div class="tovary-page-container">
     <h2>Карточки Товаров WB</h2>
 
-    <IntegrationSelector
-      :loading-integrations="loadingIntegrations"
-      :integrations-error="integrationsError"
-      :integration-links="integrationLinks"
-      v-model:selected-integration-id="selectedIntegrationId"
-      @integration-change="onIntegrationChange"
-    />
+    <DemoBlock>
+      <IntegrationSelector
+        :loading-integrations="loadingIntegrations"
+        :integrations-error="integrationsError"
+        :integration-links="integrationLinks"
+        v-model:selected-integration-id="selectedIntegrationId"
+        @integration-change="onIntegrationChange"
+      />
 
     <div v-if="selectedIntegrationId && !loadingIntegrations && !tokenChecking">
 
@@ -161,6 +162,7 @@
       @close="closeLinkToProductModal"
       @product-linked="handleProductLinked"
     />
+    </DemoBlock>
   </div>
 </template>
 
@@ -179,6 +181,7 @@ import PaginationControls from './components/PaginationControls.vue';
 import ProductListItem from './components/ProductListItem.vue';
 import BulkEditModal from './modals/BulkEditModal.vue';
 import LinkToProductModal from './modals/LinkToProductModal.vue'; // Импортируем модалку
+import DemoBlock from '../../components/DemoBlock.vue';
 
 // Импорт Composables
 import { useIntegrationLinks } from './composables/useIntegrationLinks.js';
