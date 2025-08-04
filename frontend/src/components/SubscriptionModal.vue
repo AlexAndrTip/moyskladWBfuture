@@ -222,9 +222,9 @@ const loadUserLimits = async () => {
     minWbLimit.value = Math.max(3, resp.data.currentWbCabinets || 0);
     minMsLimit.value = Math.max(3, resp.data.currentStorages || 0);
 
-    // Начальные значения – минимумы (чтобы нельзя было уменьшить ниже)
-    wbCabinetsCount.value = Math.max(minWbLimit.value, resp.data.maxWbCabinets || 3);
-    msStoragesCount.value = Math.max(minMsLimit.value, resp.data.maxStorages || 3);
+    // Начальные значения – стартуем с фактического количества (минимума)
+    wbCabinetsCount.value = minWbLimit.value;
+    msStoragesCount.value = minMsLimit.value;
   } catch (err) {
     console.error('Error loading user limits:', err);
   }
