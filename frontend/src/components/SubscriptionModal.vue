@@ -107,11 +107,20 @@
       </div>
     </div>
   </div>
+  <PaymentModal 
+    :is-open="showPaymentModal" 
+    :image-src="paymentData.imageSrc" 
+    :payload="paymentData.payload"
+    :qrc-id="paymentData.qrcId"
+    :lifetime="paymentData.lifetime"
+    @close="showPaymentModal = false"
+    @paid="onPaymentSuccess" />
 </template>
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
+import PaymentModal from './PaymentModal.vue';
 
 const props = defineProps({
   isVisible: {
@@ -163,42 +172,30 @@ const selectPlan = (plan) => {
   selectedPlan.value = plan;
 };
 
+const showPaymentModal = ref(false);
+const paymentData = ref({ imageSrc: '', payload: '', qrcId: null, lifetime: 300 });
+
 const processSubscription = async () => {
   if (!selectedPlan.value) return;
-  
   isProcessing.value = true;
   error.value = '';
-  
   try {
     const token = localStorage.getItem('token');
-    const response = await axios.post(
-      `${import.meta.env.VITE_API_BASE_URL}/subscription/update`,
-      { 
-        months: selectedPlan.value.months,
-        maxStorages: msStoragesCount.value,
-        maxWbCabinets: wbCabinetsCount.value
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
-    );
-    
-    // Уведомляем родительский компонент об обновлении подписки
-    emit('subscription-updated', response.data.subscription);
-    closeModal();
-    
-    // Показываем уведомление об успехе
-    alert('Подписка успешно оформлена!');
-    
+    const sum = getFinalPrice(selectedPlan.value);
+    const payResp = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/payment/subscription`, { sum }, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    paymentData.value = {
+      imageSrc: payResp.data.image,
+      payload: payResp.data.payload,
+      qrcId: payResp.data.qrcId,
+      lifetime: payResp.data.lifetime || 300
+    };
+    showPaymentModal.value = true;
   } catch (err) {
-    console.error('Error processing subscription:', err);
-    if (err.response?.data?.message) {
-      error.value = err.response.data.message;
-    } else {
-      error.value = 'Ошибка оформления подписки. Попробуйте позже.';
-    }
+    console.error('Error creating payment:', err);
+    error.value = err.response?.data?.message || 'Ошибка создания платежа';
   } finally {
     isProcessing.value = false;
   }
@@ -275,6 +272,28 @@ onMounted(() => {
     loadInitialData();
   }
 });
+
+async function onPaymentSuccess() {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/subscription/update`,
+      {
+        months: selectedPlan.value.months,
+        maxStorages: msStoragesCount.value,
+        maxWbCabinets: wbCabinetsCount.value
+      },
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    emit('subscription-updated', response.data.subscription);
+    alert('Подписка успешно оформлена!');
+  } catch (e) {
+    console.error('update sub err', e);
+    alert('Платёж прошёл, но обновление подписки не удалось. Свяжитесь с поддержкой');
+  } finally {
+    showPaymentModal.value = false;
+  }
+}
 </script>
 
 <style scoped>

@@ -29,6 +29,7 @@ const reportRoutes = require('./routes/reportRoutes'); // <-- Импорт ро�
 // const queueRoutes = require('./routes/queueRoutes'); // <-- Временно отключаем очереди
 const reportCleanup = require('./services/reportsCleanupService');
 const limitRoutes = require('./routes/limitRoutes'); // <-- ДОБАВЛЕНО: Импорт роутов лимитов
+const paymentRoutes = require('./routes/paymentRoutes'); // <-- маршруты оплаты
 
 
 const app = express();
@@ -97,6 +98,7 @@ app.use('/api/uslugi', uslugiRoutes); // <-- ДОБАВЛЕНО: Подключ�
 app.use('/api/settings', settingsRoutes); // <-- ДОБАВЛЕНО: Подключение роутов настроек
 app.use('/api/postavki', postavkiRoutes);
 app.use('/api/reports', reportRoutes); // <-- Подключение роутов отчетов
+app.use('/api/payment', paymentRoutes); // <-- QR оплата
 app.use('/api/limits', limitRoutes); // <-- Подключение роутов лимитов
 // app.use('/api/queue', queueRoutes); // <-- Подключение роутов очередей
 require('./models/OrganizationLink'); // <-- ДОБАВЛЕНО: Убедитесь, что модель загружается
