@@ -99,17 +99,25 @@ exports.updateSubscription = async (req, res) => {
     user.updateSubscription(months);
     await user.save();
 
-    // Обновляем лимиты, если переданы значения и они >= 3
-    if ((maxStorages && maxStorages >= 3) || (maxWbCabinets && maxWbCabinets >= 3)) {
-      const Limit = require('../models/Limit');
-      let limits = await Limit.findOne({ user: userId });
-      if (!limits) {
-        limits = await Limit.create({ user: userId });
-      }
-      if (maxStorages && maxStorages >= 3) limits.maxStorages = maxStorages;
-      if (maxWbCabinets && maxWbCabinets >= 3) limits.maxWbCabinets = maxWbCabinets;
-      await limits.save();
+    // Обновляем лимиты, учитывая текущее фактическое количество сущностей
+    const Limit = require('../models/Limit');
+    const Storage = require('../models/Storage');
+    const WbCabinet = require('../models/WbCabinet');
+
+    const currentStorages = await Storage.countDocuments({ user: userId });
+    const currentWbCabinets = await WbCabinet.countDocuments({ user: userId });
+
+    const finalMaxStorages = Math.max(currentStorages, maxStorages || 3, 3);
+    const finalMaxWbCabinets = Math.max(currentWbCabinets, maxWbCabinets || 3, 3);
+
+    let limits = await Limit.findOne({ user: userId });
+    if (!limits) {
+      limits = await Limit.create({ user: userId });
     }
+
+    limits.maxStorages = finalMaxStorages;
+    limits.maxWbCabinets = finalMaxWbCabinets;
+    await limits.save();
 
     const subscriptionStatus = user.getSubscriptionStatus();
     

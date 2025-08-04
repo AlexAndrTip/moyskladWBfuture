@@ -24,13 +24,13 @@
           <div class="limits-controls">
             <div class="limit-item">
               <span>Кабинеты WB:</span>
-              <button class="limit-btn" @click="decrementWbCabinets" :disabled="wbCabinetsCount <= MIN_LIMIT">-</button>
+              <button class="limit-btn" @click="decrementWbCabinets" :disabled="wbCabinetsCount <= minWbLimit">-</button>
               <span class="limit-value">{{ wbCabinetsCount }}</span>
               <button class="limit-btn" @click="incrementWbCabinets">+</button>
             </div>
             <div class="limit-item">
               <span>Кабинеты МС:</span>
-              <button class="limit-btn" @click="decrementMsStorages" :disabled="msStoragesCount <= MIN_LIMIT">-</button>
+              <button class="limit-btn" @click="decrementMsStorages" :disabled="msStoragesCount <= minMsLimit">-</button>
               <span class="limit-value">{{ msStoragesCount }}</span>
               <button class="limit-btn" @click="incrementMsStorages">+</button>
             </div>
@@ -60,7 +60,7 @@
               <div class="plan-price">
                 <div class="final-price">{{ formatPrice(getFinalPrice(plan)) }} ₽</div>
                 <div v-if="plan.discount > 0" class="original-price">
-                  {{ formatPrice(plan.price + ((Math.max(msStoragesCount - MIN_LIMIT, 0) * 750 + Math.max(wbCabinetsCount - MIN_LIMIT, 0) * 500) * plan.months)) }} ₽
+                  {{ formatPrice(plan.price + ((Math.max(msStoragesCount - minMsLimit, 0) * 750 + Math.max(wbCabinetsCount - minWbLimit, 0) * 500) * plan.months)) }} ₽
                 </div>
               </div>
               
@@ -131,7 +131,10 @@ const error = ref('');
 // Добавляем реактивные значения лимитов
 const wbCabinetsCount = ref(3);
 const msStoragesCount = ref(3);
-const MIN_LIMIT = 3;
+
+// Минимальные значения, рассчитываемые на основе текущего количества сущностей (≥3)
+const minWbLimit = ref(3);
+const minMsLimit = ref(3);
 
 const formatPrice = (price) => {
   return new Intl.NumberFormat('ru-RU').format(price);
@@ -215,8 +218,13 @@ const loadUserLimits = async () => {
     const resp = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/limits`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    wbCabinetsCount.value = resp.data.maxWbCabinets || 3;
-    msStoragesCount.value = resp.data.maxStorages || 3;
+    // Минимумы – максимум между 3 и фактическим количеством объектов
+    minWbLimit.value = Math.max(3, resp.data.currentWbCabinets || 0);
+    minMsLimit.value = Math.max(3, resp.data.currentStorages || 0);
+
+    // Начальные значения – минимумы (чтобы нельзя было уменьшить ниже)
+    wbCabinetsCount.value = Math.max(minWbLimit.value, resp.data.maxWbCabinets || 3);
+    msStoragesCount.value = Math.max(minMsLimit.value, resp.data.maxStorages || 3);
   } catch (err) {
     console.error('Error loading user limits:', err);
   }
@@ -224,17 +232,17 @@ const loadUserLimits = async () => {
 
 // Изменение значений (кнопки +/-)
 function incrementWbCabinets() { wbCabinetsCount.value++; }
-function decrementWbCabinets() { if (wbCabinetsCount.value > MIN_LIMIT) wbCabinetsCount.value--; }
+function decrementWbCabinets() { if (wbCabinetsCount.value > minWbLimit.value) wbCabinetsCount.value--; }
 function incrementMsStorages() { msStoragesCount.value++; }
-function decrementMsStorages() { if (msStoragesCount.value > MIN_LIMIT) msStoragesCount.value--; }
+function decrementMsStorages() { if (msStoragesCount.value > minMsLimit.value) msStoragesCount.value--; }
 
 // Вычисление итоговой цены с учётом лимитов и скидки
 const getFinalPrice = (plan) => {
   if (!plan) return 0;
   // Базовая стоимость (уже за months без скидки)
   const basePrice = plan.price;
-  const extraStorages = Math.max(0, msStoragesCount.value - MIN_LIMIT);
-  const extraCabinets = Math.max(0, wbCabinetsCount.value - MIN_LIMIT);
+  const extraStorages = Math.max(0, msStoragesCount.value - minMsLimit.value);
+  const extraCabinets = Math.max(0, wbCabinetsCount.value - minWbLimit.value);
   const extraCost = (extraStorages * 750 + extraCabinets * 500) * plan.months;
   const rawCost = basePrice + extraCost;
   const discounted = Math.round(rawCost * (1 - plan.discount / 100));
@@ -243,8 +251,8 @@ const getFinalPrice = (plan) => {
 
 const getSavings = (plan) => {
   if (!plan) return 0;
-  const extraStorages = Math.max(0, msStoragesCount.value - MIN_LIMIT);
-  const extraCabinets = Math.max(0, wbCabinetsCount.value - MIN_LIMIT);
+  const extraStorages = Math.max(0, msStoragesCount.value - minMsLimit.value);
+  const extraCabinets = Math.max(0, wbCabinetsCount.value - minWbLimit.value);
   const original = plan.price + (extraStorages * 750 + extraCabinets * 500) * plan.months;
   return original - getFinalPrice(plan);
 };

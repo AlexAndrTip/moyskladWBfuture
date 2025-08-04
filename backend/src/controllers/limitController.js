@@ -1,4 +1,6 @@
 const Limit = require('../models/Limit');
+const Storage = require('../models/Storage');
+const WbCabinet = require('../models/WbCabinet');
 
 // @desc    Получить лимиты текущего пользователя
 // @route   GET /api/limits
@@ -15,9 +17,15 @@ exports.getUserLimits = async (req, res) => {
       limits = await Limit.create({ user: userId });
     }
 
+    // Текущее фактическое количество объектов
+    const currentStorages = await Storage.countDocuments({ user: userId });
+    const currentWbCabinets = await WbCabinet.countDocuments({ user: userId });
+
     return res.json({
       maxStorages: limits.maxStorages,
       maxWbCabinets: limits.maxWbCabinets,
+      currentStorages,
+      currentWbCabinets,
     });
   } catch (error) {
     console.error('[LIMITS] Ошибка получения лимитов:', error);
