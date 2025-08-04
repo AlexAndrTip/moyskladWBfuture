@@ -84,11 +84,13 @@ exports.checkPaymentStatus = async (req, res) => {
     const resp = await axios.get(`https://api.modulbank.ru/v1/sbp/qr-codes/${qrcId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+    console.log(`[PAYMENT] Статус от Modulbank для ${qrcId}:`, resp.data);
 
-    const { status, sum } = resp.data;
+    const { status, amount } = resp.data;
 
-    // Сверяем сумму
-    if (sum && sum !== payment.amount) {
+    // Сверяем сумму (в рублях)
+    if (amount !== undefined && amount !== payment.amount) {
+      console.warn(`[PAYMENT] Несоответствие суммы. Modulbank=${amount}, DB=${payment.amount}`);
       return res.status(400).json({ message: 'Несоответствие суммы платежа' });
     }
 

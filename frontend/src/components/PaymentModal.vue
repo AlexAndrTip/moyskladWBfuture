@@ -33,7 +33,7 @@ const seconds = computed(() => String(remaining.value % 60).padStart(2, '0'));
 function startTimer() {
   remaining.value = props.lifetime;
   intervalId = setInterval(() => {
-    if (remaining.value > 0) remaining.value--; else clearInterval(intervalId);
+    if (remaining.value > 0) remaining.value--; // больше не закрываем при 0
   }, 1000);
 }
 
@@ -46,13 +46,13 @@ function startPolling() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await resp.json();
+      console.log('Poll result', data);
       if (data.status === 'Accepted') {
         clearInterval(pollId);
         clearInterval(intervalId);
         emit('paid');
-      } else if (['Rejected', 'TimedOut'].includes(data.status)) {
+      } else if (data.status === 'TimedOut') {
         clearInterval(pollId);
-        clearInterval(intervalId);
         emit('close');
       }
     } catch (e) { console.error('poll error', e); }
