@@ -3,6 +3,8 @@ import { createRouter, createWebHistory } from 'vue-router';
 import LoginPage from '../views/LoginPage.vue'; // Путь к LoginPage
 import RegisterPage from '../views/RegisterPage.vue'; // Путь к RegisterPage
 import VerifyEmailPage from '../views/VerifyEmailPage.vue'; // Путь к VerifyEmailPage
+import ForgotPasswordPage from '../views/ForgotPasswordPage.vue'; // Путь к ForgotPasswordPage
+import ResetPasswordPage from '../views/ResetPasswordPage.vue'; // Путь к ResetPasswordPage
 import AdminPanelPage from '../views/AdminPanelPage.vue'; // Путь к AdminPanelPage
 import UserDashboardPage from '../views/UserDashboardPage.vue';
 
@@ -33,6 +35,16 @@ const routes = [
     path: '/verify-email',
     name: 'VerifyEmail',
     component: VerifyEmailPage,
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: ForgotPasswordPage,
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: ResetPasswordPage,
   },
   {
     path: '/admin',
@@ -136,7 +148,7 @@ router.beforeEach((to, from, next) => {
   }
   // Если пользователь авторизован и пытается перейти на страницу логина/регистрации,
   // перенаправляем его на соответствующий дашборд
-  else if ((to.name === 'Login' || to.name === 'Register') && token) {
+  else if ((to.name === 'Login' || to.name === 'Register' || to.name === 'ForgotPassword' || to.name === 'ResetPassword') && token) {
     if (userRole === 'admin') {
       next('/admin');
     } else {

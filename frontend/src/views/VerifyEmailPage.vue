@@ -199,7 +199,8 @@ onMounted(() => {
   }
   
   .btn {
-    width: 100%;
+    width: auto;
+    min-width: fit-content;
   }
 }
 </style> 

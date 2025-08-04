@@ -3,7 +3,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const Limit = require('../models/Limit');
 const bcrypt = require('bcryptjs');
-const { sendVerificationEmail } = require('../services/emailService');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/emailService');
 
 // Генерация JWT токена
 const generateToken = (id, role) => {
@@ -189,6 +189,81 @@ exports.resendVerification = async (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       message: 'Ошибка сервера при повторной отправке email', 
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Запрос на сброс пароля
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // Для безопасности не раскрываем, существует ли пользователь с таким email
+      return res.status(200).json({ 
+        message: 'Если пользователь с таким email существует, на него будет отправлено письмо для сброса пароля' 
+      });
+    }
+
+    // Генерируем токен для сброса пароля
+    const resetToken = user.generateResetPasswordToken();
+    await user.save();
+
+    // Отправляем email
+    const emailSent = await sendPasswordResetEmail(email, user.username, resetToken);
+    
+    if (!emailSent) {
+      return res.status(500).json({ 
+        message: 'Ошибка отправки email для сброса пароля. Попробуйте позже.' 
+      });
+    }
+
+    res.json({ 
+      message: 'Если пользователь с таким email существует, на него будет отправлено письмо для сброса пароля' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Ошибка сервера при запросе сброса пароля', 
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Сброс пароля
+// @route   POST /api/auth/reset-password
+// @access  Public
+exports.resetPassword = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'Недействительный или истекший токен для сброса пароля' 
+      });
+    }
+
+    // Устанавливаем новый пароль
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ 
+      message: 'Пароль успешно изменен! Теперь вы можете войти в систему с новым паролем.' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Ошибка сервера при сбросе пароля', 
       error: error.message 
     });
   }

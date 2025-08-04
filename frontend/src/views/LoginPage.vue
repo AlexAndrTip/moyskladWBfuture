@@ -14,6 +14,7 @@
     </form>
     <div class="register-link">
       <p>Нет аккаунта? <router-link to="/register">Зарегистрироваться</router-link></p>
+      <p><router-link to="/forgot-password">Забыли пароль?</router-link></p>
     </div>
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
   </div>

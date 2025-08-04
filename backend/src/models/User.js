@@ -36,6 +36,12 @@ const UserSchema = new mongoose.Schema({
   verificationExpires: {
     type: Date
   },
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordExpires: {
+    type: Date
+  },
   subscription: {
     type: {
       type: String,
@@ -77,6 +83,14 @@ UserSchema.methods.generateVerificationToken = function() {
   const token = crypto.randomBytes(32).toString('hex');
   this.verificationToken = token;
   this.verificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 часа
+  return token;
+};
+
+// Метод для генерации токена сброса пароля
+UserSchema.methods.generateResetPasswordToken = function() {
+  const token = crypto.randomBytes(32).toString('hex');
+  this.resetPasswordToken = token;
+  this.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 час
   return token;
 };
 
