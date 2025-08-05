@@ -12,7 +12,12 @@
           <button @click="exportToExcel" class="export-excel-btn" :disabled="!reportData.length || exporting">
             <i v-if="!exporting" class="fas fa-file-excel"></i>
             <span v-if="exporting" class="loading-spinner"></span>
-            {{ exporting ? 'Выгрузка...' : 'Выгрузить Excel' }}
+            {{ exporting ? 'Выгрузка...' : 'Excel' }}
+          </button>
+          <button @click="exportToCSV" class="export-csv-btn" :disabled="!reportData.length || exporting">
+            <i v-if="!exporting" class="fas fa-file-csv"></i>
+            <span v-if="exporting" class="loading-spinner"></span>
+            {{ exporting ? 'Выгрузка...' : 'CSV' }}
           </button>
           <button class="modal-close-button" @click="closeModal">&times;</button>
         </div>
@@ -53,6 +58,7 @@
 <script setup>
 import { ref, watch, defineProps, defineEmits } from 'vue';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -163,7 +169,7 @@ const closeModal = () => {
   emit('close');
 };
 
-// Функция для экспорта в Excel
+// Функция для экспорта в Excel (XLSX)
 const exportToExcel = async () => {
   if (!reportData.value.length || exporting.value) return;
   
@@ -206,6 +212,72 @@ const exportToExcel = async () => {
     // Добавляем заголовки в начало данных
     const allData = [headers, ...excelData];
     
+    // Создаем рабочую книгу Excel
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(allData);
+    
+    // Устанавливаем ширину столбцов
+    const colWidths = fieldMapping.map(field => ({ wch: Math.max(field.label.length, 15) }));
+    ws['!cols'] = colWidths;
+    
+    // Добавляем лист в книгу
+    XLSX.utils.book_append_sheet(wb, ws, 'Детализация отчета');
+    
+    // Генерируем файл и скачиваем
+    const fileName = `Детализация_отчета_${props.reportId}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    
+  } catch (error) {
+    console.error('Ошибка при экспорте в Excel:', error);
+    alert('Ошибка при экспорте файла Excel');
+  } finally {
+    exporting.value = false;
+  }
+};
+
+// Функция для экспорта в CSV
+const exportToCSV = async () => {
+  if (!reportData.value.length || exporting.value) return;
+  
+  exporting.value = true;
+  
+  try {
+    // Создаем заголовки для CSV
+    const headers = fieldMapping.map(field => field.label);
+    
+    // Создаем данные для CSV
+    const csvData = reportData.value.map(item => {
+      return fieldMapping.map(field => {
+        const value = item[field.key];
+        if (value === null || value === undefined || value === '') {
+          return '';
+        }
+        
+        // Форматируем числовые значения
+        const numericFields = [
+          'quantity', 'retail_price', 'retail_amount', 'product_discount_for_report',
+          'supplier_promo', 'sale_percent', 'retail_price_withdisc_rub', 'sup_rating_prc_up',
+          'commission_percent', 'ppvz_spp_prc', 'ppvz_kvw_prc', 'ppvz_kvw_prc_base',
+          'ppvz_sales_commission', 'ppvz_reward', 'delivery_amount', 'acquiring_fee',
+          'acquiring_percent', 'ppvz_vw', 'ppvz_vw_nds', 'ppvz_for_pay', 'delivery_rub',
+          'return_amount', 'penalty', 'additional_payment', 'rebill_logistic_cost',
+          'storage_fee', 'deduction', 'acceptance', 'report_type', 'shk_id'
+        ];
+        
+        if (numericFields.includes(field.key)) {
+          const numValue = Number(value);
+          if (!isNaN(numValue)) {
+            return numValue;
+          }
+        }
+        
+        return value;
+      });
+    });
+    
+    // Добавляем заголовки в начало данных
+    const allData = [headers, ...csvData];
+    
     // Создаем CSV строку с правильным разделителем для Excel
     const csvContent = allData.map(row => 
       row.map(cell => {
@@ -238,8 +310,8 @@ const exportToExcel = async () => {
     URL.revokeObjectURL(url);
     
   } catch (error) {
-    console.error('Ошибка при экспорте в Excel:', error);
-    alert('Ошибка при экспорте файла');
+    console.error('Ошибка при экспорте в CSV:', error);
+    alert('Ошибка при экспорте файла CSV');
   } finally {
     exporting.value = false;
   }
@@ -381,6 +453,34 @@ const formatCellValue = (value, fieldKey) => {
 }
 
 .export-excel-btn i {
+  font-size: 0.9em;
+}
+
+.export-csv-btn {
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.export-csv-btn:hover:not(:disabled) {
+  background-color: #138496;
+}
+
+.export-csv-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.export-csv-btn i {
   font-size: 0.9em;
 }
 
