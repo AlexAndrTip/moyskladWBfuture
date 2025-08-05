@@ -221,6 +221,35 @@ exports.getReportDetails = async (req, res) => {
         console.error('[REPORT_CONTROLLER] Ошибка получения деталей отчета:', error);
         res.status(500).json({ success: false, message: 'Ошибка сервера при получении деталей отчета: ' + error.message });
     }
+};
+
+// GET /api/reports/detalization/:reportId?integrationLinkId=...
+exports.getReportDetalization = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { reportId } = req.params;
+        const { integrationLinkId } = req.query;
+
+        if (!reportId || !integrationLinkId) {
+            return res.status(400).json({ message: 'Необходимы reportId и integrationLinkId' });
+        }
+
+        const reportData = await Report.find({
+            user: userId,
+            Report_id: reportId,
+            integrationlinks_id: integrationLinkId
+        }).lean();
+
+        if (!reportData || reportData.length === 0) {
+            return res.status(404).json({ message: 'Данные отчета не найдены' });
+        }
+
+        res.json({ success: true, reportData });
+
+    } catch (error) {
+        console.error('[REPORT_CONTROLLER] Ошибка получения детализации отчета:', error);
+        res.status(500).json({ success: false, message: 'Ошибка сервера при получении детализации отчета: ' + error.message });
+    }
 }; 
 
 // POST /api/reports/export-ms

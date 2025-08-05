@@ -162,6 +162,16 @@
       :integration-link-id="selectedIntegrationId"
       :get-token="getToken"
       @close="isModalOpen = false"
+      @openDetalization="openDetalizationModal"
+    />
+
+    <!-- Модальное окно детализации отчета -->
+    <ReportDetalizationModal
+      :is-open="isDetalizationModalOpen"
+      :report-id="selectedReportId"
+      :integration-link-id="selectedIntegrationId"
+      :get-token="getToken"
+      @close="isDetalizationModalOpen = false"
     />
 
     <!-- Модальное окно массовых действий -->
@@ -181,6 +191,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import ReportDetailsModal from './OtchetiPage/components/ReportDetailsModal.vue'; // Импортируем компонент
+import ReportDetalizationModal from './OtchetiPage/components/ReportDetalizationModal.vue'; // Импортируем компонент детализации
 import BulkEditReportsModal from './OtchetiPage/modals/BulkEditReportsModal.vue'; // Модальное окно массовых действий
 import DemoBlock from '../components/DemoBlock.vue';
 
@@ -192,11 +203,18 @@ const getToken = () => localStorage.getItem('token');
 // Состояние для модального окна
 const isModalOpen = ref(false);
 const selectedReportId = ref('');
+const isDetalizationModalOpen = ref(false);
 
 // Открыть модальное окно с деталями
 const openReportDetails = (reportId) => {
   selectedReportId.value = reportId;
   isModalOpen.value = true;
+};
+
+// Открыть модальное окно детализации
+const openDetalizationModal = () => {
+  isDetalizationModalOpen.value = true;
+  isModalOpen.value = false; // Закрываем основное модальное окно
 };
 
 // Состояние интеграций

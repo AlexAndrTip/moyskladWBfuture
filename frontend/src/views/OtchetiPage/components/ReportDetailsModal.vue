@@ -62,6 +62,13 @@
           </template>
           <div class="detail-item"><strong>Стоимость логистики:</strong><span>{{ Number(reportDetails.total_delivery_rub).toFixed(2) }}</span></div>
         </div>
+        
+        <div class="modal-actions">
+          <button @click="openDetalization" class="detalization-btn">
+            <i class="fas fa-table"></i>
+            Детализация
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -78,7 +85,7 @@ const props = defineProps({
   getToken: Function,
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'openDetalization']);
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const reportDetails = ref(null);
@@ -119,6 +126,10 @@ watch(() => props.isOpen, (newVal) => {
 
 const closeModal = () => {
   emit('close');
+};
+
+const openDetalization = () => {
+  emit('openDetalization');
 };
 </script>
 
@@ -222,5 +233,32 @@ hr {
   border: none;
   border-top: 1px solid #eee;
   margin: 25px 0;
+}
+
+.modal-actions {
+  margin-top: 25px;
+  text-align: center;
+}
+
+.detalization-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detalization-btn:hover {
+  background-color: #0056b3;
+}
+
+.detalization-btn i {
+  font-size: 0.9em;
 }
 </style> 
