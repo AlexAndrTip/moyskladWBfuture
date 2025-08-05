@@ -77,7 +77,7 @@ const exporting = ref(false);
 
 // Маппинг русских названий к английским полям БД
 const fieldMapping = [
-  { key: 'id', label: '№' },
+  { key: 'Report_id', label: '№' },
   { key: 'realizationreport_id', label: 'Номер поставки' },
   { key: 'subject_name', label: 'Предмет' },
   { key: 'nm_id', label: 'Код номенклатуры' },
