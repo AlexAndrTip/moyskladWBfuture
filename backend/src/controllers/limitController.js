@@ -24,6 +24,7 @@ exports.getUserLimits = async (req, res) => {
     return res.json({
       maxStorages: limits.maxStorages,
       maxWbCabinets: limits.maxWbCabinets,
+      maxReportDepthWeeks: limits.maxReportDepthWeeks,
       currentStorages,
       currentWbCabinets,
     });

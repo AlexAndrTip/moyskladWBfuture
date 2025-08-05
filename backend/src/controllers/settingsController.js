@@ -38,8 +38,8 @@ exports.updateSettings = async (req, res) => {
   } catch (error) {
     console.error(`[SETTINGS_CONTROLLER] Ошибка при обновлении настроек: ${error.message}`);
     
-    // Если ошибка связана с правилом валидации, возвращаем 400
-    if (error.message.includes('Сначала следует включить')) {
+    // Если ошибка связана с правилом валидации или лимитами, возвращаем 400
+    if (error.message.includes('Сначала следует включить') || error.message.includes('Максимальная глубина выгрузки')) {
       return res.status(400).json({ message: error.message });
     }
     

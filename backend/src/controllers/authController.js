@@ -103,6 +103,7 @@ exports.register = async (req, res) => {
         user: user._id,
         maxStorages: 3, // Лимит по умолчанию
         maxWbCabinets: 3, // Лимит по умолчанию
+        maxReportDepthWeeks: 25, // Максимальная глубина отчётов по умолчанию
       });
       console.log(`Лимиты по умолчанию созданы для пользователя ${user.username}`);
       // --- Конец инициализации лимитов ---

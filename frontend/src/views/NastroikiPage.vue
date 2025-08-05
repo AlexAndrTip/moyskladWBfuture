@@ -133,10 +133,10 @@
               v-model.number="settings.reportDepthWeeks"
               @change="onSettingChange"
               min="4"
-              max="25"
+              :max="userLimits.maxReportDepthWeeks"
               class="setting-number-input"
             />
-            <span class="setting-hint2">От 4 до 25 недель</span>
+            <span class="setting-hint2">От 4 до {{ userLimits.maxReportDepthWeeks }} недель</span>
           </label>
         </div>
 
@@ -209,9 +209,35 @@ const settingsError = ref('');
 const saveMessage = ref('');
 const saveMessageType = ref('');
 
+// Состояние лимитов пользователя
+const userLimits = ref({
+  maxReportDepthWeeks: 25 // Значение по умолчанию
+});
+const loadingLimits = ref(false);
+
 // Состояние модального окна
 const showWarningModal = ref(false);
 const autoExportProducts = ref(false); // Для отслеживания изменений
+
+// Загрузка лимитов пользователя
+const fetchUserLimits = async () => {
+  loadingLimits.value = true;
+  try {
+    const response = await axios.get(`${API_BASE_URL}/limits`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    
+    userLimits.value = {
+      maxReportDepthWeeks: response.data.maxReportDepthWeeks || 25
+    };
+  } catch (error) {
+    console.error('Ошибка загрузки лимитов пользователя:', error);
+    // Используем значение по умолчанию
+    userLimits.value.maxReportDepthWeeks = 25;
+  } finally {
+    loadingLimits.value = false;
+  }
+};
 
 // Загрузка настроек для выбранной интеграции
 const fetchSettings = async () => {
@@ -311,7 +337,8 @@ watch(selectedIntegrationId, (newValue) => {
 });
 
 onMounted(() => {
-  // Настройки будут загружены автоматически при выборе интеграции
+  // Загружаем лимиты пользователя при монтировании компонента
+  fetchUserLimits();
 });
 
 // Логика для модального окна

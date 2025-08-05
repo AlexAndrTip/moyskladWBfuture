@@ -16,6 +16,13 @@ const LimitSchema = new mongoose.Schema({
     type: Number,
     default: 3, // Лимит по умолчанию на WB-кабинеты
   },
+  // Максимальная глубина выгрузки отчётов (в неделях)
+  maxReportDepthWeeks: {
+    type: Number,
+    default: 25, // По умолчанию разрешаем выгрузку отчётов за 25 недель
+    min: 4,
+    max: 52,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

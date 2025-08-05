@@ -48,6 +48,24 @@ async function updateSettings(integrationLinkId, userId, settingsData) {
       throw new Error('Сначала следует включить Автоматическую выгрузку товаров');
     }
 
+    // Проверяем лимит глубины выгрузки отчётов, если передан параметр reportDepthWeeks
+    if (settingsData.reportDepthWeeks !== undefined) {
+      // Загружаем лимиты пользователя
+      const Limit = require('../models/Limit');
+      let userLimits = await Limit.findOne({ user: userId });
+
+      // Если лимиты ещё не созданы — создаём с настройками по умолчанию
+      if (!userLimits) {
+        userLimits = await Limit.create({ user: userId });
+      }
+
+      const maxAllowedWeeks = userLimits.maxReportDepthWeeks || 25;
+
+      if (settingsData.reportDepthWeeks > maxAllowedWeeks) {
+        throw new Error(`Максимальная глубина выгрузки отчётов для вашего тарифа составляет ${maxAllowedWeeks} недель.`);
+      }
+    }
+
     let settings = await Settings.findOne({ integrationLink: integrationLinkId, user: userId });
     
     if (!settings) {

@@ -51,7 +51,7 @@ const SettingsSchema = new mongoose.Schema({
     type: Number,
     default: 12, // 12 недель по умолчанию
     min: 4,
-    max: 25,
+    // Убираем жесткий максимум, так как он будет проверяться в сервисе
   },
   createdAt: {
     type: Date,
