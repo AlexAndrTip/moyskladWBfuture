@@ -2,17 +2,26 @@
   <div v-if="isOpen" class="modal-overlay" @click.self="closeModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Детализация отчета № {{ reportId }}</h3>
-        <button class="modal-close-button" @click="closeModal">&times;</button>
+        <div class="header-title">
+          <h3>Детализация отчета № {{ reportId }}</h3>
+          <span v-if="reportData.length" class="records-count">
+            ({{ reportData.length }} записей)
+          </span>
+        </div>
+        <div class="header-actions">
+          <button @click="exportToExcel" class="export-excel-btn" :disabled="!reportData.length || exporting">
+            <i v-if="!exporting" class="fas fa-file-excel"></i>
+            <span v-if="exporting" class="loading-spinner"></span>
+            {{ exporting ? 'Выгрузка...' : 'Выгрузить Excel' }}
+          </button>
+          <button class="modal-close-button" @click="closeModal">&times;</button>
+        </div>
       </div>
       
       <div v-if="loading" class="loading-message">Загрузка данных...</div>
       <div v-if="error" class="error-message">{{ error }}</div>
       
       <div v-if="reportData && reportData.length > 0" class="report-data-container">
-        <div class="data-info">
-          <p>Найдено записей: {{ reportData.length }}</p>
-        </div>
         
         <div class="table-container">
           <table class="report-table">
@@ -58,6 +67,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const reportData = ref([]);
 const loading = ref(false);
 const error = ref('');
+const exporting = ref(false);
 
 // Маппинг русских названий к английским полям БД
 const fieldMapping = [
@@ -153,6 +163,88 @@ const closeModal = () => {
   emit('close');
 };
 
+// Функция для экспорта в Excel
+const exportToExcel = async () => {
+  if (!reportData.value.length || exporting.value) return;
+  
+  exporting.value = true;
+  
+  try {
+    // Создаем заголовки для Excel
+    const headers = fieldMapping.map(field => field.label);
+    
+    // Создаем данные для Excel
+    const excelData = reportData.value.map(item => {
+      return fieldMapping.map(field => {
+        const value = item[field.key];
+        if (value === null || value === undefined || value === '') {
+          return '';
+        }
+        
+        // Форматируем числовые значения
+        const numericFields = [
+          'quantity', 'retail_price', 'retail_amount', 'product_discount_for_report',
+          'supplier_promo', 'sale_percent', 'retail_price_withdisc_rub', 'sup_rating_prc_up',
+          'commission_percent', 'ppvz_spp_prc', 'ppvz_kvw_prc', 'ppvz_kvw_prc_base',
+          'ppvz_sales_commission', 'ppvz_reward', 'delivery_amount', 'acquiring_fee',
+          'acquiring_percent', 'ppvz_vw', 'ppvz_vw_nds', 'ppvz_for_pay', 'delivery_rub',
+          'return_amount', 'penalty', 'additional_payment', 'rebill_logistic_cost',
+          'storage_fee', 'deduction', 'acceptance', 'report_type', 'shk_id'
+        ];
+        
+        if (numericFields.includes(field.key)) {
+          const numValue = Number(value);
+          if (!isNaN(numValue)) {
+            return numValue;
+          }
+        }
+        
+        return value;
+      });
+    });
+    
+    // Добавляем заголовки в начало данных
+    const allData = [headers, ...excelData];
+    
+    // Создаем CSV строку с правильным разделителем для Excel
+    const csvContent = allData.map(row => 
+      row.map(cell => {
+        // Экранируем кавычки и оборачиваем в кавычки если есть запятая или перенос строки
+        const cellStr = String(cell);
+        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n') || cellStr.includes(';')) {
+          return `"${cellStr.replace(/"/g, '""')}"`;
+        }
+        return cellStr;
+      }).join(';') // Используем точку с запятой как разделитель для лучшей совместимости с Excel
+    ).join('\r\n'); // Используем Windows-style переносы строк
+    
+    // Создаем Blob с BOM для правильной кодировки UTF-8
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { 
+      type: 'text/csv;charset=utf-8;' 
+    });
+    
+    // Создаем ссылку для скачивания
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Детализация_отчета_${props.reportId}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Очищаем URL
+    URL.revokeObjectURL(url);
+    
+  } catch (error) {
+    console.error('Ошибка при экспорте в Excel:', error);
+    alert('Ошибка при экспорте файла');
+  } finally {
+    exporting.value = false;
+  }
+};
+
 // Функция для определения класса ячейки
 const getCellClass = (fieldKey) => {
   const numericFields = [
@@ -240,10 +332,70 @@ const formatCellValue = (value, fieldKey) => {
   border-radius: 8px 8px 0 0;
 }
 
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .modal-header h3 {
   margin: 0;
   color: #333;
   font-size: 1.3em;
+}
+
+.records-count {
+  color: #6c757d;
+  font-size: 0.9em;
+  font-weight: normal;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.export-excel-btn {
+  background-color: #217346;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.export-excel-btn:hover:not(:disabled) {
+  background-color: #1e6b3d;
+}
+
+.export-excel-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.export-excel-btn i {
+  font-size: 0.9em;
+}
+
+.loading-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #ffffff;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .modal-close-button {
