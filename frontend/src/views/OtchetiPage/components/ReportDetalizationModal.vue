@@ -32,14 +32,21 @@
           <table class="report-table">
             <thead>
               <tr>
-                <th v-for="field in fieldMapping" :key="field.key" class="table-header">
-                  {{ field.label }}
+                <th v-for="(field, index) in fieldMapping" :key="field.key" class="table-header" :style="{ width: columnWidths[field.key] + 'px' }">
+                  <div class="header-content">
+                    <span class="header-text">{{ field.label }}</span>
+                  </div>
+                  <div 
+                    class="column-resizer" 
+                    @mousedown="startResize($event, field.key)"
+                    :style="{ left: (columnWidths[field.key] - 2) + 'px' }"
+                  ></div>
                 </th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="item in reportData" :key="item._id" class="table-row">
-                <td v-for="field in fieldMapping" :key="field.key" :class="getCellClass(field.key)">
+                <td v-for="field in fieldMapping" :key="field.key" :class="getCellClass(field.key)" :style="{ width: columnWidths[field.key] + 'px' }">
                   {{ formatCellValue(item[field.key], field.key) }}
                 </td>
               </tr>
@@ -74,6 +81,11 @@ const reportData = ref([]);
 const loading = ref(false);
 const error = ref('');
 const exporting = ref(false);
+const columnWidths = ref({}); // Состояние для ширины столбцов
+const isResizing = ref(false);
+const currentResizeField = ref(null);
+const startX = ref(0);
+const startWidth = ref(0);
 
 // Маппинг русских названий к английским полям БД
 const fieldMapping = [
@@ -98,7 +110,7 @@ const fieldMapping = [
   { key: 'sup_rating_prc_up', label: 'Размер снижения кВВ из-за рейтинга, %' },
   { key: 'commission_percent', label: 'Размер изменения кВВ из-за акции, %' },
   { key: 'ppvz_spp_prc', label: 'Скидка постоянного Покупателя (СПП), %' },
-  { key: 'ppvz_kvw_prc', label: 'Размер кВВ, %' },
+  { key: 'ppvz_kvw_prc', label: 'Размер кВВ, %' }, 
   { key: 'ppvz_kvw_prc_base', label: 'Размер кВВ без НДС, % Базовый' },
   { key: 'ppvz_sales_commission', label: 'Итоговый кВВ без НДС, %' },
   { key: 'ppvz_reward', label: 'Вознаграждение с продаж до вычета услуг поверенного, без НДС' },
@@ -132,6 +144,24 @@ const fieldMapping = [
   { key: 'report_type', label: 'Фиксированный коэффициент склада по поставке' }
 ];
 
+// Инициализация ширины столбцов
+const initializeColumnWidths = () => {
+  const widths = {};
+  fieldMapping.forEach(field => {
+    // Устанавливаем базовую ширину в зависимости от типа поля
+    if (field.key === 'subject_name') {
+      widths[field.key] = 250; // Шире для названий товаров
+    } else if (field.key === 'Report_id' || field.key === 'realizationreport_id') {
+      widths[field.key] = 120; // Для ID
+    } else if (field.key.includes('price') || field.key.includes('amount') || field.key.includes('percent')) {
+      widths[field.key] = 140; // Для числовых значений
+    } else {
+      widths[field.key] = Math.max(field.label.length * 8, 100); // Базовая ширина
+    }
+  });
+  columnWidths.value = widths;
+};
+
 const fetchReportDetalization = async () => {
   if (!props.reportId || !props.integrationLinkId) return;
 
@@ -148,6 +178,7 @@ const fetchReportDetalization = async () => {
     
     if (response.data.success) {
       reportData.value = response.data.reportData;
+      initializeColumnWidths(); // Инициализируем ширину столбцов после загрузки данных
     } else {
       throw new Error(response.data.message || 'Не удалось загрузить детализацию отчета.');
     }
@@ -162,12 +193,55 @@ const fetchReportDetalization = async () => {
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
     fetchReportDetalization();
+  } else {
+    // Очищаем обработчики при закрытии модального окна
+    if (isResizing.value) {
+      stopResize();
+    }
   }
 });
 
 const closeModal = () => {
   emit('close');
 };
+
+// Функции для изменения ширины столбцов перетаскиванием
+const startResize = (event, fieldKey) => {
+  event.preventDefault();
+  isResizing.value = true;
+  currentResizeField.value = fieldKey;
+  startX.value = event.clientX;
+  startWidth.value = columnWidths.value[fieldKey] || 100;
+  
+  document.addEventListener('mousemove', handleResize);
+  document.addEventListener('mouseup', stopResize);
+  
+  // Изменяем курсор на весь документ
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+};
+
+const handleResize = (event) => {
+  if (!isResizing.value || !currentResizeField.value) return;
+  
+  const deltaX = event.clientX - startX.value;
+  const newWidth = Math.max(50, Math.min(500, startWidth.value + deltaX));
+  columnWidths.value[currentResizeField.value] = newWidth;
+};
+
+const stopResize = () => {
+  isResizing.value = false;
+  currentResizeField.value = null;
+  
+  document.removeEventListener('mousemove', handleResize);
+  document.removeEventListener('mouseup', stopResize);
+  
+  // Возвращаем курсор
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+};
+
+
 
 // Функция для экспорта в Excel (XLSX)
 const exportToExcel = async () => {
@@ -484,6 +558,43 @@ const formatCellValue = (value, fieldKey) => {
   font-size: 0.9em;
 }
 
+
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.header-text {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.95em;
+  line-height: 1.2;
+  padding-right: 8px;
+}
+
+.column-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background-color: transparent;
+  cursor: col-resize;
+  z-index: 10;
+}
+
+.column-resizer:hover {
+  background-color: #007bff;
+}
+
+.table-header {
+  position: relative;
+  min-width: 80px;
+}
+
 .loading-spinner {
   width: 12px;
   height: 12px;
@@ -560,7 +671,7 @@ const formatCellValue = (value, fieldKey) => {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8em;
-  min-width: 2000px;
+  table-layout: fixed;
 }
 
 .report-table th,
@@ -569,9 +680,9 @@ const formatCellValue = (value, fieldKey) => {
   text-align: left;
   border-bottom: 1px solid #dee2e6;
   white-space: nowrap;
-  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 .report-table th {
@@ -582,10 +693,7 @@ const formatCellValue = (value, fieldKey) => {
   top: 0;
   z-index: 10;
   font-size: 0.75em;
-}
-
-.table-header {
-  min-width: 120px;
+  min-width: 80px;
 }
 
 .report-table tbody tr:hover {
