@@ -134,6 +134,7 @@
           @create-variants="createVariants"
           @link-to-product="linkToProduct"
           @unlink-product="unlinkProduct"
+          @open-image-modal="openImageModal"
         />
       </div>
       <p v-else-if="!productsLoading && !productsError && (selectedIntegrationId === 'all' || !tokenError) && !products.length && searchTerm">Нет товаров, соответствующих вашему поиску.</p>
@@ -173,6 +174,13 @@
       @close="closeLinkToProductModal"
       @product-linked="handleProductLinked"
     />
+
+    <ImageModal
+      :is-open="isImageModalOpen"
+      :image-url="currentImageData.imageUrl"
+      :product-title="currentImageData.productTitle"
+      @close="closeImageModal"
+    />
     </DemoBlock>
   </div>
 </template>
@@ -192,6 +200,7 @@ import PaginationControls from './components/PaginationControls.vue';
 import ProductListItem from './components/ProductListItem.vue';
 import BulkEditModal from './modals/BulkEditModal.vue';
 import LinkToProductModal from './modals/LinkToProductModal.vue'; // Импортируем модалку
+import ImageModal from './components/ImageModal.vue'; // Импортируем модалку для изображений
 import DemoBlock from '../../components/DemoBlock.vue';
 
 // Импорт Composables
@@ -209,6 +218,10 @@ const getToken = () => localStorage.getItem('token');
 const msFilter = ref(''); // '', 'exists', 'not_exists'
 const complectFilter = ref(''); // '', 'true', 'false'
 
+// Состояние для модального окна изображений
+const isImageModalOpen = ref(false);
+const currentImageData = ref({ imageUrl: '', productTitle: '' });
+
 const onMsFilterChange = () => {
   fetchProducts(); // просто перезапускаем запрос с текущими фильтрами
 };
@@ -222,6 +235,17 @@ const resetFilters = () => {
   msFilter.value = '';
   complectFilter.value = '';
   fetchProducts();
+};
+
+// Функции для работы с модальным окном изображений
+const openImageModal = (imageData) => {
+  currentImageData.value = imageData;
+  isImageModalOpen.value = true;
+};
+
+const closeImageModal = () => {
+  isImageModalOpen.value = false;
+  currentImageData.value = { imageUrl: '', productTitle: '' };
 };
 
 // Использование composables

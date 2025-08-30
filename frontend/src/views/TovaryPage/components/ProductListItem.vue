@@ -13,6 +13,7 @@
         :alt="product.title"
         class="product-thumbnail"
         @error="handleImageError"
+        @click="openImageModal"
       />
       <div v-else class="no-image-placeholder">
         <span>Нет фото</span>
@@ -108,6 +109,7 @@ const emit = defineEmits([
   'link-to-product',
   'unlink-product',
   'toggle-complect',
+  'open-image-modal',
 ]);
 
 const handleComplectToggle = (event) => {
@@ -129,6 +131,15 @@ const handleImageError = (event) => {
   // При ошибке загрузки изображения заменяем на placeholder
   event.target.style.display = 'none';
   event.target.nextElementSibling.style.display = 'flex';
+};
+
+const openImageModal = () => {
+  if (props.product.photos && props.product.photos.length > 0 && props.product.photos[0].big) {
+    emit('open-image-modal', {
+      imageUrl: props.product.photos[0].big,
+      productTitle: props.product.title
+    });
+  }
 };
 </script>
 
@@ -185,6 +196,13 @@ const handleImageError = (event) => {
   object-fit: cover;
   border-radius: 4px;
   border: 1px solid #eee;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .no-image-placeholder {
