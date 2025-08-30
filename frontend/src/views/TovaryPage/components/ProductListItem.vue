@@ -46,7 +46,7 @@
     </div>
     <div v-else class="product-complect-placeholder"></div>
 
-    <div v-if="!showIntegrationInfo" class="product-actions">
+    <div class="product-actions">
       <button @click="emit('create-in-ms', product)" class="action-btn create-ms" :disabled="isActionInProgress(product._id, 'createMs')">
         {{ isActionInProgress(product._id, 'createMs') ? 'Создаётся...' : 'Создать в МС' }}
       </button>
@@ -70,9 +70,6 @@
 
       <button @click="emit('link-to-product', product)" class="action-btn link-product" :disabled="isActionInProgress(product._id, 'linkProduct')">Связать с товаром</button>
       <button @click="emit('unlink-product', product)" class="action-btn unlink-product" :disabled="isActionInProgress(product._id, 'unlinkProduct')">Удалить связку</button>
-    </div>
-    <div v-else class="product-actions-disabled">
-      <span class="actions-disabled-text">Выберите конкретную интеграцию для действий</span>
     </div>
   </div>
 </template>

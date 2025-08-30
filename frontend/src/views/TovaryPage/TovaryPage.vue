@@ -12,6 +12,16 @@
       />
 
     <div v-if="selectedIntegrationId && !loadingIntegrations && (selectedIntegrationId === 'all' || !tokenChecking)">
+      <!-- Подсказка для режима "Все интеграции" -->
+      <div v-if="selectedIntegrationId === 'all'" class="all-integrations-hint">
+        <div class="hint-content">
+          <div class="hint-icon">ℹ️</div>
+          <div class="hint-text">
+            <strong>Режим "Все интеграции"</strong><br/>
+            Отображаются товары всех ваших интеграций. Действия с товарами выполняются с использованием интеграции каждого конкретного товара. Массовые действия автоматически группируются по интеграциям.
+          </div>
+        </div>
+      </div>
 
       <BulkActionsBar
         v-if="products.length > 0 && (selectedProductIds.length > 0 || selectedAllPages)"
@@ -157,9 +167,8 @@
     />
 
     <LinkToProductModal
-      v-if="selectedIntegrationId !== 'all'"
       :is-open="isLinkToProductModalOpen"
-      :integration-link-id="selectedIntegrationId"
+      :integration-link-id="currentWbProductForLinking?.integrationLink || selectedIntegrationId"
       :get-token="getToken"
       :wb-product="currentWbProductForLinking"
       @close="closeLinkToProductModal"
@@ -279,7 +288,7 @@ const {
   currentWbProductForLinking,
   handleProductLinked,
   closeLinkToProductModal,
-} = useProductActions(getToken, selectedIntegrationId, updateProductInList);
+} = useProductActions(getToken, selectedIntegrationId, updateProductInList, products);
 
 
 const {
@@ -290,7 +299,7 @@ const {
   bulkCreateInMs,
   bulkCreateVariants,
   bulkUnlinkProducts,
-} = useBulkActions(getToken, selectedIntegrationId, selectedProductIds, selectedAllPages, totalProducts, fetchProducts);
+} = useBulkActions(getToken, selectedIntegrationId, selectedProductIds, selectedAllPages, totalProducts, fetchProducts, products);
 
 
 // --- НОВАЯ ФУНКЦИЯ ДЛЯ ОБРАБОТКИ СОБЫТИЯ ОТ ProductListItem ---
@@ -653,5 +662,37 @@ h3 {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Стили для подсказки "Все интеграции" */
+.all-integrations-hint {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 2px solid #2196f3;
+  border-radius: 12px;
+  padding: 15px;
+  margin: 20px 0;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
+}
+
+.hint-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.hint-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.hint-text {
+  color: #1565c0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.hint-text strong {
+  color: #0d47a1;
 }
 </style>
