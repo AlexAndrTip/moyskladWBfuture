@@ -86,7 +86,7 @@ async function getProductsFromDb(integrationLinkId, userId, page, limit, searchT
         const products = await Product.find(query)
             .skip(skip)
             .limit(limit)
-            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect'); // Выбираем все необходимые поля, включая ms_href внутри sizes
+            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect photos'); // Добавляем photos
 
         // Подсчитываем общее количество товаров для пагинации
         const totalProducts = await Product.countDocuments(query);
@@ -179,7 +179,7 @@ async function getAllProductsFromDb(userId, page, limit, searchTerm, msFilter, c
         const products = await Product.find(query)
             .skip(skip)
             .limit(limit)
-            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect integrationLink'); // Добавляем integrationLink для идентификации
+            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect integrationLink photos'); // Добавляем photos
 
         // Подсчитываем общее количество товаров для пагинации
         const totalProducts = await Product.countDocuments(query);

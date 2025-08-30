@@ -27,7 +27,14 @@ const ProductSchema = new mongoose.Schema({
   title: String, // Название товара
   description: String, // Описание
   needKiz: Boolean, // Нужен ли КИЗ
-  // photos: [String], // Исключено
+  photos: [{
+    big: String, // URL фото 900x1200
+    c246x328: String, // URL фото 248x328
+    c516x688: String, // URL фото 516x688
+    square: String, // URL фото 600x600
+    tm: String, // URL фото 75x100
+    video: String
+  }], // Массив фото
   // video: String, // Исключено
   // dimensions: mongoose.Schema.Types.Mixed, // Исключено
   characteristics: mongoose.Schema.Types.Mixed, // Массив характеристик

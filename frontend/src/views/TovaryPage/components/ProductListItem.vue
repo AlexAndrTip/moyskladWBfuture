@@ -6,6 +6,18 @@
       :checked="isSelected"
       @change="event => emit('toggle-select', event, product._id)"
     />
+    <div class="product-image">
+      <img 
+        v-if="product.photos && product.photos.length > 0 && product.photos[0].c246x328" 
+        :src="product.photos[0].c246x328" 
+        :alt="product.title"
+        class="product-thumbnail"
+        @error="handleImageError"
+      />
+      <div v-else class="no-image-placeholder">
+        <span>Нет фото</span>
+      </div>
+    </div>
     <div class="product-info">
       <strong>Название:</strong> {{ product.title }}<br/>
       <strong>Артикул WB:</strong> {{ product.nmID }}<br/>
@@ -112,13 +124,19 @@ const getIntegrationName = (integrationLinkId) => {
   }
   return 'Неизвестная интеграция';
 };
+
+const handleImageError = (event) => {
+  // При ошибке загрузки изображения заменяем на placeholder
+  event.target.style.display = 'none';
+  event.target.nextElementSibling.style.display = 'flex';
+};
 </script>
 
 <style scoped>
 /* Ваши текущие стили */
 .product-item {
   display: grid;
-  grid-template-columns: 40px 3fr 2fr 1fr 3fr; /* Это должно быть согласовано с заголовком */
+  grid-template-columns: 40px 80px 3fr 2fr 1fr 3fr; /* Добавляем колонку для фото */
   gap: 15px;
   align-items: center;
   padding: 15px 20px;
@@ -151,6 +169,36 @@ const getIntegrationName = (integrationLinkId) => {
 }
 .product-info br {
   display: block;
+}
+
+.product-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+}
+
+.product-thumbnail {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #eee;
+}
+
+.no-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: #f8f9fa;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  color: #666;
+  font-size: 12px;
+  text-align: center;
 }
 
 .ms-link {
@@ -301,12 +349,12 @@ const getIntegrationName = (integrationLinkId) => {
 
 @media (max-width: 768px) {
   .product-item {
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 40px 60px 1fr;
     flex-direction: column;
     align-items: flex-start;
   }
   .product-item.header {
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 40px 60px 1fr;
   }
   .product-item .header-sizes,
   .product-item .header-actions,
@@ -318,6 +366,10 @@ const getIntegrationName = (integrationLinkId) => {
   .product-complect,
   .product-complect-placeholder {
     display: none;
+  }
+  .product-image {
+    width: 60px;
+    height: 60px;
   }
   .product-actions {
     justify-content: flex-start;

@@ -115,9 +115,11 @@
       <div v-if="products.length > 0 && (selectedIntegrationId === 'all' || !tokenError)" class="products-list">
         <div class="product-item header">
           <input type="checkbox" :checked="selectedAllPages || areAllProductsSelectedOnPage" @change="toggleSelectAllProducts" />
+          <div class="header-image">Фото</div>
           <div class="header-info">Название / Артикул WB / Артикул продавца</div>
           <div class="header-sizes">Размеры</div>
-          <div class="header-complect">Комплект</div> <div class="header-actions">Действия</div>
+          <div class="header-complect">Комплект</div>
+          <div class="header-actions">Действия</div>
         </div>
         <ProductListItem
           v-for="product in products"
@@ -451,7 +453,7 @@ h3 {
   padding-bottom: 10px;
   border-bottom: 2px solid #ccc;
   display: grid; /* Важно, чтобы тут был grid, т.к. он задается в ProductListItem */
-  grid-template-columns: 40px 3fr 2fr 1fr 3fr; /* Должен совпадать с ProductListItem, добавлено для "Комплект" */
+  grid-template-columns: 40px 80px 3fr 2fr 1fr 3fr; /* Добавляем колонку для фото */
   gap: 15px;
   align-items: center;
   padding-left: 20px;
@@ -521,7 +523,7 @@ h3 {
 /* Адаптивность */
 @media (max-width: 768px) {
   .product-item.header {
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 40px 60px 1fr;
   }
   .product-item.header .header-sizes,
   .product-item.header .header-actions {
