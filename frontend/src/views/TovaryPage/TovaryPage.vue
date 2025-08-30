@@ -12,16 +12,7 @@
       />
 
     <div v-if="selectedIntegrationId && !loadingIntegrations && (selectedIntegrationId === 'all' || !tokenChecking)">
-      <!-- Подсказка для режима "Все интеграции" -->
-      <div v-if="selectedIntegrationId === 'all'" class="all-integrations-hint">
-        <div class="hint-content">
-          <div class="hint-icon">ℹ️</div>
-          <div class="hint-text">
-            <strong>Режим "Все интеграции"</strong><br/>
-            Отображаются товары всех ваших интеграций. Действия с товарами выполняются с использованием интеграции каждого конкретного товара. Массовые действия автоматически группируются по интеграциям.
-          </div>
-        </div>
-      </div>
+
 
       <BulkActionsBar
         v-if="products.length > 0 && (selectedProductIds.length > 0 || selectedAllPages)"
@@ -31,21 +22,27 @@
         @open-bulk-edit-modal="openBulkEditModal"
       />
 
-      <div class="search-and-refresh-container">
-        <SearchBar
-          v-if="selectedIntegrationId === 'all' || !tokenError"
-          v-model:search-term="searchTerm"
-          @search="debouncedSearch"
-          @clear-search="clearSearch"
+      <!-- Форма поиска и фильтров -->
+      <form class="search-filter-form" @submit.prevent>
+        <input
+          v-model="searchTerm"
+          type="text"
+          placeholder="Поиск по названию, артикулу..."
+          class="search-input"
+          @input="debouncedSearch"
         />
-      </div>
-
-      <h5 v-if="selectedIntegrationId === 'all' || !tokenError">Фильтр по выгрузке в МС:</h5>
-      <select v-if="selectedIntegrationId === 'all' || !tokenError" v-model="msFilter" @change="onMsFilterChange" class="ms-filter-select">
-        <option value="">Все</option>
-        <option value="exists">Есть в МС</option>
-        <option value="not_exists">Нет в МС</option>
-      </select>
+        <select v-model="msFilter" @change="onMsFilterChange" class="ms-filter-select">
+          <option value="">Все товары</option>
+          <option value="exists">Есть в МС</option>
+          <option value="not_exists">Нет в МС</option>
+        </select>
+        <select v-model="complectFilter" @change="onComplectFilterChange" class="complect-filter-select">
+          <option value="">Все товары</option>
+          <option value="true">Комплекты</option>
+          <option value="false">Не комплекты</option>
+        </select>
+        <button type="button" class="reset-btn" @click="resetFilters">Сбросить</button>
+      </form>
 
       <SelectionControls
         v-if="selectedIntegrationId === 'all' || !tokenError"
@@ -208,9 +205,21 @@ const router = useRouter();
 
 const getToken = () => localStorage.getItem('token');
 const msFilter = ref(''); // '', 'exists', 'not_exists'
+const complectFilter = ref(''); // '', 'true', 'false'
 
 const onMsFilterChange = () => {
   fetchProducts(); // просто перезапускаем запрос с текущими фильтрами
+};
+
+const onComplectFilterChange = () => {
+  fetchProducts(); // просто перезапускаем запрос с текущими фильтрами
+};
+
+const resetFilters = () => {
+  searchTerm.value = '';
+  msFilter.value = '';
+  complectFilter.value = '';
+  fetchProducts();
 };
 
 // Использование composables
@@ -246,7 +255,7 @@ const {
   goToPage,
   debouncedSearch,
   clearSearch,
-} = useProducts(selectedIntegrationId, getToken, msFilter);
+} = useProducts(selectedIntegrationId, getToken, msFilter, complectFilter);
 
 
 const {
@@ -459,15 +468,6 @@ h3 {
   gap: 15px;
 } */
 
-/* Новый стиль для контейнера строки поиска и кнопки обновления */
-.search-and-refresh-container {
-  display: flex;
-  gap: 10px; /* Отступ между строкой поиска и кнопкой */
-  margin-bottom: 20px;
-  margin-top: 10px;
-  align-items: center; /* Выравнивание по центру по вертикали */
-}
-
 /* Стили для кнопки "Обновить" (только иконка) */
 .refresh-button {
   background-color: #007bff; /* Синий цвет */
@@ -493,13 +493,6 @@ h3 {
   cursor: not-allowed;
   opacity: 0.8;
   transform: none;
-}
-
-/* Изменения для SearchBar */
-.search-bar {
-  flex-grow: 1; /* Позволяет строке поиска занимать все доступное пространство */
-  margin-bottom: 0; /* Убираем отступы, так как они теперь управляются родительским контейнером */
-  margin-top: 0;
 }
 
 
@@ -534,16 +527,13 @@ h3 {
   .product-item.header .header-actions {
     display: none;
   }
-  /* Адаптивность для нового контейнера */
-  .search-and-refresh-container {
+  /* Адаптивность для формы фильтров */
+  .search-filter-form {
     flex-direction: column; /* Элементы в столбец на маленьких экранах */
     align-items: stretch; /* Растягивание по ширине */
   }
-  .search-bar {
-    width: 100%; /* Строка поиска занимает всю ширину */
-  }
-  .refresh-button {
-    width: 100%; /* Кнопка занимает всю ширину */
+  .search-input, .ms-filter-select, .complect-filter-select {
+    width: 100%; /* Все элементы занимают всю ширину */
   }
   .bulk-actions-bar {
     width: 100%; /* Панель массовых действий также занимает всю ширину */
@@ -664,35 +654,42 @@ h3 {
   }
 }
 
-/* Стили для подсказки "Все интеграции" */
-.all-integrations-hint {
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-  border: 2px solid #2196f3;
-  border-radius: 12px;
-  padding: 15px;
-  margin: 20px 0;
-  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
-}
-
-.hint-content {
+/* Стили для формы поиска и фильтров */
+.search-filter-form {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
 }
 
-.hint-icon {
-  font-size: 20px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.hint-text {
-  color: #1565c0;
+.search-input, .ms-filter-select, .complect-filter-select {
+  padding: 7px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
   font-size: 14px;
-  line-height: 1.4;
 }
 
-.hint-text strong {
-  color: #0d47a1;
+.search-input {
+  min-width: 200px;
+}
+
+.ms-filter-select, .complect-filter-select {
+  min-width: 140px;
+}
+
+.reset-btn {
+  background: #e0e0e0;
+  color: #333;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reset-btn:hover {
+  background: #bdbdbd;
 }
 </style>

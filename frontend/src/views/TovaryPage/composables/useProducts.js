@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export function useProducts(selectedIntegrationId, getToken, msFilter) {
+export function useProducts(selectedIntegrationId, getToken, msFilter, complectFilter) {
   const products = ref([]);
   const productsLoading = ref(false);
   const productsError = ref('');
@@ -36,6 +36,7 @@ export function useProducts(selectedIntegrationId, getToken, msFilter) {
         limit: productsPerPage.value,
         searchTerm: searchTerm.value,
         msFilter: msFilter.value,
+        complectFilter: complectFilter.value,
       };
 
       // Определяем URL в зависимости от выбранной интеграции

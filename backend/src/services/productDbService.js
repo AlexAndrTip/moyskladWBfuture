@@ -13,7 +13,7 @@ const IntegrationLink = require('../models/IntegrationLink');
  * @returns {Promise<Object>} - Объект с товарами, текущей страницей, общим количеством страниц и общим количеством товаров.
  * @throws {Error} - Если интеграционная связка не найдена.
  */
-async function getProductsFromDb(integrationLinkId, userId, page, limit, searchTerm, msFilter) {
+async function getProductsFromDb(integrationLinkId, userId, page, limit, searchTerm, msFilter, complectFilter) {
     const skip = (page - 1) * limit;
 
     console.log(`[PRODUCT_DB_SERVICE] Получен запрос на товары для integrationLink ID: ${integrationLinkId}, страница: ${page}, лимит: ${limit}, поиск: ${searchTerm || 'N/A'}, фильтр МС: ${msFilter || 'N/A'}`);
@@ -75,6 +75,12 @@ async function getProductsFromDb(integrationLinkId, userId, page, limit, searchT
             ];
         }
 
+        // Фильтр по комплектам
+        if (complectFilter === 'true') {
+            query.complect = true;
+        } else if (complectFilter === 'false') {
+            query.complect = false;
+        }
 
         // Получаем товары из вашей БД
         const products = await Product.find(query)
@@ -108,7 +114,7 @@ async function getProductsFromDb(integrationLinkId, userId, page, limit, searchT
  * @param {string} [msFilter] - Фильтр по наличию в МС ('exists' или 'not_exists').
  * @returns {Promise<Object>} - Объект с товарами, текущей страницей, общим количеством страниц и общим количеством товаров.
  */
-async function getAllProductsFromDb(userId, page, limit, searchTerm, msFilter) {
+async function getAllProductsFromDb(userId, page, limit, searchTerm, msFilter, complectFilter) {
     const skip = (page - 1) * limit;
 
     console.log(`[PRODUCT_DB_SERVICE] Получен запрос на товары всех интеграций для пользователя: ${userId}, страница: ${page}, лимит: ${limit}, поиск: ${searchTerm || 'N/A'}, фильтр МС: ${msFilter || 'N/A'}`);
@@ -160,6 +166,13 @@ async function getAllProductsFromDb(userId, page, limit, searchTerm, msFilter) {
                     ]
                 }
             ];
+        }
+
+        // Фильтр по комплектам
+        if (complectFilter === 'true') {
+            query.complect = true;
+        } else if (complectFilter === 'false') {
+            query.complect = false;
         }
 
         // Получаем товары из вашей БД

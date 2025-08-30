@@ -30,9 +30,10 @@ exports.getAllProducts = async (req, res) => {
     try {
         // Получаем товары всех интеграций из БД через сервис
         const msFilter = req.query.msFilter;
+        const complectFilter = req.query.complectFilter;
 
         let result = await getAllProductsFromDb(
-          userId, page, limit, searchTerm, msFilter
+          userId, page, limit, searchTerm, msFilter, complectFilter
         );
 
         const { products, currentPage, totalPages, totalProducts } = result;
@@ -67,9 +68,10 @@ exports.getProductsByIntegration = async (req, res) => {
     try {
         // Получаем товары из БД через сервис
         const msFilter = req.query.msFilter;
+        const complectFilter = req.query.complectFilter;
 
         let result = await getProductsFromDb(
-          integrationLinkId, userId, page, limit, searchTerm, msFilter
+          integrationLinkId, userId, page, limit, searchTerm, msFilter, complectFilter
         );
 
         // Если товаров нет, пробуем выполнить синхронизацию с WB и повторить запрос
