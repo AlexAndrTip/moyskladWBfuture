@@ -37,7 +37,13 @@ export function useProducts(selectedIntegrationId, getToken, msFilter) {
         searchTerm: searchTerm.value,
         msFilter: msFilter.value,
       };
-      const response = await axios.get(`${API_BASE_URL}/products/${selectedIntegrationId.value}`, {
+
+      // Определяем URL в зависимости от выбранной интеграции
+      const url = selectedIntegrationId.value === 'all' 
+        ? `${API_BASE_URL}/products/all`
+        : `${API_BASE_URL}/products/${selectedIntegrationId.value}`;
+
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${getToken()}` },
         params
       });

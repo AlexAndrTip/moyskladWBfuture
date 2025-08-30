@@ -21,6 +21,11 @@ router.get('/moysklad-variants', protect, productController.getMoySkladVariants)
 // @access   Private
 router.get('/moysklad-bundles', protect, productController.getMoySkladBundles); //
 
+// @desc     Получить товары всех интеграций пользователя
+// @route    GET /api/products/all
+// @access   Private
+router.get('/all', protect, productController.getAllProducts);
+
 // @desc     Получить товары для конкретной интеграции
 // @route    GET /api/products/:integrationLinkId
 // @access   Private

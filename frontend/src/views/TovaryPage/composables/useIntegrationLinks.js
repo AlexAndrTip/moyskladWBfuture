@@ -19,7 +19,8 @@ export function useIntegrationLinks(getToken) {
       });
       integrationLinks.value = response.data;
       if (integrationLinks.value.length > 0) {
-        selectedIntegrationId.value = integrationLinks.value[0]._id;
+        // По умолчанию выбираем "Все интеграции" если есть хотя бы одна интеграция
+        selectedIntegrationId.value = 'all';
       }
     } catch (error) {
       integrationsError.value = error.response?.data?.message || 'Ошибка при загрузке интеграций.';

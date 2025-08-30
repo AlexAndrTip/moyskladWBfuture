@@ -10,6 +10,9 @@
       <strong>Название:</strong> {{ product.title }}<br/>
       <strong>Артикул WB:</strong> {{ product.nmID }}<br/>
       <strong>Артикул продавца:</strong> {{ product.vendorCode }}
+      <div v-if="showIntegrationInfo && product.integrationLink" class="integration-info">
+        <strong>Интеграция:</strong> {{ getIntegrationName(product.integrationLink) }}
+      </div>
       <div v-if="product.ms_href_general || (product.sizes && product.sizes.some(size => size.ms_href))" class="ms-link">
         <span class="ms-exists-label">
           в МС ✅
@@ -43,7 +46,7 @@
     </div>
     <div v-else class="product-complect-placeholder"></div>
 
-    <div class="product-actions">
+    <div v-if="!showIntegrationInfo" class="product-actions">
       <button @click="emit('create-in-ms', product)" class="action-btn create-ms" :disabled="isActionInProgress(product._id, 'createMs')">
         {{ isActionInProgress(product._id, 'createMs') ? 'Создаётся...' : 'Создать в МС' }}
       </button>
@@ -68,6 +71,9 @@
       <button @click="emit('link-to-product', product)" class="action-btn link-product" :disabled="isActionInProgress(product._id, 'linkProduct')">Связать с товаром</button>
       <button @click="emit('unlink-product', product)" class="action-btn unlink-product" :disabled="isActionInProgress(product._id, 'unlinkProduct')">Удалить связку</button>
     </div>
+    <div v-else class="product-actions-disabled">
+      <span class="actions-disabled-text">Выберите конкретную интеграцию для действий</span>
+    </div>
   </div>
 </template>
 
@@ -78,6 +84,14 @@ const props = defineProps({
   product: Object,
   isSelected: Boolean,
   isActionInProgress: Function,
+  showIntegrationInfo: {
+    type: Boolean,
+    default: false
+  },
+  integrationLinks: {
+    type: Array,
+    default: () => []
+  }
 });
 
 const emit = defineEmits([
@@ -94,6 +108,14 @@ const handleComplectToggle = (event) => {
     console.log('ID товара:', props.product._id);
     console.log('Новое значение:', event.target.checked);
     emit('toggle-complect', props.product._id, event.target.checked);
+};
+
+const getIntegrationName = (integrationLinkId) => {
+  const integration = props.integrationLinks.find(link => link._id === integrationLinkId);
+  if (integration) {
+    return `${integration.wbCabinet.name} - ${integration.storage.name}`;
+  }
+  return 'Неизвестная интеграция';
 };
 </script>
 
@@ -262,6 +284,32 @@ const handleComplectToggle = (event) => {
 }
 .unlink-product:hover {
   background-color: #c9302c;
+}
+
+.integration-info {
+  margin-top: 5px;
+  font-size: 0.85em;
+  color: #666;
+  background-color: #f8f9fa;
+  padding: 3px 6px;
+  border-radius: 3px;
+  border-left: 3px solid #007bff;
+}
+
+.product-actions-disabled {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+}
+
+.actions-disabled-text {
+  color: #666;
+  font-size: 0.85em;
+  font-style: italic;
 }
 
 @media (max-width: 768px) {

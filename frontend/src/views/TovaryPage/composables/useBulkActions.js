@@ -9,6 +9,12 @@ export function useBulkActions(getToken, selectedIntegrationId, selectedProductI
   const bulkActionInProgress = ref(false);
 
   const openBulkEditModal = () => {
+    // Проверяем, что выбрана конкретная интеграция, а не "Все интеграции"
+    if (selectedIntegrationId.value === 'all') {
+      alert('Для выполнения массовых действий необходимо выбрать конкретную интеграцию.');
+      return;
+    }
+
     if (selectedProductIds.value.length === 0 && !selectedAllPages.value) {
       alert('Пожалуйста, выберите хотя бы один товар или выберите все товары на всех страницах.');
       return;

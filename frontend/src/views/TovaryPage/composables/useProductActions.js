@@ -26,6 +26,13 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
   };
 
   const createInMs = async (product) => {
+    // Проверяем, что выбрана конкретная интеграция, а не "Все интеграции"
+    if (selectedIntegrationId.value === 'all') {
+      individualActionMessage.value = 'Для выполнения действий с товарами необходимо выбрать конкретную интеграцию.';
+      individualActionMessageType.value = 'error';
+      return;
+    }
+
     clearIndividualActionMessage();
     pendingActions.value[product._id] = 'createMs';
     let sizeChrtIDToSend = null;
@@ -97,6 +104,13 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
   };
 
   const createVariants = async (product) => {
+    // Проверяем, что выбрана конкретная интеграция, а не "Все интеграции"
+    if (selectedIntegrationId.value === 'all') {
+      individualActionMessage.value = 'Для выполнения действий с товарами необходимо выбрать конкретную интеграцию.';
+      individualActionMessageType.value = 'error';
+      return;
+    }
+
     clearIndividualActionMessage();
     pendingActions.value[product._id] = 'createVariants';
     individualActionMessage.value = `Создание модификаций для "${product.title}"...`;
@@ -148,6 +162,13 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
 
   // ИЗМЕНЕННАЯ ФУНКЦИЯ linkToProduct
   const linkToProduct = (product) => {
+    // Проверяем, что выбрана конкретная интеграция, а не "Все интеграции"
+    if (selectedIntegrationId.value === 'all') {
+      individualActionMessage.value = 'Для выполнения действий с товарами необходимо выбрать конкретную интеграцию.';
+      individualActionMessageType.value = 'error';
+      return;
+    }
+
     clearIndividualActionMessage();
     // Сохраняем ВЕСЬ объект товара WB, для которого открываем модалку
     currentWbProductForLinking.value = product;
@@ -205,6 +226,13 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
   };
 
   const unlinkProduct = async (product) => {
+    // Проверяем, что выбрана конкретная интеграция, а не "Все интеграции"
+    if (selectedIntegrationId.value === 'all') {
+      individualActionMessage.value = 'Для выполнения действий с товарами необходимо выбрать конкретную интеграцию.';
+      individualActionMessageType.value = 'error';
+      return;
+    }
+
     clearIndividualActionMessage();
     pendingActions.value[product._id] = 'unlinkProduct';
 
@@ -269,6 +297,13 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
   };
 
   const toggleComplect = async (productId, complectValue) => {
+    // Проверяем, что выбрана конкретная интеграция, а не "Все интеграции"
+    if (selectedIntegrationId.value === 'all') {
+      individualActionMessage.value = 'Для выполнения действий с товарами необходимо выбрать конкретную интеграцию.';
+      individualActionMessageType.value = 'error';
+      return;
+    }
+
     clearIndividualActionMessage();
     pendingActions.value[productId] = 'updateComplect';
 

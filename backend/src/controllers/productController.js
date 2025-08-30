@@ -4,6 +4,7 @@ const { syncProducts } = require('../services/syncService');
 // ИСПРАВЛЕННЫЙ ИМПОРТ: Объединяем все необходимые функции из productDbService в одну строку
 const {
     getProductsFromDb,
+    getAllProductsFromDb,
     unlinkMoySkladLinks,
     bulkUnlinkMoySkladLinks,
     updateProductComplect,
@@ -15,6 +16,42 @@ const { getProductsFromMoySklad } = require('../services/moySkladProductSearchSe
 const { getVariantsFromMoySklad } = require('../services/moySkladVariantSearchService');  // Получение модификаций из МС
 const { getBundlesFromMoySklad } = require('../services/moySkladBundleSearchService');  // Получение комплектов из МС
 // const { createProductBundlesInMoySklad } = require('../services/moySkladBundleService'); // Убедись, что этот импорт находится здесь или выше, если он используется ниже
+
+// @desc      Получить товары всех интеграций пользователя
+// @route     GET /api/products/all
+// @access    Private
+exports.getAllProducts = async (req, res) => {
+    const userId = req.user._id;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const searchTerm = req.query.searchTerm;
+
+    try {
+        // Получаем товары всех интеграций из БД через сервис
+        const msFilter = req.query.msFilter;
+
+        let result = await getAllProductsFromDb(
+          userId, page, limit, searchTerm, msFilter
+        );
+
+        const { products, currentPage, totalPages, totalProducts } = result;
+
+        res.json({
+            success: true,
+            products,
+            currentPage,
+            totalPages,
+            totalProducts,
+        });
+    } catch (error) {
+        console.error(`[CONTROLLER ERROR] Общая ошибка при получении товаров всех интеграций: ${error.message}`);
+        res.status(500).json({ 
+            success: false,
+            message: 'Ошибка сервера при получении товаров.' 
+        });
+    }
+};
 
 // @desc      Получить товары для конкретной интеграции
 // @route     GET /api/products/:integrationLinkId

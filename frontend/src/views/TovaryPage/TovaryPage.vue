@@ -11,7 +11,7 @@
         @integration-change="onIntegrationChange"
       />
 
-    <div v-if="selectedIntegrationId && !loadingIntegrations && !tokenChecking">
+    <div v-if="selectedIntegrationId && !loadingIntegrations && (selectedIntegrationId === 'all' || !tokenChecking)">
 
       <BulkActionsBar
         v-if="products.length > 0 && (selectedProductIds.length > 0 || selectedAllPages)"
@@ -23,22 +23,22 @@
 
       <div class="search-and-refresh-container">
         <SearchBar
-          v-if="!tokenError"
+          v-if="selectedIntegrationId === 'all' || !tokenError"
           v-model:search-term="searchTerm"
           @search="debouncedSearch"
           @clear-search="clearSearch"
         />
       </div>
 
-      <h5 v-if="!tokenError">Фильтр по выгрузке в МС:</h5>
-      <select v-if="!tokenError" v-model="msFilter" @change="onMsFilterChange" class="ms-filter-select">
+      <h5 v-if="selectedIntegrationId === 'all' || !tokenError">Фильтр по выгрузке в МС:</h5>
+      <select v-if="selectedIntegrationId === 'all' || !tokenError" v-model="msFilter" @change="onMsFilterChange" class="ms-filter-select">
         <option value="">Все</option>
         <option value="exists">Есть в МС</option>
         <option value="not_exists">Нет в МС</option>
       </select>
 
       <SelectionControls
-        v-if="!tokenError"
+        v-if="selectedIntegrationId === 'all' || !tokenError"
         :products-count-on-page="products.length"
         :are-all-products-selected-on-page="areAllProductsSelectedOnPage"
         :total-pages="totalPages"
@@ -49,16 +49,16 @@
       />
 
       <IndividualActionStatus
-        v-if="!tokenError"
+        v-if="selectedIntegrationId === 'all' || !tokenError"
         :message="individualActionMessage"
         :type="individualActionMessageType"
         :ms-href="individualActionMsHref"
         @clear="clearIndividualActionMessage"
       />
 
-      <div v-if="(products.length || productsLoading) && !tokenError" class="products-header">
+      <div v-if="(products.length || productsLoading) && (selectedIntegrationId === 'all' || !tokenError)" class="products-header">
         <h3>Список товаров:</h3>
-        <button @click="triggerManualSync" :disabled="syncInProgress" class="refresh-button inline-refresh">
+        <button v-if="selectedIntegrationId !== 'all'" @click="triggerManualSync" :disabled="syncInProgress" class="refresh-button inline-refresh">
           <i :class="syncInProgress ? 'fas fa-sync fa-spin' : 'fas fa-sync-alt'"></i>
         </button>
       </div>
@@ -66,7 +66,7 @@
       <p v-if="productsError" class="error-message">{{ productsError }}</p>
 
       <!-- Ошибка токена -->
-      <div v-if="tokenError" class="token-error-container">
+      <div v-if="selectedIntegrationId !== 'all' && tokenError" class="token-error-container">
         <div class="token-error-content">
           <div class="token-error-icon">⚠️</div>
           <div class="token-error-message">
@@ -85,7 +85,7 @@
       </div>
 
       <!-- Проверка токена -->
-      <div v-if="tokenChecking" class="token-checking-container">
+      <div v-if="selectedIntegrationId !== 'all' && tokenChecking" class="token-checking-container">
         <div class="token-checking-content">
           <div class="token-checking-spinner"></div>
           <p>Проверка токена WB API...</p>
@@ -93,7 +93,7 @@
       </div>
 
       <PaginationControls
-        v-if="totalPages > 1 && !tokenError"
+        v-if="totalPages > 1 && (selectedIntegrationId === 'all' || !tokenError)"
         :current-page="currentPage"
         :total-pages="totalPages"
         :selected-all-pages="selectedAllPages"
@@ -105,7 +105,7 @@
         :is-top="true"
       />
 
-      <div v-if="products.length > 0 && !tokenError" class="products-list">
+      <div v-if="products.length > 0 && (selectedIntegrationId === 'all' || !tokenError)" class="products-list">
         <div class="product-item header">
           <input type="checkbox" :checked="selectedAllPages || areAllProductsSelectedOnPage" @change="toggleSelectAllProducts" />
           <div class="header-info">Название / Артикул WB / Артикул продавца</div>
@@ -118,6 +118,8 @@
           :product="product"
           :is-selected="selectedAllPages || selectedProductIds.includes(product._id)"
           :is-action-in-progress="isActionInProgress"
+          :show-integration-info="selectedIntegrationId === 'all'"
+          :integration-links="integrationLinks"
           @toggle-complect="handleToggleComplectFromChild" @toggle-select="onIndividualCheckboxChange"
           @create-in-ms="createInMs"
           @create-variants="createVariants"
@@ -125,11 +127,11 @@
           @unlink-product="unlinkProduct"
         />
       </div>
-      <p v-else-if="!productsLoading && !productsError && !tokenError && !products.length && searchTerm">Нет товаров, соответствующих вашему поиску.</p>
-      <p v-else-if="!productsLoading && !productsError && !tokenError && !products.length">Нет товаров для этой интеграции.</p>
+      <p v-else-if="!productsLoading && !productsError && (selectedIntegrationId === 'all' || !tokenError) && !products.length && searchTerm">Нет товаров, соответствующих вашему поиску.</p>
+      <p v-else-if="!productsLoading && !productsError && (selectedIntegrationId === 'all' || !tokenError) && !products.length">Нет товаров для этой интеграции.</p>
 
       <PaginationControls
-        v-if="totalPages > 1 && !tokenError"
+        v-if="totalPages > 1 && (selectedIntegrationId === 'all' || !tokenError)"
         :current-page="currentPage"
         :total-pages="totalPages"
         :selected-all-pages="selectedAllPages"
@@ -155,6 +157,7 @@
     />
 
     <LinkToProductModal
+      v-if="selectedIntegrationId !== 'all'"
       :is-open="isLinkToProductModalOpen"
       :integration-link-id="selectedIntegrationId"
       :get-token="getToken"
@@ -353,14 +356,23 @@ const triggerManualSync = async () => {
 // Обработчики, которые координируют работу composables
 const onIntegrationChange = async () => {
   if (selectedIntegrationId.value) {
-    // Сначала проверяем токен
-    await checkToken(selectedIntegrationId.value);
-    // Затем загружаем товары только если токен валиден
-    if (tokenValid.value) {
+    if (selectedIntegrationId.value === 'all') {
+      // Для "Все интеграции" не проверяем токен, сразу загружаем товары
       currentPage.value = 1;
       searchTerm.value = '';
       resetSelection(); // Сброс выбора при смене интеграции
+      resetTokenCheck(); // Сбрасываем проверку токена
       fetchProducts();
+    } else {
+      // Для конкретной интеграции проверяем токен
+      await checkToken(selectedIntegrationId.value);
+      // Затем загружаем товары только если токен валиден
+      if (tokenValid.value) {
+        currentPage.value = 1;
+        searchTerm.value = '';
+        resetSelection(); // Сброс выбора при смене интеграции
+        fetchProducts();
+      }
     }
   } else {
     resetTokenCheck();

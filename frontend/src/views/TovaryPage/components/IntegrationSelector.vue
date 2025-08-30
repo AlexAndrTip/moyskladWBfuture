@@ -7,6 +7,7 @@
     <div v-if="!loadingIntegrations && integrationLinks.length > 0">
       <select :value="selectedIntegrationId" @change="onSelectChange" class="integration-select">
         <option value="" disabled>-- Выберите связку (Кабинет - Склад) --</option>
+        <option value="all">Все интеграции</option>
         <option v-for="link in integrationLinks" :key="link._id" :value="link._id">
           {{ link.wbCabinet.name }} - {{ link.storage.name }}
         </option>
