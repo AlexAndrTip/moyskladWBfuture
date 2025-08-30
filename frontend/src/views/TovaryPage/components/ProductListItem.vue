@@ -9,10 +9,8 @@
     <div class="product-info">
       <strong>Название:</strong> {{ product.title }}<br/>
       <strong>Артикул WB:</strong> {{ product.nmID }}<br/>
-      <strong>Артикул продавца:</strong> {{ product.vendorCode }}
-      <div v-if="showIntegrationInfo && product.integrationLink" class="integration-info">
-        <strong>Интеграция:</strong> {{ getIntegrationName(product.integrationLink) }}
-      </div>
+      <strong>Артикул продавца:</strong> {{ product.vendorCode }}<br/>
+      <strong v-if="showIntegrationInfo && product.integrationLink">Интеграция:</strong> {{ showIntegrationInfo && product.integrationLink ? getIntegrationName(product.integrationLink) : '' }}
       <div v-if="product.ms_href_general || (product.sizes && product.sizes.some(size => size.ms_href))" class="ms-link">
         <span class="ms-exists-label">
           в МС ✅
@@ -283,15 +281,7 @@ const getIntegrationName = (integrationLinkId) => {
   background-color: #c9302c;
 }
 
-.integration-info {
-  margin-top: 5px;
-  font-size: 0.85em;
-  color: #666;
-  background-color: #f8f9fa;
-  padding: 3px 6px;
-  border-radius: 3px;
-  border-left: 3px solid #007bff;
-}
+
 
 .product-actions-disabled {
   display: flex;
