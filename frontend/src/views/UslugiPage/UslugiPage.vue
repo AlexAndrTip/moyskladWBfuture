@@ -295,6 +295,20 @@ const unlinkStatRashodov = async () => {
   }
 };
 
+// Функция для установки первой интеграции по умолчанию
+const setDefaultIntegration = () => {
+  if (integrationLinks.value.length > 0 && !selectedIntegrationId.value) {
+    selectedIntegrationId.value = integrationLinks.value[0]._id;
+  }
+};
+
+// Следим за загрузкой интеграций и устанавливаем первую по умолчанию
+watch(integrationLinks, (newLinks) => {
+  if (newLinks.length > 0 && !selectedIntegrationId.value) {
+    setDefaultIntegration();
+  }
+}, { immediate: true });
+
 onMounted(() => {
   if (selectedIntegrationId.value) {
     onIntegrationChange();

@@ -18,10 +18,8 @@ export function useIntegrationLinks(getToken) {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       integrationLinks.value = response.data;
-      if (integrationLinks.value.length > 0) {
-        // По умолчанию выбираем "Все интеграции" если есть хотя бы одна интеграция
-        selectedIntegrationId.value = 'all';
-      }
+      // Не устанавливаем значение по умолчанию здесь
+      // Пусть компоненты сами решают, какое значение выбрать
     } catch (error) {
       integrationsError.value = error.response?.data?.message || 'Ошибка при загрузке интеграций.';
       console.error('Fetch integration links error:', error);
