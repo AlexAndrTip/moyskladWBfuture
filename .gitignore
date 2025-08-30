@@ -1,0 +1,353 @@
+# ===========================================
+# .gitignore для проекта moyskladWBfuture
+# ===========================================
+
+# ===========================================
+# ОБЩИЕ ФАЙЛЫ СИСТЕМЫ
+# ===========================================
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.tmp
+*.temp
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===========================================
+# NODE.JS / BACKEND
+# ===========================================
+
+# Зависимости
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Локальные файлы окружения
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Логи
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+storybook-static
+
+# Temporary folders
+tmp/
+temp/
+
+# ===========================================
+# VUE.JS / FRONTEND
+# ===========================================
+
+# Vite
+.vite/
+dist/
+dist-ssr/
+
+# Vue CLI
+.vue-cli-service/
+
+# Vue DevTools
+.vue-devtools/
+
+# ===========================================
+# БАЗЫ ДАННЫХ
+# ===========================================
+
+# MongoDB
+*.mongodb
+*.mongo
+
+# SQLite
+*.sqlite
+*.sqlite3
+*.db
+
+# PostgreSQL
+*.psql
+
+# MySQL
+*.mysql
+
+# ===========================================
+# РЕДИС
+# ===========================================
+
+# Redis dump files
+dump.rdb
+*.rdb
+
+# Redis configuration
+redis.conf
+
+# ===========================================
+# ФАЙЛЫ КОНФИГУРАЦИИ И СЕКРЕТЫ
+# ===========================================
+
+# Конфигурационные файлы с секретами
+config.json
+secrets.json
+credentials.json
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# API ключи и токены
+api-keys.txt
+tokens.txt
+secrets.txt
+
+# ===========================================
+# ВРЕМЕННЫЕ ФАЙЛЫ ПРОЕКТА
+# ===========================================
+
+# Временные файлы отчетов
+temp_reports/
+temp_exports/
+temp_uploads/
+
+# Кэш файлов
+cache/
+.cache/
+
+# Временные файлы загрузок
+uploads/temp/
+downloads/temp/
+
+# ===========================================
+# IDE И РЕДАКТОРЫ
+# ===========================================
+
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ===========================================
+# ДОКУМЕНТАЦИЯ И ЗАМЕТКИ
+# ===========================================
+
+# Временные заметки (если нужно исключить)
+# notes_temp.txt
+# todo_temp.md
+
+# ===========================================
+# БЭКАПЫ И АРХИВЫ
+# ===========================================
+
+# Архивы
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Бэкапы
+backup/
+backups/
+*.backup
+*.bak
+
+# ===========================================
+# СПЕЦИФИЧНЫЕ ДЛЯ ПРОЕКТА
+# ===========================================
+
+# Файлы с токенами (уже есть в корне проекта)
+текен МС и WB.txt
+текен МС.txt
+
+# Временные файлы запуска
+запуск.txt
+
+# Файлы с личной информацией
+1 резюме.txt
+1.txt
+
+# ===========================================
+# ДОПОЛНИТЕЛЬНЫЕ ИСКЛЮЧЕНИЯ
+# ===========================================
+
+# Исключаем все .env файлы во всех папках
+**/.env
+**/.env.local
+**/.env.development
+**/.env.test
+**/.env.production
+
+# Исключаем node_modules во всех папках
+**/node_modules/
+
+# Исключаем логи во всех папках
+**/logs/
+**/*.log
+
+# Исключаем временные файлы сборки
+**/dist/
+**/build/
+**/.vite/
+**/.next/
+**/.nuxt/
+
+# ===========================================
+# ПРИМЕЧАНИЯ
+# ===========================================
+
+# Если нужно включить какие-то файлы обратно, используйте:
+# !important-file.txt
+
+# Если нужно исключить только в определенной папке:
+# backend/specific-file.txt
+
+# Для игнорирования файлов только в корне:
+# /.env
+# /package-lock.json
