@@ -18,6 +18,7 @@ import OtchetiPage from '../views/OtchetiPage.vue';
 import PostavkiPage from '../views/PostavkiPage.vue';
 import OrganizationPage from '../views/OrganizationPage/OrganizationPage.vue';
 import UslugiPage from '../views/UslugiPage/UslugiPage.vue';
+import CenyOstatkiPage from '../views/CenyOstatkiPage/CenyOstatkiPage.vue';
 import FbsOrdersPage from '../views/FbsOrdersPage.vue';
 
 const routes = [
@@ -114,6 +115,14 @@ const routes = [
         name: 'Uslugi',
         components: {
           dashboardContent: UslugiPage
+        },
+        meta: { requiresAuth: true, roles: ['user', 'admin'] }
+      },
+      { // <-- НОВЫЙ МАРШРУТ ДЛЯ ЦЕН И ОСТАТКОВ
+        path: 'ceny-ostatki',
+        name: 'CenyOstatki',
+        components: {
+          dashboardContent: CenyOstatkiPage
         },
         meta: { requiresAuth: true, roles: ['user', 'admin'] }
       },

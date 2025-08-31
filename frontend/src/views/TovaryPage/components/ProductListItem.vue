@@ -57,7 +57,7 @@
     </div>
     <div v-else class="product-complect-placeholder"></div>
 
-    <div class="product-actions">
+    <div v-if="showActions" class="product-actions">
       <button @click="emit('create-in-ms', product)" class="action-btn create-ms" :disabled="isActionInProgress(product._id, 'createMs')">
         {{ isActionInProgress(product._id, 'createMs') ? 'Создаётся...' : 'Создать в МС' }}
       </button>
@@ -82,6 +82,22 @@
       <button @click="emit('link-to-product', product)" class="action-btn link-product" :disabled="isActionInProgress(product._id, 'linkProduct')">Связать с товаром</button>
       <button @click="emit('unlink-product', product)" class="action-btn unlink-product" :disabled="isActionInProgress(product._id, 'unlinkProduct')">Удалить связку</button>
     </div>
+    
+    <!-- Дополнительные колонки для цен и остатков -->
+    <div v-if="!showActions" class="product-prices">
+      <div class="price-item">
+        <strong>Цена на WB:</strong> <span class="price-value">—</span>
+      </div>
+      <div class="price-item">
+        <strong>Цена в МС:</strong> <span class="price-value">—</span>
+      </div>
+      <div class="price-item">
+        <strong>Себестоимость:</strong> <span class="price-value">—</span>
+      </div>
+      <div class="price-item">
+        <strong>Остаток:</strong> <span class="price-value">—</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -95,6 +111,10 @@ const props = defineProps({
   showIntegrationInfo: {
     type: Boolean,
     default: false
+  },
+  showActions: {
+    type: Boolean,
+    default: true
   },
   integrationLinks: {
     type: Array,
@@ -275,6 +295,35 @@ const openImageModal = () => {
     padding: 5px 0;
 }
 
+/* Стили для колонок с ценами и остатками */
+.product-prices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.price-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9em;
+  padding: 4px 0;
+}
+
+.price-item strong {
+  color: #495057;
+  font-weight: 600;
+}
+
+.price-value {
+  color: #6c757d;
+  font-weight: 500;
+}
+
 
 .product-sizes ul {
   list-style: none;
@@ -382,7 +431,8 @@ const openImageModal = () => {
   .product-sizes,
   .product-actions,
   .product-complect,
-  .product-complect-placeholder {
+  .product-complect-placeholder,
+  .product-prices {
     display: none;
   }
   .product-image {
