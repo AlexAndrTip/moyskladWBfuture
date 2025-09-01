@@ -48,7 +48,7 @@
       <strong>Баркоды:</strong>
       <ul>
         <li v-for="size in product.sizes" :key="size.chrtID">
-          {{ size.techSize }}: {{ size.barcode || 'Нет' }}
+          {{ size.techSize }}: {{ size.skus ? size.skus.join(', ') : 'Нет' }}
           <span v-if="size.ms_href" class="ms-size-link-icon">
             ✅
           </span>
