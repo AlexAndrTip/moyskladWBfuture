@@ -267,7 +267,28 @@ exports.exportReportToMS = async (req, res) => {
     res.json({ success: true, ...result });
   } catch (error) {
     console.error('[REPORT_CONTROLLER] Ошибка выгрузки отчёта в МС:', error);
-    res.status(500).json({ message: error.message || 'Ошибка сервера при выгрузке отчёта в МС' });
+    
+    // Определяем тип ошибки и даём более информативное сообщение
+    let userMessage = 'Ошибка сервера при выгрузке отчёта в МС';
+    
+    if (error.message.includes('OrganizationLink не настроен')) {
+      userMessage = 'Не настроены связи с МойСклад. Перейдите на страницу "Организации" и заполните все обязательные поля.';
+    } else if (error.message.includes('токен МС')) {
+      userMessage = 'Проблема с токеном доступа к МойСклад. Проверьте настройки склада.';
+    } else if (error.message.includes('Не заполнены href')) {
+      userMessage = error.message;
+    } else if (error.response?.status === 412) {
+      userMessage = 'Ошибка валидации данных в МойСклад. Проверьте корректность ссылок на организацию, контрагента и договор.';
+    } else if (error.response?.status === 401) {
+      userMessage = 'Ошибка авторизации в МойСклад. Проверьте токен доступа.';
+    } else if (error.response?.status === 403) {
+      userMessage = 'Недостаточно прав для выполнения операции в МойСклад.';
+    }
+    
+    res.status(500).json({ 
+      message: userMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }; 
 

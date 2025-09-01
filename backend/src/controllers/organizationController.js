@@ -194,38 +194,6 @@ exports.getMoyskladOrganizationsList = async (req, res) => {
   }
 };
 
-// @desc    Получить список контрагентов из МойСклад
-// @route   GET /api/organizations/moysklad-list/counterparties/:integrationLinkId
-// @access  Private
-exports.getMoyskladCounterpartiesList = async (req, res) => {
-  try {
-    const { integrationLinkId } = req.params;
-    const { searchTerm } = req.query;
-    const counterparties = await moySkladEntityService.getMoyskladCounterparties(integrationLinkId, req.user._id, searchTerm);
-    res.status(200).json(counterparties);
-  } catch (error) {
-    console.error(`[CONTROLLER ERROR] Ошибка при получении списка контрагентов из МойСклад: ${error.message}`);
-    res.status(500).json({ message: error.message || 'Ошибка сервера при получении списка контрагентов из МойСклад.' });
-  }
-};
-
-
-// @desc    Получить список договоров из МойСклад (заглушка)
-// @route   GET /api/organizations/moysklad-list/contracts/:integrationLinkId
-// @access  Private
-exports.getMoyskladContractsList = async (req, res) => {
-  try {
-    const { integrationLinkId } = req.params;
-    const { searchTerm } = req.query;
-    const contracts = await moySkladEntityService.getMoyskladContracts(integrationLinkId, req.user._id, searchTerm);
-    res.status(200).json(contracts);
-  } catch (error) {
-    console.error(`[CONTROLLER ERROR] Ошибка при получении списка договоров из МойСклад: ${error.message}`);
-    res.status(500).json({ message: error.message || 'Ошибка сервера при получении списка договоров из МойСклад.' });
-  }
-};
-
-
 // @desc    Создать организацию в МойСклад
 // @route   POST /api/organizations/moysklad-create/organization
 // @access  Private
@@ -248,6 +216,20 @@ exports.createMoyskladOrganization = async (req, res) => {
   }
 };
 
+// @desc    Получить список контрагентов из МойСклад
+// @route   GET /api/organizations/moysklad-list/counterparties/:integrationLinkId
+// @access  Private
+exports.getMoyskladCounterpartiesList = async (req, res) => {
+  try {
+    const { integrationLinkId } = req.params;
+    const { searchTerm } = req.query;
+    const counterparties = await moySkladEntityService.getMoyskladCounterparties(integrationLinkId, req.user._id, searchTerm);
+    res.status(200).json(counterparties);
+  } catch (error) {
+    console.error(`[CONTROLLER ERROR] Ошибка при получении списка контрагентов из МойСклад: ${error.message}`);
+    res.status(500).json({ message: error.message || 'Ошибка сервера при получении списка контрагентов из МойСклад.' });
+  }
+};
 
 // @desc    Создать контрагента в МойСклад
 // @route   POST /api/organizations/moysklad-create/counterparty
@@ -272,10 +254,10 @@ exports.createMoyskladCounterparty = async (req, res) => {
 };
 
 
-
 // @desc    Получить список договоров из МойСклад
 // @route   GET /api/organizations/moysklad-list/contracts/:integrationLinkId
 // @access  Private
+// ПРИМЕЧАНИЕ: Возвращаются только договоры типа "Commission" (Договор комиссии)
 exports.getMoyskladContractsList = async (req, res) => {
   try {
     const { integrationLinkId } = req.params;
@@ -305,6 +287,7 @@ exports.getMoyskladContractsList = async (req, res) => {
 // @desc    Создать договор в МойСклад
 // @route   POST /api/organizations/moysklad-create/contract
 // @access  Private
+// ПРИМЕЧАНИЕ: Создаются только договоры типа "Commission" (Договор комиссии)
 exports.createMoyskladContract = async (req, res) => {
   try {
     const { integrationLinkId, contractName, ownAgentHref, agentHref } = req.body;

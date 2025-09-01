@@ -9,6 +9,7 @@ const MS_BASE_URL = 'https://api.moysklad.ru/api/remap/1.2';
 
 async function checkReportExists(reportNumber, msToken) {
   const url = `${MS_BASE_URL}/entity/commissionreportin`;
+  
   const resp = await axios.get(url, {
     headers: {
       Authorization: `Bearer ${msToken}`,
@@ -18,9 +19,12 @@ async function checkReportExists(reportNumber, msToken) {
       filter: `name=${reportNumber}`
     }
   });
+  
   if (resp.status === 200) {
     const found = resp.data.rows.find(r => r.name === String(reportNumber));
-    return found ? found.meta.href : null;
+    if (found) {
+      return found.meta.href;
+    }
   }
   return null;
 }
@@ -33,18 +37,41 @@ async function createCommissionReport({ reportNumber, dateFrom, dateTo, orgLink,
     contract: { meta: { href: orgLink.moyskladContractHref, type: 'contract', mediaType: 'application/json' } },
     agent: { meta: { href: orgLink.moyskladCounterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
     organization: { meta: { href: orgLink.moyskladOrganizationHref, type: 'organization', mediaType: 'application/json' } },
+    store: { meta: { href: orgLink.moyskladStoreHref, type: 'store', mediaType: 'application/json' } },
     moment: `${dateTo} 00:00:00`,
     commissionPeriodStart: `${dateFrom} 00:00:00`,
     commissionPeriodEnd: `${dateTo} 00:00:00`
   };
 
-  const resp = await axios.post(url, payload, {
-    headers: {
-      Authorization: `Bearer ${msToken}`,
-      'Content-Type': 'application/json'
+  console.log('[MS_EXPORT] Отправляем payload в МойСклад:', JSON.stringify(payload, null, 2));
+
+  try {
+    const resp = await axios.post(url, payload, {
+      headers: {
+        Authorization: `Bearer ${msToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log('[MS_EXPORT] Успешный ответ от МойСклад:', resp.status);
+    return resp.data.meta.href;
+  } catch (error) {
+    console.error('[MS_EXPORT] Ошибка при создании отчёта в МойСклад:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
+    
+    // Детальное логирование ошибок от МойСклад
+    if (error.response?.data?.errors) {
+      console.error('[MS_EXPORT] Детали ошибок МойСклад:');
+      error.response.data.errors.forEach((err, index) => {
+        console.error(`  Ошибка ${index + 1}:`, err);
+      });
     }
-  });
-  return resp.data.meta.href;
+    
+    throw error;
+  }
 }
 
 // список операций, влияющих на overhead
@@ -189,8 +216,26 @@ async function exportReportToMS({ userId, reportId, integrationLinkId }) {
     await report.save();
   }
 
+  // Получаем ссылки организации/контрагента/договора (как в сервисе отгрузок)
   const orgLink = await OrganizationLink.findOne({ user: userId, integrationLink: integrationLinkId });
-  if (!orgLink) throw new Error('OrganizationLink не найден. Заполните связи организации/контрагента/договора');
+  if (!orgLink) throw new Error('OrganizationLink не настроен');
+  
+  const organizationHref = orgLink.moyskladOrganizationHref;
+  const counterpartyHref = orgLink.moyskladCounterpartyHref;
+  const contractHref = orgLink.moyskladContractHref;
+  const storeHref = orgLink.moyskladStoreHref || orgLink.moyskladStoreExpensesHref;
+
+  console.log('[MS_EXPORT] Извлечённые ссылки:', {
+    organization: organizationHref,
+    counterparty: counterpartyHref,
+    contract: contractHref,
+    store: storeHref
+  });
+
+  // Проверяем только наличие обязательных полей (как в сервисе отгрузок)
+  if (!organizationHref || !counterpartyHref || !contractHref || !storeHref) {
+    throw new Error('Не заполнены href организации/контрагента/договора/склада. Перейдите на страницу "Организации" и заполните все обязательные поля.');
+  }
 
   console.log(`[MS_EXPORT] Обработка отчёта ${reportId}`);
 
@@ -202,7 +247,7 @@ async function exportReportToMS({ userId, reportId, integrationLinkId }) {
       reportNumber: reportId,
       dateFrom: report.date_from,
       dateTo: report.date_to,
-      orgLink,
+      orgLink: { moyskladOrganizationHref: organizationHref, moyskladCounterpartyHref: counterpartyHref, moyskladContractHref: contractHref, moyskladStoreHref: storeHref },
       msToken
     });
     console.log(`[MS_EXPORT] Создан отчёт, href=${href}`);
