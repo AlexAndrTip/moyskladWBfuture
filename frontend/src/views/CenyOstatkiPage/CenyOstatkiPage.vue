@@ -37,6 +37,20 @@
           <button type="button" class="reset-btn" @click="resetFilters">Сбросить</button>
         </form>
 
+        <!-- Верхняя пагинация -->
+        <PaginationControls
+          v-if="totalPages > 1"
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          :selected-all-pages="false"
+          v-model:products-per-page="productsPerPage"
+          v-model:page-input="pageInput"
+          @change-page="changePage"
+          @go-to-page="goToPage"
+          @update:products-per-page="onProductsPerPageChange"
+          :is-top="true"
+        />
+
         <!-- Заголовок таблицы -->
         <div class="product-item header no-actions">
           <div>Выбрать</div>
@@ -73,29 +87,19 @@
           />
         </div>
 
-        <!-- Пагинация -->
-        <div v-if="totalPages > 1" class="pagination-section">
-          <div class="pagination-info">
-            Страница {{ currentPage }} из {{ totalPages }} (всего товаров: {{ totalProducts }})
-          </div>
-          <div class="pagination-controls">
-            <button 
-              @click="changePage(currentPage - 1)" 
-              :disabled="currentPage === 1"
-              class="pagination-btn"
-            >
-              Предыдущая
-            </button>
-            <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
-            <button 
-              @click="changePage(currentPage + 1)" 
-              :disabled="currentPage === totalPages"
-              class="pagination-btn"
-            >
-              Следующая
-            </button>
-          </div>
-        </div>
+        <!-- Нижняя пагинация -->
+        <PaginationControls
+          v-if="totalPages > 1"
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          :selected-all-pages="false"
+          v-model:products-per-page="productsPerPage"
+          v-model:page-input="pageInput"
+          @change-page="changePage"
+          @go-to-page="goToPage"
+          @update:products-per-page="onProductsPerPageChange"
+          :is-top="false"
+        />
       </div>
 
       <!-- Модальное окно для изображений -->
@@ -113,9 +117,10 @@
 import { ref, watch, onMounted } from 'vue';
 import axios from 'axios';
 import { useIntegrationLinks } from '../TovaryPage/composables/useIntegrationLinks.js';
-import { useProducts } from '../TovaryPage/composables/useProducts.js';
+import { useProductsForCenyOstatki } from './composables/useProductsForCenyOstatki.js';
 import IntegrationSelector from '../TovaryPage/components/IntegrationSelector.vue';
 import ProductListItem from '../TovaryPage/components/ProductListItem.vue';
+import PaginationControls from '../TovaryPage/components/PaginationControls.vue';
 import ImageModal from '../TovaryPage/components/ImageModal.vue';
 import DemoBlock from '../../components/DemoBlock.vue';
 
@@ -158,18 +163,27 @@ const productsError = ref('');
 const totalProducts = ref(0);
 const totalPages = ref(1);
 const currentPage = ref(1);
+const productsPerPage = ref(20);
+const pageInput = ref(1);
 const tokenError = ref('');
 
 // Использование composable для товаров
 const {
   products: productsFromComposable,
-  loadingProducts: loadingProductsFromComposable,
+  productsLoading: loadingProductsFromComposable,
   productsError: productsErrorFromComposable,
   totalProducts: totalProductsFromComposable,
   totalPages: totalPagesFromComposable,
   currentPage: currentPageFromComposable,
+  productsPerPage: productsPerPageFromComposable,
+  pageInput: pageInputFromComposable,
   fetchProducts: fetchProductsFromComposable,
-} = useProducts(selectedIntegrationId, getToken, searchTerm, msFilter);
+  changePage: changePageFromComposable,
+  onProductsPerPageChange: onProductsPerPageChangeFromComposable,
+  goToPage: goToPageFromComposable,
+  debouncedSearch: debouncedSearchFromComposable,
+  clearSearch: clearSearchFromComposable,
+} = useProductsForCenyOstatki(selectedIntegrationId, getToken, msFilter, searchTerm);
 
 // Синхронизируем состояние с composable
 watch(productsFromComposable, (newProducts) => {
@@ -196,6 +210,14 @@ watch(currentPageFromComposable, (newPage) => {
   currentPage.value = newPage;
 });
 
+watch(productsPerPageFromComposable, (newPerPage) => {
+  productsPerPage.value = newPerPage;
+});
+
+watch(pageInputFromComposable, (newPageInput) => {
+  pageInput.value = newPageInput;
+});
+
 // Функция для загрузки товаров
 const fetchProducts = async () => {
   await fetchProductsFromComposable();
@@ -206,40 +228,41 @@ const onIntegrationChange = () => {
   // Сброс фильтров при смене интеграции
   searchTerm.value = '';
   msFilter.value = '';
-  // Сброс страницы
-  currentPage.value = 1;
-  // Загрузка товаров будет выполнена автоматически через composable
+  // Сброс будет выполнен автоматически через composable
+  clearSearchFromComposable();
 };
 
 const onMsFilterChange = () => {
   // Сброс страницы при изменении фильтра
   currentPage.value = 1;
   // Фильтрация будет выполнена автоматически через composable
+  fetchProductsFromComposable();
 };
 
 
 
 const onSearchChange = () => {
-  // Сброс страницы при изменении поиска
-  currentPage.value = 1;
-  // Поиск будет выполнен автоматически через composable
+  // Используем debouncedSearch из composable
+  debouncedSearchFromComposable();
 };
 
 const resetFilters = () => {
   searchTerm.value = '';
   msFilter.value = '';
-  // Сброс страницы
-  currentPage.value = 1;
   // Сброс будет выполнен автоматически через composable
+  clearSearchFromComposable();
 };
 
 const changePage = (page) => {
-  // Пагинация будет выполнена автоматически через composable
-  // Нужно обновить currentPage в composable
-  if (page >= 1 && page <= totalPages.value) {
-    // Обновляем страницу в composable
-    currentPageFromComposable.value = page;
-  }
+  changePageFromComposable(page);
+};
+
+const onProductsPerPageChange = () => {
+  onProductsPerPageChangeFromComposable();
+};
+
+const goToPage = () => {
+  goToPageFromComposable();
 };
 
 const resetSelection = () => {
@@ -398,51 +421,7 @@ h3 {
   font-style: italic;
 }
 
-/* Пагинация */
-.pagination-section {
-  margin-top: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 15px;
-}
 
-.pagination-info {
-  color: #666;
-  font-size: 14px;
-}
-
-.pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.pagination-btn {
-  padding: 8px 16px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-.pagination-btn:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-}
-
-.page-info {
-  font-weight: bold;
-  color: #333;
-}
 
 /* Адаптивность */
 @media (max-width: 768px) {
@@ -461,9 +440,6 @@ h3 {
     font-size: 12px;
   }
   
-  .pagination-section {
-    flex-direction: column;
-    text-align: center;
-  }
+
 }
 </style> 
