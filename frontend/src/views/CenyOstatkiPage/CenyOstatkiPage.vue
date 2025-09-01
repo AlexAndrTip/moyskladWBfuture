@@ -43,16 +43,13 @@
 
         <!-- Заголовок таблицы -->
         <div class="product-item header">
-          <div class="header-image">Фото</div>
           <div>Выбрать</div>
-          <div>Название</div>
-          <div>Артикул WB</div>
-          <div>Артикул продавца</div>
-          <div>Интеграция</div>
-          <div>Цена на WB</div>
-          <div>Цена в МС</div>
-          <div>Себестоимость</div>
-          <div>Остаток на складе</div>
+          <div class="header-image">Фото</div>
+          <div>Информация</div>
+          <div>Баркод</div>
+          <div>Комплект</div>
+          <div>Цены</div>
+          <div>Остатки</div>
         </div>
 
         <!-- Список товаров -->
@@ -373,7 +370,7 @@ h3 {
   padding: 10px 20px;
   border-bottom: 2px solid #ccc;
   display: grid;
-  grid-template-columns: 40px 60px 3fr 2fr 1fr 2fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 60px 80px 3fr 2fr 1fr 2fr 2fr;
   gap: 15px;
   align-items: center;
 }
@@ -478,7 +475,7 @@ h3 {
   }
   
   .product-item.header {
-    grid-template-columns: 40px 60px 1fr;
+    grid-template-columns: 60px 80px 1fr;
     font-size: 12px;
   }
   

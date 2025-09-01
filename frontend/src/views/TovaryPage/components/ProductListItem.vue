@@ -30,16 +30,8 @@
         </span>
       </div>
     </div>
-    <div class="product-sizes">
-      <strong>Размеры:</strong>
-      <ul>
-        <li v-for="size in product.sizes" :key="size.chrtID">
-          {{ size.techSize }} (SKUs: {{ size.skus ? size.skus.join(', ') : 'Нет' }})
-          <span v-if="size.ms_href" class="ms-size-link-icon">
-            ✅
-          </span>
-        </li>
-      </ul>
+    <div class="product-barcode">
+      <strong>Баркод:</strong> {{ product.barcode || 'Нет' }}
     </div>
     <div v-if="product.sizes && product.sizes.length === 1" class="product-complect">
       <label class="complect-label">Комплект:</label>
@@ -83,7 +75,7 @@
       <button @click="emit('unlink-product', product)" class="action-btn unlink-product" :disabled="isActionInProgress(product._id, 'unlinkProduct')">Удалить связку</button>
     </div>
     
-    <!-- Дополнительные колонки для цен и остатков -->
+    <!-- Колонка для цен -->
     <div v-if="!showActions" class="product-prices">
       <div class="price-item">
         <strong>Цена на WB:</strong> <span class="price-value">—</span>
@@ -92,10 +84,20 @@
         <strong>Цена в МС:</strong> <span class="price-value">—</span>
       </div>
       <div class="price-item">
-        <strong>Себестоимость:</strong> <span class="price-value">—</span>
+        <strong>Себестоимость в МС:</strong> <span class="price-value">—</span>
       </div>
-      <div class="price-item">
-        <strong>Остаток:</strong> <span class="price-value">—</span>
+    </div>
+    
+    <!-- Колонка для остатков -->
+    <div v-if="!showActions" class="product-stocks">
+      <div class="stock-item">
+        <strong>Остаток в МС:</strong> <span class="stock-value">—</span>
+      </div>
+      <div class="stock-item">
+        <strong>Остаток FBS:</strong> <span class="stock-value">—</span>
+      </div>
+      <div class="stock-item">
+        <strong>Остаток FBY WB:</strong> <span class="stock-value">—</span>
       </div>
     </div>
   </div>
@@ -167,7 +169,7 @@ const openImageModal = () => {
 /* Ваши текущие стили */
 .product-item {
   display: grid;
-  grid-template-columns: 40px 80px 3fr 2fr 1fr 3fr; /* Добавляем колонку для фото */
+  grid-template-columns: 60px 80px 3fr 2fr 1fr 2fr 2fr; /* Обновленная структура с 7 колонками */
   gap: 15px;
   align-items: center;
   padding: 15px 20px;
@@ -175,7 +177,7 @@ const openImageModal = () => {
   background-color: #f9f9f9;
 }
 .product-item.header {
-  grid-template-columns: 40px 3fr 2fr 1fr 3fr; /* Важно, чтобы здесь тоже был столбец для "Комплекта" */
+  grid-template-columns: 60px 80px 3fr 2fr 1fr 2fr 2fr; /* Обновленная структура с 7 колонками */
   background-color: #f0f2f5;
   font-weight: bold;
   position: sticky;
@@ -291,6 +293,16 @@ const openImageModal = () => {
     color: #999;
     min-height: 50px;
 }
+
+.product-barcode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.9em;
+  color: #555;
+}
 .complect-info {
     padding: 5px 0;
 }
@@ -320,6 +332,35 @@ const openImageModal = () => {
 }
 
 .price-value {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* Стили для колонки с остатками */
+.product-stocks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.stock-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9em;
+  padding: 4px 0;
+}
+
+.stock-item strong {
+  color: #495057;
+  font-weight: 600;
+}
+
+.stock-value {
   color: #6c757d;
   font-weight: 500;
 }
@@ -416,12 +457,12 @@ const openImageModal = () => {
 
 @media (max-width: 768px) {
   .product-item {
-    grid-template-columns: 40px 60px 1fr;
+    grid-template-columns: 60px 80px 1fr;
     flex-direction: column;
     align-items: flex-start;
   }
   .product-item.header {
-    grid-template-columns: 40px 60px 1fr;
+    grid-template-columns: 60px 80px 1fr;
   }
   .product-item .header-sizes,
   .product-item .header-actions,
@@ -432,7 +473,9 @@ const openImageModal = () => {
   .product-actions,
   .product-complect,
   .product-complect-placeholder,
-  .product-prices {
+  .product-prices,
+  .product-stocks,
+  .product-barcode {
     display: none;
   }
   .product-image {
