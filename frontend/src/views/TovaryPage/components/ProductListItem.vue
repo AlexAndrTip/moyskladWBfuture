@@ -43,11 +43,26 @@
       </ul>
     </div>
     
-    <!-- Блок с баркодом для страницы цен и остатков -->
+    <!-- Блок с баркодами для страницы цен и остатков -->
+    <div v-else-if="showBarcodesBySize" class="product-barcodes">
+      <strong>Баркоды:</strong>
+      <ul>
+        <li v-for="size in product.sizes" :key="size.chrtID">
+          {{ size.techSize }}: {{ size.barcode || 'Нет' }}
+          <span v-if="size.ms_href" class="ms-size-link-icon">
+            ✅
+          </span>
+        </li>
+      </ul>
+    </div>
+    
+    <!-- Блок с баркодом для страницы товаров -->
     <div v-else class="product-barcode">
       <strong>Баркод:</strong> {{ product.barcode || 'Нет' }}
     </div>
-    <div v-if="product.sizes && product.sizes.length === 1" class="product-complect">
+    
+    <!-- Блок с комплектом для страницы товаров -->
+    <div v-if="showActions && product.sizes && product.sizes.length === 1" class="product-complect">
       <label class="complect-label">Комплект:</label>
       <input
         type="checkbox"
@@ -61,7 +76,8 @@
         class="complect-checkbox"
       />
     </div>
-    <div v-else class="product-complect-placeholder"></div>
+    <div v-else-if="showActions" class="product-complect-placeholder"></div>
+
 
     <div v-if="showActions" class="product-actions">
       <button @click="emit('create-in-ms', product)" class="action-btn create-ms" :disabled="isActionInProgress(product._id, 'createMs')">
@@ -132,6 +148,10 @@ const props = defineProps({
     type: Boolean,
     default: true
   },
+  showBarcodesBySize: {
+    type: Boolean,
+    default: false
+  },
   integrationLinks: {
     type: Array,
     default: () => []
@@ -193,7 +213,7 @@ const openImageModal = () => {
 
 /* Специальная структура для страницы цен и остатков */
 .product-item.no-actions {
-  grid-template-columns: 60px 80px 3fr 2fr 1fr 2fr 2fr; /* Структура с 7 колонками */
+  grid-template-columns: 60px 80px 3fr 2fr 2fr 2fr; /* Структура с 6 колонками */
 }
 .product-item.header {
   grid-template-columns: 60px 80px 3fr 2fr 1fr 3fr; /* Структура для страницы товаров */
@@ -282,6 +302,9 @@ const openImageModal = () => {
   margin-left: 5px; /* Небольшой отступ от текста размера */
 }
 
+
+
+
 .product-complect {
   display: flex;
   flex-direction: column;
@@ -327,9 +350,41 @@ const openImageModal = () => {
   font-size: 0.9em;
   color: #555;
 }
-.complect-info {
-    padding: 5px 0;
+
+.product-barcodes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  font-size: 0.9em;
+  color: #555;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
 }
+
+.product-barcodes ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.product-barcodes li {
+  padding: 4px 0;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.product-barcodes li:last-child {
+  border-bottom: none;
+}
+
+
 
 /* Стили для колонок с ценами и остатками */
 .product-prices {
@@ -499,7 +554,8 @@ const openImageModal = () => {
   .product-complect-placeholder,
   .product-prices,
   .product-stocks,
-  .product-barcode {
+  .product-barcode,
+  .product-barcodes {
     display: none;
   }
   .product-image {

@@ -33,11 +33,7 @@
             <option value="exists">Выгружены в МС</option>
             <option value="not_exists">Не выгружены в МС</option>
           </select>
-          <select v-model="complectFilter" @change="onComplectFilterChange" class="complect-filter">
-            <option value="">Все товары</option>
-            <option value="true">Комплекты</option>
-            <option value="false">Не комплекты</option>
-          </select>
+
           <button type="button" class="reset-btn" @click="resetFilters">Сбросить</button>
         </form>
 
@@ -46,8 +42,7 @@
           <div>Выбрать</div>
           <div class="header-image">Фото</div>
           <div>Информация</div>
-          <div>Баркод</div>
-          <div>Комплект</div>
+          <div>Баркоды</div>
           <div>Цены</div>
           <div>Остатки</div>
         </div>
@@ -72,14 +67,9 @@
             :show-integration-info="selectedIntegrationId === 'all'"
             :integration-links="integrationLinks"
             :show-actions="false"
+            :show-barcodes-by-size="true"
             class="no-actions"
             @open-image-modal="openImageModal"
-            @toggle-complect="() => {}"
-            @toggle-select="() => {}"
-            @create-in-ms="() => {}"
-            @create-variants="() => {}"
-            @link-to-product="() => {}"
-            @unlink-product="() => {}"
           />
         </div>
 
@@ -160,7 +150,6 @@ const {
 // Состояние для фильтров
 const searchTerm = ref('');
 const msFilter = ref(''); // '', 'exists', 'not_exists'
-const complectFilter = ref(''); // '', 'true', 'false'
 
 // Состояние для товаров (будет синхронизировано с composable)
 const products = ref([]);
@@ -180,7 +169,7 @@ const {
   totalPages: totalPagesFromComposable,
   currentPage: currentPageFromComposable,
   fetchProducts: fetchProductsFromComposable,
-} = useProducts(selectedIntegrationId, getToken, searchTerm, msFilter, complectFilter);
+} = useProducts(selectedIntegrationId, getToken, searchTerm, msFilter);
 
 // Синхронизируем состояние с composable
 watch(productsFromComposable, (newProducts) => {
@@ -217,7 +206,6 @@ const onIntegrationChange = () => {
   // Сброс фильтров при смене интеграции
   searchTerm.value = '';
   msFilter.value = '';
-  complectFilter.value = '';
   // Сброс страницы
   currentPage.value = 1;
   // Загрузка товаров будет выполнена автоматически через composable
@@ -229,11 +217,7 @@ const onMsFilterChange = () => {
   // Фильтрация будет выполнена автоматически через composable
 };
 
-const onComplectFilterChange = () => {
-  // Сброс страницы при изменении фильтра
-  currentPage.value = 1;
-  // Фильтрация будет выполнена автоматически через composable
-};
+
 
 const onSearchChange = () => {
   // Сброс страницы при изменении поиска
@@ -244,7 +228,6 @@ const onSearchChange = () => {
 const resetFilters = () => {
   searchTerm.value = '';
   msFilter.value = '';
-  complectFilter.value = '';
   // Сброс страницы
   currentPage.value = 1;
   // Сброс будет выполнен автоматически через composable
@@ -332,8 +315,7 @@ h3 {
 }
 
 .search-input,
-.ms-filter,
-.complect-filter {
+.ms-filter {
   padding: 8px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -371,7 +353,7 @@ h3 {
   padding: 10px 20px;
   border-bottom: 2px solid #ccc;
   display: grid;
-  grid-template-columns: 60px 80px 3fr 2fr 1fr 2fr 2fr;
+  grid-template-columns: 60px 80px 3fr 2fr 2fr 2fr;
   gap: 15px;
   align-items: center;
 }
@@ -470,8 +452,7 @@ h3 {
   }
   
   .search-input,
-  .ms-filter,
-  .complect-filter {
+  .ms-filter {
     min-width: auto;
   }
   
