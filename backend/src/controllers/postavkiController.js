@@ -145,12 +145,25 @@ exports.createDemand = async (req, res) => {
     }
 
     console.log(`[POSTAVKI] href для Demand: ${hrefToUse} | nmID: ${product.nmID}`);
+    
+    // ИЗМЕНЕНО: Правильное определение типа товара по URL
+    let detectedType = 'product'; // fallback
+    if (hrefToUse.includes('/entity/bundle/')) {
+      detectedType = 'bundle';
+    } else if (hrefToUse.includes('/entity/variant/')) {
+      detectedType = 'variant';
+    } else if (hrefToUse.includes('/entity/product/')) {
+      detectedType = 'product';
+    }
+    
+    console.log(`[POSTAVKI] Определённый тип товара: ${detectedType} для href: ${hrefToUse}`);
+    
     positions.push({
       quantity: income.quantity,
       assortment: {
         meta: {
           href: hrefToUse,
-          type: hrefToUse.includes('/bundle/') ? 'bundle' : 'product',
+          type: detectedType,
           mediaType: 'application/json'
         }
       }
@@ -173,6 +186,9 @@ exports.createDemand = async (req, res) => {
       code: income._id.toString(),
       positions // <-- снова передаём позиции
     };
+    
+    console.log('[POSTAVKI] Отправляем payload в МойСклад:', JSON.stringify(payload, null, 2));
+    
     // Отправляем запрос в МойСклад
     const msResp = await axios.post('https://api.moysklad.ru/api/remap/1.2/entity/demand', payload, {
       headers: {
@@ -187,6 +203,25 @@ exports.createDemand = async (req, res) => {
     res.status(200).json({ message: 'Отгрузка создана в МойСклад', ms_href });
   } catch (error) {
     console.error('Ошибка создания отгрузки в МойСклад:', error);
+    
+    // Детальное логирование ошибок от МойСклад
+    if (error.response) {
+      console.error('[POSTAVKI] Детали ошибки МойСклад:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
+      
+      if (error.response.data?.errors) {
+        console.error('[POSTAVKI] Ошибки от МойСклад:');
+        error.response.data.errors.forEach((err, index) => {
+          console.error(`  Ошибка ${index + 1}:`, err);
+        });
+      }
+    }
+    
     res.status(500).json({ message: 'Ошибка создания отгрузки в МойСклад', error: error.message });
   }
 };
