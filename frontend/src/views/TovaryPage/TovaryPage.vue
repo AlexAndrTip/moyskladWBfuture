@@ -491,7 +491,7 @@ h3 {
   padding-bottom: 10px;
   border-bottom: 2px solid #ccc;
   display: grid; /* Важно, чтобы тут был grid, т.к. он задается в ProductListItem */
-  grid-template-columns: 40px 80px 3fr 2fr 1fr 3fr; /* Добавляем колонку для фото */
+  grid-template-columns: 40px 80px 3fr 2fr 1fr 3fr; /* 6 колонок для страницы товаров */
   gap: 15px;
   align-items: center;
   padding-left: 20px;

@@ -42,7 +42,7 @@
         </form>
 
         <!-- Заголовок таблицы -->
-        <div class="product-item header">
+        <div class="product-item header no-actions">
           <div>Выбрать</div>
           <div class="header-image">Фото</div>
           <div>Информация</div>
@@ -72,6 +72,7 @@
             :show-integration-info="selectedIntegrationId === 'all'"
             :integration-links="integrationLinks"
             :show-actions="false"
+            class="no-actions"
             @open-image-modal="openImageModal"
             @toggle-complect="() => {}"
             @toggle-select="() => {}"

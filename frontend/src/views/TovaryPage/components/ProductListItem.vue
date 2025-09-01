@@ -30,7 +30,21 @@
         </span>
       </div>
     </div>
-    <div class="product-barcode">
+    <!-- Блок с размерами для страницы товаров -->
+    <div v-if="showActions" class="product-sizes">
+      <strong>Размеры:</strong>
+      <ul>
+        <li v-for="size in product.sizes" :key="size.chrtID">
+          {{ size.techSize }} (SKUs: {{ size.skus ? size.skus.join(', ') : 'Нет' }})
+          <span v-if="size.ms_href" class="ms-size-link-icon">
+            ✅
+          </span>
+        </li>
+      </ul>
+    </div>
+    
+    <!-- Блок с баркодом для страницы цен и остатков -->
+    <div v-else class="product-barcode">
       <strong>Баркод:</strong> {{ product.barcode || 'Нет' }}
     </div>
     <div v-if="product.sizes && product.sizes.length === 1" class="product-complect">
@@ -169,15 +183,20 @@ const openImageModal = () => {
 /* Ваши текущие стили */
 .product-item {
   display: grid;
-  grid-template-columns: 60px 80px 3fr 2fr 1fr 2fr 2fr; /* Обновленная структура с 7 колонками */
+  grid-template-columns: 60px 80px 3fr 2fr 1fr 3fr; /* Структура для страницы товаров */
   gap: 15px;
   align-items: center;
   padding: 15px 20px;
   border-bottom: 1px solid #eee;
   background-color: #f9f9f9;
 }
+
+/* Специальная структура для страницы цен и остатков */
+.product-item.no-actions {
+  grid-template-columns: 60px 80px 3fr 2fr 1fr 2fr 2fr; /* Структура с 7 колонками */
+}
 .product-item.header {
-  grid-template-columns: 60px 80px 3fr 2fr 1fr 2fr 2fr; /* Обновленная структура с 7 колонками */
+  grid-template-columns: 60px 80px 3fr 2fr 1fr 3fr; /* Структура для страницы товаров */
   background-color: #f0f2f5;
   font-weight: bold;
   position: sticky;
@@ -186,6 +205,11 @@ const openImageModal = () => {
   padding-top: 10px;
   padding-bottom: 10px;
   border-bottom: 2px solid #ccc;
+}
+
+/* Специальная структура заголовка для страницы цен и остатков */
+.product-item.header.no-actions {
+  grid-template-columns: 60px 80px 3fr 2fr 1fr 2fr 2fr; /* Структура с 7 колонками */
 }
 .product-item:last-child {
   border-bottom: none;
