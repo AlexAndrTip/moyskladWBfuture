@@ -10,6 +10,58 @@ const SizeSchema = new mongoose.Schema({
   ms_href: { // <-- НОВОЕ ПОЛЕ: URL товара в МойСклад для данного размера
     type: String,
     required: false, // Не обязательно, пока товар не создан в МС
+  },
+  // Новые поля для цен и остатков
+  priceWB: { // Цена на Wildberries
+    type: Number,
+    default: 0,
+    required: false
+  },
+  discountedPriceWB: { // Цена со скидкой на Wildberries
+    type: Number,
+    default: 0,
+    required: false
+  },
+  clubDiscountedPriceWB: { // Цена со скидкой для участников клуба WB
+    type: Number,
+    default: 0,
+    required: false
+  },
+  priceMS: { // Цена в МойСклад
+    type: Number,
+    default: 0,
+    required: false
+  },
+  costPriceMS: { // Себестоимость в МойСклад
+    type: Number,
+    default: 0,
+    required: false
+  },
+  stockMS: { // Остаток в МойСклад
+    type: Number,
+    default: 0,
+    required: false
+  },
+  stockFBS: { // Остаток FBS (Fulfillment by Seller)
+    type: Number,
+    default: 0,
+    required: false
+  },
+  stockFBY: { // Остаток FBY (Fulfillment by Yandex)
+    type: Number,
+    default: 0,
+    required: false
+  },
+  // Поля для отслеживания времени последнего обновления
+  lastPriceUpdate: { // Время последнего обновления цен
+    type: Date,
+    default: null,
+    required: false
+  },
+  lastStockUpdate: { // Время последнего обновления остатков
+    type: Date,
+    default: null,
+    required: false
   }
 });
 
