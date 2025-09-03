@@ -53,9 +53,9 @@
 
         <!-- Заголовок таблицы -->
         <div class="product-item header no-actions">
-          <div>Выбрать</div>
           <div class="header-image">Фото</div>
           <div>Информация</div>
+          <div>Размеры</div>
           <div>Баркоды</div>
           <div>Цены</div>
           <div>Остатки</div>
@@ -72,17 +72,12 @@
         </div>
 
         <div v-else class="products-list">
-          <ProductListItem
+          <ProductListItemCenyOstatki
             v-for="product in products"
             :key="product.nmID"
             :product="product"
-            :is-selected="false"
-            :is-action-in-progress="isActionInProgress"
             :show-integration-info="selectedIntegrationId === 'all'"
             :integration-links="integrationLinks"
-            :show-actions="false"
-            :show-barcodes-by-size="true"
-            class="no-actions"
             @open-image-modal="openImageModal"
           />
         </div>
@@ -119,7 +114,7 @@ import axios from 'axios';
 import { useIntegrationLinks } from '../TovaryPage/composables/useIntegrationLinks.js';
 import { useProductsForCenyOstatki } from './composables/useProductsForCenyOstatki.js';
 import IntegrationSelector from '../TovaryPage/components/IntegrationSelector.vue';
-import ProductListItem from '../TovaryPage/components/ProductListItem.vue';
+import ProductListItemCenyOstatki from './components/ProductListItemCenyOstatki.vue';
 import PaginationControls from '../TovaryPage/components/PaginationControls.vue';
 import ImageModal from '../TovaryPage/components/ImageModal.vue';
 import DemoBlock from '../../components/DemoBlock.vue';
@@ -269,8 +264,7 @@ const resetSelection = () => {
   // В этой странице нет выбора товаров, но функция нужна для совместимости
 };
 
-// Функция-заглушка для isActionInProgress
-const isActionInProgress = () => false;
+
 
 // Функция для установки первой интеграции по умолчанию
 const setDefaultIntegration = () => {
@@ -383,7 +377,7 @@ h3 {
 
 /* Специальная структура заголовка для страницы цен и остатков */
 .product-item.header.no-actions {
-  grid-template-columns: 60px 80px 3fr 2fr 2fr 2fr;
+  grid-template-columns: 80px 3fr 2fr 2fr 2fr 2fr;
   align-items: center;
   background-color: #f0f2f5;
   font-weight: bold;
@@ -449,12 +443,12 @@ h3 {
   }
   
   .product-item.header {
-    grid-template-columns: 60px 80px 1fr;
+    grid-template-columns: 80px 1fr;
     font-size: 12px;
   }
   
   .product-item.header.no-actions {
-    grid-template-columns: 60px 80px 1fr;
+    grid-template-columns: 80px 1fr;
   }
 }
 </style> 
