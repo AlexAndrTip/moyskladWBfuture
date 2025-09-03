@@ -46,16 +46,16 @@ const selectSize = (sizeId) => {
 }
 
 .size-button {
-  padding: 8px 16px;
+  padding: 6px 12px;
   border: 2px solid #ddd;
-  border-radius: 6px;
+  border-radius: 4px;
   background-color: #fff;
   color: #333;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   transition: all 0.2s ease;
-  min-width: 60px;
+  min-width: 45px;
   text-align: center;
 }
 
