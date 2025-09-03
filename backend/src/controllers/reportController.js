@@ -278,7 +278,12 @@ exports.exportReportToMS = async (req, res) => {
     } else if (error.message.includes('Не заполнены href')) {
       userMessage = error.message;
     } else if (error.response?.status === 412) {
-      userMessage = 'Ошибка валидации данных в МойСклад. Проверьте корректность ссылок на организацию, контрагента и договор.';
+      userMessage = 'Ошибка валидации данных в МойСклад. Возможно, в отчете есть позиции с некорректными данными (нулевое количество, отрицательные цены и т.д.).';
+      console.error('[REPORT_CONTROLLER] Детали ошибки 412:', {
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
     } else if (error.response?.status === 401) {
       userMessage = 'Ошибка авторизации в МойСклад. Проверьте токен доступа.';
     } else if (error.response?.status === 403) {

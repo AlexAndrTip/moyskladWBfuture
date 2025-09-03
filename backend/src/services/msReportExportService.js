@@ -91,6 +91,22 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
     Report_id: reportDoc.Report_id,
   }).lean();
 
+  console.log(`[MS_EXPORT] Обрабатываем ${rows.length} строк отчёта ${reportDoc.Report_id}`);
+  
+  // Логируем проблемные строки для диагностики
+  const zeroQuantityRows = rows.filter(r => r.quantity === 0 || r.quantity === null || r.quantity === undefined);
+  if (zeroQuantityRows.length > 0) {
+    console.log(`[MS_EXPORT] Найдено ${zeroQuantityRows.length} строк с нулевым количеством:`, 
+      zeroQuantityRows.map(r => ({
+        barcode: r.barcode,
+        quantity: r.quantity,
+        doc_type: r.doc_type_name,
+        retail_amount: r.retail_amount,
+        ppvz_for_pay: r.ppvz_for_pay
+      }))
+    );
+  }
+
   const sales = []; const returns = [];
 
   for (const r of rows) {
@@ -120,6 +136,26 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
     }
     if (!hrefMS) continue;
 
+    // Пропускаем позиции с нулевым количеством - МойСклад их не принимает
+    if (r.quantity === 0 || r.quantity === null || r.quantity === undefined) {
+      console.log(`[MS_EXPORT] Пропускаем позицию с нулевым количеством: ${r.barcode}, reward: ${r.ppvz_for_pay}`);
+      continue;
+    }
+
+    // Рассчитываем комиссию правильно: комиссия = розничная цена - выплата продавцу
+    // Это дает нам реальную комиссию WB, а не то, что получит продавец
+    let reward;
+    if (r.doc_type_name === 'Продажа') {
+      // Для продаж: комиссия = розничная цена - выплата продавцу
+      reward = Math.round(((r.retail_amount || 0) - (r.ppvz_for_pay || 0)) * 100);
+    } else if (r.doc_type_name === 'Возврат') {
+      // Для возвратов: комиссия = розничная цена - выплата продавцу (может быть отрицательной)
+      reward = Math.round(((r.retail_amount || 0) - (r.ppvz_for_pay || 0)) * 100);
+    } else {
+      // Для других типов: используем ту же логику
+      reward = Math.round(((r.retail_amount || 0) - (r.ppvz_for_pay || 0)) * 100);
+    }
+
     const position = {
       assortment: {
         meta: { href: hrefMS, type, mediaType: 'application/json' },
@@ -127,7 +163,7 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
       quantity: r.quantity,
       price: Math.round((r.retail_amount || 0) * 100),
       vat: 0,
-      reward: Math.round(((r.retail_amount || 0) - (r.ppvz_for_pay || 0)) * 100),
+      reward: reward,
     };
 
     if (r.doc_type_name === 'Возврат') returns.push(position);
@@ -139,15 +175,62 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
     if (!arr.length) return;
     const url = `${MS_BASE_URL}/entity/commissionreportin/${cleanId}` +
       (isReturn ? '/returntocommissionerpositions' : '/positions');
+    
+    console.log(`[MS_EXPORT] Отправляем ${arr.length} позиций на ${url}`);
+    
     for (let i = 0; i < arr.length; i += 1000) {
-      await axios.post(url, arr.slice(i, i + 1000), {
-        headers: {
-          Authorization: `Bearer ${msToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const chunk = arr.slice(i, i + 1000);
+      console.log(`[MS_EXPORT] Отправляем чанк ${i/1000 + 1} (${chunk.length} позиций)`);
+      
+      try {
+        await axios.post(url, chunk, {
+          headers: {
+            Authorization: `Bearer ${msToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        console.log(`[MS_EXPORT] Чанк ${i/1000 + 1} успешно отправлен`);
+      } catch (error) {
+        console.error(`[MS_EXPORT] Ошибка отправки чанка ${i/1000 + 1}:`, {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: url
+        });
+        throw error;
+      }
     }
   };
+
+  // Валидация позиций перед отправкой
+  const validatePosition = (pos, index, type) => {
+    if (pos.quantity <= 0) {
+      throw new Error(`Позиция ${index} (${type}): некорректное количество ${pos.quantity}`);
+    }
+    if (pos.price < 0) {
+      throw new Error(`Позиция ${index} (${type}): некорректная цена ${pos.price}`);
+    }
+    // Комиссия может быть любой (положительной, отрицательной, нулевой) - это нормально для WB отчетов
+    // if (pos.reward < 0) {
+    //   throw new Error(`Позиция ${index} (${type}): некорректная комиссия ${pos.reward}`);
+    // }
+    if (!pos.assortment?.meta?.href) {
+      throw new Error(`Позиция ${index} (${type}): отсутствует ссылка на товар`);
+    }
+  };
+
+  // Проверяем все позиции
+  sales.forEach((pos, index) => validatePosition(pos, index, 'продажа'));
+  returns.forEach((pos, index) => validatePosition(pos, index, 'возврат'));
+
+  console.log(`[MS_EXPORT] Валидация пройдена: ${sales.length} продаж, ${returns.length} возвратов`);
+
+  // Проверяем, что есть позиции для отправки
+  if (sales.length === 0 && returns.length === 0) {
+    console.warn('[MS_EXPORT] Внимание: нет позиций для отправки в МойСклад после фильтрации');
+    console.warn('[MS_EXPORT] Возможные причины: все позиции имеют нулевое количество или некорректные данные');
+    return; // Выходим без отправки
+  }
 
   await postChunk(sales, false);
   await postChunk(returns, true);
@@ -177,6 +260,24 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
   console.log(
     `[MS_EXPORT] Позиции отправлены (продажи ${sales.length}, возвраты ${returns.length}), overhead = ${overheadSum}`,
   );
+  
+  // Дополнительное логирование для диагностики
+  if (sales.length > 0) {
+    console.log('[MS_EXPORT] Примеры позиций продаж:', sales.slice(0, 2).map(p => ({
+      quantity: p.quantity,
+      price: p.price,
+      reward: p.reward,
+      assortment: p.assortment.meta.href
+    })));
+  }
+  if (returns.length > 0) {
+    console.log('[MS_EXPORT] Примеры позиций возвратов:', returns.slice(0, 2).map(p => ({
+      quantity: p.quantity,
+      price: p.price,
+      reward: p.reward,
+      assortment: p.assortment.meta.href
+    })));
+  }
 }
 
 /**
