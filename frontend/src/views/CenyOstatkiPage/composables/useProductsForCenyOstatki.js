@@ -82,9 +82,12 @@ export function useProductsForCenyOstatki(selectedIntegrationId, getToken, msFil
     }
   };
 
-  const onProductsPerPageChange = () => {
-    currentPage.value = 1;
-    fetchProducts();
+  const onProductsPerPageChange = (newProductsPerPage) => {
+    if (newProductsPerPage && newProductsPerPage !== productsPerPage.value) {
+      productsPerPage.value = newProductsPerPage;
+      currentPage.value = 1;
+      fetchProducts();
+    }
   };
 
   const goToPage = () => {

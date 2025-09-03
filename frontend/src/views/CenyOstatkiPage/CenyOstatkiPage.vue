@@ -252,8 +252,8 @@ const changePage = (page) => {
   changePageFromComposable(page);
 };
 
-const onProductsPerPageChange = () => {
-  onProductsPerPageChangeFromComposable();
+const onProductsPerPageChange = (newProductsPerPage) => {
+  onProductsPerPageChangeFromComposable(newProductsPerPage);
 };
 
 const goToPage = () => {
