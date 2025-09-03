@@ -61,7 +61,7 @@
           <span class="price-value">{{ formatPrice(selectedSize.clubDiscountedPriceWB) }}</span>
         </div>
         <div class="price-item">
-          <span class="price-label">Акция:</span> 
+          <span class="price-label">Цена со скидкой:</span> 
           <span class="price-value">{{ formatPrice(selectedSize.discountedPriceWB) }}</span>
         </div>
         <div class="price-item">

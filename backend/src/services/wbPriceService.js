@@ -13,11 +13,10 @@ class WbPriceService {
   // Получение цен с WB API для всех кабинетов
   async getPricesForProducts(limit = 100, offset = 0) {
     try {
-      console.log('🚀 Начало обновления цен для всех WB кабинетов...');
+      console.log('🚀 Обновление цен WB...');
       
       // Сначала находим все уникальные wbCabinet ID из товаров
       const uniqueCabinetIds = await Product.distinct('wbCabinet');
-      console.log(`🔍 Найдено уникальных wbCabinet ID в товарах: ${uniqueCabinetIds.length}`);
       
       if (uniqueCabinetIds.length === 0) {
         throw new Error('В товарах не найдено ссылок на WB кабинеты');
@@ -29,16 +28,9 @@ class WbPriceService {
         token: { $exists: true, $ne: '' }
       }).select('+token');
       
-      console.log(`🏢 Найдено WB кабинетов с токенами: ${wbCabinets.length}`);
-      
       if (wbCabinets.length === 0) {
         throw new Error('Все найденные кабинеты не имеют токенов');
       }
-      
-      // Выводим информацию о каждом кабинете
-      wbCabinets.forEach(cabinet => {
-        console.log(`   - ${cabinet.name} (ID: ${cabinet._id}) - Токен: установлен`);
-      });
 
       let totalUpdated = 0;
       let totalErrors = 0;
@@ -47,11 +39,8 @@ class WbPriceService {
       // Обрабатываем каждый WB кабинет
       for (const cabinet of wbCabinets) {
         try {
-          console.log(`\n🏢 Обработка кабинета: ${cabinet.name} (ID: ${cabinet._id})`);
-          
           // Проверяем токен кабинета
           if (!cabinet.token || cabinet.token.trim() === '') {
-            console.log(`⚠️ Для кабинета ${cabinet.name} не установлен токен - пропускаем`);
             results.push({
               cabinetId: cabinet._id,
               cabinetName: cabinet.name,
@@ -68,7 +57,6 @@ class WbPriceService {
           const cabinetProducts = await this.getProductsForCabinet(cabinet._id);
           
           if (cabinetProducts.length === 0) {
-            console.log(`⚠️ Для кабинета ${cabinet.name} не найдено товаров`);
             results.push({
               cabinetId: cabinet._id,
               cabinetName: cabinet.name,
@@ -80,8 +68,6 @@ class WbPriceService {
             });
             continue;
           }
-
-          console.log(`📦 Найдено товаров для кабинета ${cabinet.name}: ${cabinetProducts.length}`);
 
           // Обновляем цены для товаров данного кабинета
           const cabinetResult = await this.updatePricesForCabinet(cabinet, cabinetProducts, limit, offset);
@@ -194,13 +180,10 @@ class WbPriceService {
          return { updated: 0, errors: 0 };
        }
 
-       console.log(`🔄 Обработка ${nmIDs.length} товаров для кабинета ${cabinet.name}`);
+       let totalUpdated = 0;
+       let totalErrors = 0;
 
-      let totalUpdated = 0;
-      let totalErrors = 0;
-
-             // Получаем все товары с WB API с пагинацией
-       console.log(`🔄 Получение товаров с WB API для кабинета ${cabinet.name}...`);
+       // Получаем все товары с WB API с пагинацией
        
        let allWbGoods = [];
        let currentOffset = 0;
@@ -244,29 +227,20 @@ class WbPriceService {
          }
        }
       
-      console.log(`📦 Всего получено товаров с WB API: ${allWbGoods.length}`);
-      
       if (allWbGoods.length === 0) {
-        console.log(`⚠️ Не удалось получить товары с WB API для кабинета ${cabinet.name}`);
         return { updated: 0, errors: totalErrors };
       }
       
-             // Фильтруем товары по нужным nmID
-       const neededNmIDs = new Set(nmIDs);
-       const filteredWbGoods = allWbGoods.filter(good => neededNmIDs.has(good.nmID));
-       
-       console.log(`🔍 Найдено товаров из ${nmIDs.length} нужных: ${filteredWbGoods.length}`);
-       
-       if (filteredWbGoods.length > 0) {
-         // Обновляем цены в БД для найденных товаров
-         const updateResult = await this.updateProductPrices(filteredWbGoods);
-         totalUpdated += updateResult.updated;
-         totalErrors += updateResult.errors;
-       } else {
-         console.log(`⚠️ Не найдено товаров для обновления цен`);
-       }
-
-             console.log(`📊 Итоговый результат для кабинета ${cabinet.name}: обновлено: ${totalUpdated}, ошибок: ${totalErrors}`);
+      // Фильтруем товары по нужным nmID
+      const neededNmIDs = new Set(nmIDs);
+      const filteredWbGoods = allWbGoods.filter(good => neededNmIDs.has(good.nmID));
+      
+      if (filteredWbGoods.length > 0) {
+        // Обновляем цены в БД для найденных товаров
+        const updateResult = await this.updateProductPrices(filteredWbGoods);
+        totalUpdated += updateResult.updated;
+        totalErrors += updateResult.errors;
+      }
        
        return { updated: totalUpdated, errors: totalErrors };
 
@@ -434,7 +408,6 @@ class WbPriceService {
         
           if (updateResult.modifiedCount > 0) {
             updated++;
-            console.log(`✅ Обновлены цены для товара ${product.title || product.nmID} (nmID: ${wbGood.nmID})`);
           }
         }
 
@@ -444,7 +417,6 @@ class WbPriceService {
       }
     }
 
-    console.log(`📊 Результат обновления цен: обновлено товаров: ${updated}, ошибок: ${errors}`);
     return { updated, errors };
   }
 
