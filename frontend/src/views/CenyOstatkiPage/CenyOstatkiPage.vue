@@ -381,6 +381,19 @@ h3 {
   align-items: center;
 }
 
+/* Специальная структура заголовка для страницы цен и остатков */
+.product-item.header.no-actions {
+  grid-template-columns: 60px 80px 3fr 2fr 2fr 2fr;
+  align-items: center;
+  background-color: #f0f2f5;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 10px 20px;
+  border-bottom: 2px solid #ccc;
+}
+
 .header-image {
   text-align: center;
   font-weight: bold;
@@ -440,6 +453,8 @@ h3 {
     font-size: 12px;
   }
   
-
+  .product-item.header.no-actions {
+    grid-template-columns: 60px 80px 1fr;
+  }
 }
 </style> 

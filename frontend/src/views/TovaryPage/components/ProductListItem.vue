@@ -108,26 +108,56 @@
     <!-- Колонка для цен -->
     <div v-if="!showActions" class="product-prices">
       <div class="price-item">
-        <strong>Цена на WB:</strong> <span class="price-value">—</span>
+        <strong>Цена на WB:</strong> 
+        <span class="price-value">
+          {{ getPriceDisplay(product, 'priceWB') }}
+        </span>
       </div>
       <div class="price-item">
-        <strong>Цена в МС:</strong> <span class="price-value">—</span>
+        <strong>Цена по акции клуб:</strong> 
+        <span class="price-value">
+          {{ getPriceDisplay(product, 'clubDiscountedPriceWB') }}
+        </span>
       </div>
       <div class="price-item">
-        <strong>Себестоимость в МС:</strong> <span class="price-value">—</span>
+        <strong>Цена по акции:</strong> 
+        <span class="price-value">
+          {{ getPriceDisplay(product, 'discountedPriceWB') }}
+        </span>
+      </div>
+      <div class="price-item">
+        <strong>Цена в МС:</strong> 
+        <span class="price-value">
+          {{ getPriceDisplay(product, 'priceMS') }}
+        </span>
+      </div>
+      <div class="price-item">
+        <strong>Себестоимость в МС:</strong> 
+        <span class="price-value">
+          {{ getPriceDisplay(product, 'costPriceMS') }}
+        </span>
       </div>
     </div>
     
     <!-- Колонка для остатков -->
     <div v-if="!showActions" class="product-stocks">
       <div class="stock-item">
-        <strong>Остаток в МС:</strong> <span class="stock-value">—</span>
+        <strong>Остаток в МС:</strong> 
+        <span class="stock-value">
+          {{ getStockDisplay(product, 'stockMS') }}
+        </span>
       </div>
       <div class="stock-item">
-        <strong>Остаток FBS:</strong> <span class="stock-value">—</span>
+        <strong>Остаток FBS:</strong> 
+        <span class="stock-value">
+          {{ getStockDisplay(product, 'stockFBS') }}
+        </span>
       </div>
       <div class="stock-item">
-        <strong>Остаток FBY WB:</strong> <span class="stock-value">—</span>
+        <strong>Остаток FBY WB:</strong> 
+        <span class="stock-value">
+          {{ getStockDisplay(product, 'stockFBY') }}
+        </span>
       </div>
     </div>
   </div>
@@ -197,6 +227,71 @@ const openImageModal = () => {
     });
   }
 };
+
+// Функция для отображения цен
+const getPriceDisplay = (product, priceField) => {
+  if (!product.sizes || product.sizes.length === 0) {
+    return '—';
+  }
+  
+  // Если у товара несколько размеров, показываем диапазон цен
+  if (product.sizes.length > 1) {
+    const prices = product.sizes
+      .map(size => size[priceField])
+      .filter(price => price !== undefined && price !== null && price > 0);
+    
+    if (prices.length === 0) {
+      return '—';
+    }
+    
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    
+    if (minPrice === maxPrice) {
+      return formatPrice(minPrice);
+    } else {
+      return `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`;
+    }
+  } else {
+    // Если у товара один размер
+    const price = product.sizes[0][priceField];
+    return price && price > 0 ? formatPrice(price) : '—';
+  }
+};
+
+// Функция для отображения остатков
+const getStockDisplay = (product, stockField) => {
+  if (!product.sizes || product.sizes.length === 0) {
+    return '—';
+  }
+  
+  // Если у товара несколько размеров, показываем общий остаток
+  if (product.sizes.length > 1) {
+    const totalStock = product.sizes.reduce((sum, size) => {
+      const stock = size[stockField];
+      return sum + (stock && stock > 0 ? stock : 0);
+    }, 0);
+    
+    return totalStock > 0 ? totalStock : '—';
+  } else {
+    // Если у товара один размер
+    const stock = product.sizes[0][stockField];
+    return stock && stock > 0 ? stock : '—';
+  }
+};
+
+// Функция для форматирования цен
+const formatPrice = (price) => {
+  if (typeof price !== 'number' || price <= 0) {
+    return '—';
+  }
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price);
+};
 </script>
 
 <style scoped>
@@ -214,6 +309,12 @@ const openImageModal = () => {
 /* Специальная структура для страницы цен и остатков */
 .product-item.no-actions {
   grid-template-columns: 60px 80px 3fr 2fr 2fr 2fr; /* Структура с 6 колонками */
+  gap: 15px;
+  align-items: start;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  background-color: #f9f9f9;
+  display: grid;
 }
 .product-item.header {
   grid-template-columns: 60px 80px 3fr 2fr 1fr 3fr; /* Структура для страницы товаров */
@@ -229,7 +330,14 @@ const openImageModal = () => {
 
 /* Специальная структура заголовка для страницы цен и остатков */
 .product-item.header.no-actions {
-  grid-template-columns: 60px 80px 3fr 2fr 1fr 2fr 2fr; /* Структура с 7 колонками */
+  grid-template-columns: 60px 80px 3fr 2fr 2fr 2fr; /* Структура с 6 колонками */
+  background-color: #f0f2f5;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 10px 20px;
+  border-bottom: 2px solid #ccc;
 }
 .product-item:last-child {
   border-bottom: none;
@@ -395,6 +503,8 @@ const openImageModal = () => {
   background-color: #f8f9fa;
   border-radius: 4px;
   border: 1px solid #e9ecef;
+  min-height: 120px;
+  justify-content: space-between;
 }
 
 .price-item {
@@ -403,16 +513,20 @@ const openImageModal = () => {
   align-items: center;
   font-size: 0.9em;
   padding: 4px 0;
+  min-height: 20px;
 }
 
 .price-item strong {
   color: #495057;
   font-weight: 600;
+  min-width: 120px;
 }
 
 .price-value {
   color: #6c757d;
   font-weight: 500;
+  text-align: right;
+  min-width: 80px;
 }
 
 /* Стили для колонки с остатками */
@@ -424,6 +538,8 @@ const openImageModal = () => {
   background-color: #f8f9fa;
   border-radius: 4px;
   border: 1px solid #e9ecef;
+  min-height: 120px;
+  justify-content: space-between;
 }
 
 .stock-item {
@@ -432,16 +548,20 @@ const openImageModal = () => {
   align-items: center;
   font-size: 0.9em;
   padding: 4px 0;
+  min-height: 20px;
 }
 
 .stock-item strong {
   color: #495057;
   font-weight: 600;
+  min-width: 120px;
 }
 
 .stock-value {
   color: #6c757d;
   font-weight: 500;
+  text-align: right;
+  min-width: 80px;
 }
 
 
@@ -541,6 +661,9 @@ const openImageModal = () => {
     align-items: flex-start;
   }
   .product-item.header {
+    grid-template-columns: 60px 80px 1fr;
+  }
+  .product-item.no-actions {
     grid-template-columns: 60px 80px 1fr;
   }
   .product-item .header-sizes,
