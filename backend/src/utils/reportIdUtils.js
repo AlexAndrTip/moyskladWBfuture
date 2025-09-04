@@ -21,6 +21,36 @@ function generateUniqueReportId(integrationId, dateRange) {
 }
 
 /**
+ * Генерирует уникальное имя документа в том же формате: {integrationIdSuffix}-{dateRange}
+ * @param {string} integrationId - ID интеграции
+ * @param {string} reportId - ID отчета (может быть в старом или новом формате)
+ * @returns {string} уникальное имя документа
+ */
+function generateUniqueDocumentName(integrationId, reportId) {
+  if (!integrationId || !reportId) {
+    throw new Error('Необходимы integrationId и reportId');
+  }
+  
+  // Получаем последние 8 символов ID интеграции
+  const integrationIdSuffix = integrationId.slice(-8);
+  
+  // Извлекаем дату из reportId (поддерживаем оба формата)
+  let dateRange;
+  if (reportId.includes('-')) {
+    // Новый формат: {integrationIdSuffix}-{dateRange}
+    dateRange = reportId.split('-')[1];
+  } else {
+    // Старый формат: {dateRange}
+    dateRange = reportId;
+  }
+  
+  // Формируем уникальное имя: {integrationIdSuffix}-{dateRange}
+  const uniqueName = `${integrationIdSuffix}-${dateRange}`;
+  console.log(`[DOCUMENT_NAME] Сгенерировано уникальное имя документа: ${uniqueName} (интеграция: ${integrationId}, отчет: ${reportId})`);
+  return uniqueName;
+}
+
+/**
  * Извлекает короткий номер отчета (без префикса интеграции)
  * @param {string} fullReportId - полный номер отчета
  * @returns {string} короткий номер отчета
@@ -57,6 +87,7 @@ function isNewFormatReportId(reportId) {
 
 module.exports = {
   generateUniqueReportId,
+  generateUniqueDocumentName,
   getShortReportId,
   getIntegrationPrefix,
   isNewFormatReportId

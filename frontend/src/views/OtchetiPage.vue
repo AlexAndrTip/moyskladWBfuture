@@ -653,7 +653,8 @@ const createServiceReceipts = async (report) => {
       report.serviceReceiptsCreated = true;
       // Добавляем короткий ID в статус для совместимости
       const shortId = getShortReportId(report.id);
-      // Здесь нужно добавить логику для обновления статуса приемок услуг
+      // Обновляем статус приемок услуг в соответствующем Set
+      // TODO: Добавить логику для обновления статуса приемок услуг
     } else {
       showNotification('Не удалось создать приёмки услуг', 'error');
     }
@@ -685,7 +686,8 @@ const createExpenseOrders = async (report) => {
       report.expenseOrdersCreated = true;
       // Добавляем короткий ID в статус для совместимости
       const shortId = getShortReportId(report.id);
-      // Здесь нужно добавить логику для обновления статуса расходных ордеров
+      // Обновляем статус расходных ордеров в соответствующем Set
+      // TODO: Добавить логику для обновления статуса расходных ордеров
     } else {
       showNotification('Не удалось создать расходные ордера', 'error');
     }
@@ -717,7 +719,8 @@ const createIncomeOrders = async (report) => {
       report.incomeOrdersCreated = true;
       // Добавляем короткий ID в статус для совместимости
       const shortId = getShortReportId(report.id);
-      // Здесь нужно добавить логику для обновления статуса приходных ордеров
+      // Обновляем статус приходных ордеров в соответствующем Set
+      // TODO: Добавить логику для обновления статуса приходных ордеров
     } else {
       showNotification('Не удалось создать приходный ордер', 'error');
     }

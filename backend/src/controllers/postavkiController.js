@@ -124,11 +124,42 @@ exports.createDemand = async (req, res) => {
     }
     // Формируем позиции для отгрузки
     let positions = [];
-    // Найти product по barcode (ищем по sizes.skus)
-    const product = await Product.findOne({ 'sizes.skus': income.barcode });
+    // Найти product по barcode (ищем по sizes.skus), wbCabinet и user
+    // Важно: ищем товар только в рамках конкретного кабинета WB и пользователя,
+    // чтобы избежать конфликтов между разными пользователями с одинаковыми товарами
+    console.log(`[POSTAVKI] Поиск товара по баркоду: ${income.barcode}, wbCabinet: ${integrationLink.wbCabinet._id}, user: ${userId}`);
+    
+    const product = await Product.findOne({ 
+      'sizes.skus': income.barcode,
+      wbCabinet: integrationLink.wbCabinet._id,
+      user: userId
+    });
+    
     if (!product) {
-      return res.status(400).json({ message: 'Товар не найден' });
+      console.log(`[POSTAVKI] Товар не найден. Проверяем без фильтра wbCabinet...`);
+      // Дополнительная проверка: ищем товар без фильтра wbCabinet для диагностики
+      const productWithoutWbCabinet = await Product.findOne({ 'sizes.skus': income.barcode });
+      if (productWithoutWbCabinet) {
+        console.log(`[POSTAVKI] Найден товар без фильтра wbCabinet: nmID=${productWithoutWbCabinet.nmID}, wbCabinet=${productWithoutWbCabinet.wbCabinet}, user=${productWithoutWbCabinet.user}`);
+        console.log(`[POSTAVKI] Текущий wbCabinet: ${integrationLink.wbCabinet._id}, текущий user: ${userId}`);
+      }
+      
+      // Проверяем, есть ли товар у другого пользователя
+      const productOtherUser = await Product.findOne({ 
+        'sizes.skus': income.barcode,
+        wbCabinet: integrationLink.wbCabinet._id
+      });
+      if (productOtherUser) {
+        console.log(`[POSTAVKI] Найден товар у другого пользователя: nmID=${productOtherUser.nmID}, user=${productOtherUser.user}`);
+      }
+      
+      return res.status(400).json({ 
+        message: 'Товар не найден для данного кабинета WB и пользователя',
+        details: 'Убедитесь, что товар синхронизирован с WB для выбранной интеграции'
+      });
     }
+    
+    console.log(`[POSTAVKI] Товар найден: nmID=${product.nmID}, title=${product.title}`);
 
     // Пытаемся найти размер с данным баркодом и его ms_href
     const sizeEntry = product.sizes.find(s => Array.isArray(s.skus) && s.skus.includes(income.barcode));
