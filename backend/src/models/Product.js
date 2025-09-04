@@ -137,7 +137,14 @@ ProductSchema.index({ nmID: 1, integrationLink: 1, user: 1 }, { unique: true });
 // Также индекс для фильтрации по интеграции
 ProductSchema.index({ integrationLink: 1, user: 1 });
 
-ProductSchema.index({ 'sizes.skus': 1 }); // Добавьте это в Product.js
+// Индексы для оптимизации поиска и фильтрации
+ProductSchema.index({ 'sizes.skus': 1 }); // Для поиска по баркоду
+ProductSchema.index({ wbCabinet: 1, user: 1 }); // Для фильтрации по кабинету WB
+ProductSchema.index({ user: 1, integrationLink: 1, wbCabinet: 1 }); // Составной индекс для основных запросов
+ProductSchema.index({ title: 'text', brand: 'text', vendorCode: 'text' }); // Текстовый индекс для поиска
+ProductSchema.index({ ms_href_general: 1 }); // Для фильтрации по наличию в МС
+ProductSchema.index({ 'sizes.ms_href': 1 }); // Для фильтрации по наличию размеров в МС
+ProductSchema.index({ nmID: 1 }); // Для ускорения сортировки и поиска по nmID
 
 
 module.exports = mongoose.model('Product', ProductSchema);

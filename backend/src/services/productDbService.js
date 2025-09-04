@@ -82,13 +82,16 @@ async function getProductsFromDb(integrationLinkId, userId, page, limit, searchT
             query.complect = false;
         }
 
-        // Получаем товары из вашей БД
+        // Получаем товары из вашей БД с оптимизированным запросом
         const products = await Product.find(query)
             .skip(skip)
             .limit(limit)
-            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect photos sizes.priceWB sizes.discountedPriceWB sizes.clubDiscountedPriceWB sizes.priceMS sizes.costPriceMS sizes.stockMS sizes.stockFBS sizes.stockFBY'); // Добавляем поля цен и остатков
+            .sort({ nmID: 1 }) // Сортируем по индексированному полю для ускорения
+            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect photos sizes.priceWB sizes.discountedPriceWB sizes.clubDiscountedPriceWB sizes.priceMS sizes.costPriceMS sizes.stockMS sizes.stockFBS sizes.stockFBY')
+            .lean(); // Используем lean() для ускорения запросов
 
         // Подсчитываем общее количество товаров для пагинации
+        // Примечание: убрали .cache() так как этот метод не существует в стандартном Mongoose
         const totalProducts = await Product.countDocuments(query);
 
         console.log(`[PRODUCT_DB_SERVICE] Найдено ${products.length} товаров на странице ${page} из ${totalProducts} всего для связки ${integrationLinkId}.`);
@@ -175,13 +178,16 @@ async function getAllProductsFromDb(userId, page, limit, searchTerm, msFilter, c
             query.complect = false;
         }
 
-        // Получаем товары из вашей БД
+        // Получаем товары из вашей БД с оптимизированным запросом
         const products = await Product.find(query)
             .skip(skip)
             .limit(limit)
-            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect integrationLink photos sizes.priceWB sizes.discountedPriceWB sizes.clubDiscountedPriceWB sizes.priceMS sizes.costPriceMS sizes.stockMS sizes.stockFBS sizes.stockFBY'); // Добавляем поля цен и остатков
+            .sort({ nmID: 1 }) // Сортируем по индексированному полю для ускорения
+            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect integrationLink photos sizes.priceWB sizes.discountedPriceWB sizes.clubDiscountedPriceWB sizes.priceMS sizes.costPriceMS sizes.stockMS sizes.stockFBS sizes.stockFBY')
+            .lean(); // Используем lean() для ускорения запросов
 
         // Подсчитываем общее количество товаров для пагинации
+        // Примечание: убрали .cache() так как этот метод не существует в стандартном Mongoose
         const totalProducts = await Product.countDocuments(query);
 
         console.log(`[PRODUCT_DB_SERVICE] Найдено ${products.length} товаров на странице ${page} из ${totalProducts} всего для всех интеграций пользователя ${userId}.`);

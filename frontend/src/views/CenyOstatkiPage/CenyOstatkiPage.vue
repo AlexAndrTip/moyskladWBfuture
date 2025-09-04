@@ -51,6 +51,19 @@
           :is-top="true"
         />
 
+        <!-- Индикатор прогресса для больших списков -->
+        <div v-if="totalPages > 100" class="progress-indicator">
+          <div class="progress-bar">
+            <div 
+              class="progress-fill" 
+              :style="{ width: `${(currentPage / totalPages) * 100}%` }"
+            ></div>
+          </div>
+          <p class="progress-text">
+            Страница {{ currentPage }} из {{ totalPages }} ({{ Math.round((currentPage / totalPages) * 100) }}%)
+          </p>
+        </div>
+
         <!-- Заголовок таблицы -->
         <div class="product-item header no-actions">
           <div class="header-image">Фото</div>
@@ -62,7 +75,7 @@
         </div>
 
         <!-- Список товаров -->
-        <div v-if="loadingProducts" class="loading-section">
+        <div v-if="loadingProducts && products.length === 0" class="loading-section">
           <p class="loading-message">Загрузка товаров...</p>
           <div class="loading-spinner"></div>
         </div>
@@ -72,6 +85,14 @@
         </div>
 
         <div v-else class="products-list">
+          <!-- Индикатор загрузки при смене страницы -->
+          <div v-if="isPageLoading(currentPage)" class="page-loading-overlay">
+            <div class="loading-content">
+              <div class="loading-spinner large"></div>
+              <p class="loading-message">Загрузка страницы {{ currentPage }}...</p>
+            </div>
+          </div>
+          
           <ProductListItemCenyOstatki
             v-for="product in products"
             :key="product.nmID"
@@ -80,6 +101,15 @@
             :integration-links="integrationLinks"
             @open-image-modal="openImageModal"
           />
+        </div>
+
+        <!-- Индикатор загрузки для текущей страницы -->
+        <div v-if="isPageLoading(currentPage)" class="page-loading-indicator">
+          <div class="loading-content">
+            <div class="loading-spinner large"></div>
+            <p class="loading-message">Загрузка страницы {{ currentPage }}...</p>
+            <p class="loading-subtitle">Пожалуйста, подождите</p>
+          </div>
         </div>
 
         <!-- Нижняя пагинация -->
@@ -178,6 +208,9 @@ const {
   goToPage: goToPageFromComposable,
   debouncedSearch: debouncedSearchFromComposable,
   clearSearch: clearSearchFromComposable,
+  isPageLoading: isPageLoadingFromComposable,
+  isPageLoaded: isPageLoadedFromComposable,
+  clearCache: clearCacheFromComposable,
 } = useProductsForCenyOstatki(selectedIntegrationId, getToken, msFilter, searchTerm);
 
 // Синхронизируем состояние с composable
@@ -212,6 +245,11 @@ watch(productsPerPageFromComposable, (newPerPage) => {
 watch(pageInputFromComposable, (newPageInput) => {
   pageInput.value = newPageInput;
 });
+
+// Функции для работы с кэшем и состоянием страниц
+const isPageLoading = (page) => isPageLoadingFromComposable(page);
+const isPageLoaded = (page) => isPageLoadedFromComposable(page);
+const clearCache = () => clearCacheFromComposable();
 
 // Функция для загрузки товаров
 const fetchProducts = async () => {
@@ -299,6 +337,64 @@ onMounted(() => {
   text-align: left;
 }
 
+/* Индикатор загрузки страницы */
+.page-loading-indicator {
+  text-align: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  margin: 20px 0;
+  border: 2px solid #dee2e6;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.page-loading-indicator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.page-loading-indicator .loading-content {
+  position: relative;
+  z-index: 1;
+}
+
+.page-loading-indicator .loading-message {
+  margin: 0 0 8px 0;
+  color: #495057;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.page-loading-indicator .loading-subtitle {
+  margin: 0;
+  color: #6c757d;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.page-loading-indicator .loading-spinner.large {
+  width: 50px;
+  height: 50px;
+  border-width: 4px;
+  margin: 0 auto 20px auto;
+  border-color: #007bff;
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
 h2 {
   color: #333;
   margin-bottom: 25px;
@@ -320,6 +416,40 @@ h3 {
 .error-message {
   color: #dc3545;
   font-weight: bold;
+}
+
+/* Индикатор прогресса для больших списков */
+.progress-indicator {
+  margin: 20px 0;
+  padding: 15px;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 8px;
+  border: 1px solid #90caf9;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2196f3, #42a5f5);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+  box-shadow: 0 1px 3px rgba(33, 150, 243, 0.3);
+}
+
+.progress-text {
+  margin: 0;
+  text-align: center;
+  color: #1976d2;
+  font-weight: 500;
+  font-size: 14px;
 }
 
 /* Форма поиска и фильтров */
@@ -398,6 +528,41 @@ h3 {
   border: 1px solid #eee;
   border-radius: 5px;
   overflow: hidden;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+/* Overlay индикатор загрузки для списка товаров */
+.page-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  border-radius: 5px;
+  opacity: 0;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+.page-loading-overlay .loading-content {
+  text-align: center;
+}
+
+.page-loading-overlay .loading-message {
+  margin: 15px 0 0 0;
+  color: #495057;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 /* Загрузка */
@@ -414,6 +579,7 @@ h3 {
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 20px auto;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
 @keyframes spin {
