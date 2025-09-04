@@ -1,12 +1,8 @@
-console.log('📦 Импортируем axios для MoySkladPriceService...');
 const axios = require('axios');
-console.log('✅ axios импортирован');
 
 class MoySkladPriceService {
   constructor() {
-    console.log('🔧 Инициализация MoySkladPriceService...');
     this.baseUrl = 'https://api.moysklad.ru/api/remap/1.2';
-    console.log('✅ MoySkladPriceService инициализирован с базовым URL:', this.baseUrl);
   }
 
   /**
@@ -66,41 +62,30 @@ class MoySkladPriceService {
   /**
    * Извлекает цену продажи из массива цен товара
    * @param {Array} salePrices - Массив цен продажи
-   * @returns {number|null} Цена продажи или null
+   * @returns {number|null} Цена продажи в рублях или null
    */
   extractSalePrice(salePrices) {
-    console.log(`  🔍 Извлекаем цену продажи из ${salePrices ? salePrices.length : 0} цен...`);
-    
     if (!salePrices || !Array.isArray(salePrices)) {
-      console.log(`  ⚠️ salePrices не является массивом или пустой`);
       return null;
     }
 
-    // Выводим информацию о всех ценах
-    salePrices.forEach((price, index) => {
-      console.log(`    💰 Цена ${index + 1}: value=${price.value}, type=${price.priceType?.name || 'Не указан'}`);
-    });
-
     // Ищем цену продажи по типу "Цена продажи"
-    console.log(`  🔍 Ищем цену с типом "Цена продажи"...`);
     const salePrice = salePrices.find(price => 
       price.priceType && 
       price.priceType.name === 'Цена продажи'
     );
 
     if (salePrice && salePrice.value) {
-      console.log(`  ✅ Найдена цена продажи: ${salePrice.value}`);
-      return salePrice.value;
+      // МойСклад отдает цену в копейках, переводим в рубли
+      return salePrice.value / 100;
     }
 
     // Если не нашли по названию, берем первую доступную цену
-    console.log(`  🔍 Цена продажи не найдена, берем первую доступную цену...`);
     if (salePrices.length > 0 && salePrices[0].value) {
-      console.log(`  ✅ Используем первую доступную цену: ${salePrices[0].value}`);
-      return salePrices[0].value;
+      // МойСклад отдает цену в копейках, переводим в рубли
+      return salePrices[0].value / 100;
     }
 
-    console.log(`  ⚠️ Подходящая цена не найдена`);
     return null;
   }
 
@@ -155,52 +140,32 @@ class MoySkladPriceService {
     const prices = {};
     
     try {
-      console.log(`🔍 Получаем цены для ${productHrefs.length} товаров по href...`);
-      console.log(`🔑 Используем токен: ${token ? 'Настроен' : 'Не настроен'}`);
-      
       for (let i = 0; i < productHrefs.length; i++) {
         const href = productHrefs[i];
-        console.log(`  📦 Обрабатываем товар ${i + 1}/${productHrefs.length}: ${href}`);
         
         try {
-          console.log(`  🌐 Отправляем запрос к МойСклад: ${href}`);
-          
           const response = await axios.get(href, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             }
           });
-
-          console.log(`  ✅ Получен ответ от МойСклад, статус: ${response.status}`);
           
           const product = response.data;
-          console.log(`  📊 Данные товара получены, salePrices: ${product.salePrices ? product.salePrices.length : 0} цен`);
-          
           const salePrice = this.extractSalePrice(product.salePrices);
-          console.log(`  💰 Извлеченная цена продажи: ${salePrice}`);
           
           if (salePrice !== null) {
             prices[href] = salePrice;
-            console.log(`  ✅ Цена ${salePrice} добавлена для href: ${href}`);
-          } else {
-            console.log(`  ⚠️ Цена не найдена для href: ${href}`);
           }
         } catch (error) {
-          console.error(`  ❌ Ошибка при получении цены для ${href}:`, error.message);
-          if (error.response) {
-            console.error(`  📊 Статус ответа: ${error.response.status}`);
-            console.error(`  📄 Данные ответа:`, error.response.data);
-          }
+          console.error(`Ошибка при получении цены для ${href}:`, error.message);
           // Продолжаем с другими товарами
         }
       }
 
-      console.log(`📊 Итого получено цен: ${Object.keys(prices).length}`);
       return prices;
     } catch (error) {
-      console.error('❌ Общая ошибка при получении цен по href:', error.message);
-      console.error('Детали ошибки:', error.stack);
+      console.error('Ошибка при получении цен по href:', error.message);
       throw error;
     }
   }

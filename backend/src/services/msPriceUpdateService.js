@@ -1,23 +1,14 @@
-console.log('📦 Импортируем зависимости для MsPriceUpdateService...');
 const Product = require('../models/Product');
-console.log('✅ Product импортирован');
 const MoySkladPriceService = require('./moySkladPriceService');
-console.log('✅ MoySkladPriceService импортирован');
-console.log('📦 Импорт зависимостей завершен');
 
 class MsPriceUpdateService {
   constructor() {
-    console.log('🔧 Инициализация MsPriceUpdateService...');
-    
     try {
       this.moySkladService = new MoySkladPriceService();
-      console.log('✅ MoySkladPriceService создан успешно');
     } catch (error) {
-      console.error('❌ Ошибка при создании MoySkladPriceService:', error.message);
+      console.error('Ошибка при создании MoySkladPriceService:', error.message);
       throw error;
     }
-    
-    console.log('✅ MsPriceUpdateService инициализирован успешно');
   }
 
   /**
@@ -28,40 +19,28 @@ class MsPriceUpdateService {
    */
   async updateAllPrices(integrationId, msToken) {
     try {
-      console.log(`🔄 Начинаем обновление цен МойСклад для интеграции ${integrationId}`);
-      console.log(`🔑 Используем токен МойСклад: ${msToken ? 'Настроен' : 'Не настроен'}`);
-
       // Получаем все товары интеграции
-      console.log(`🔍 Ищем товары для интеграции ${integrationId}...`);
       const products = await Product.find({ integrationLink: integrationId });
-      console.log(`📊 Найдено товаров: ${products ? products.length : 0}`);
       
       if (!products || products.length === 0) {
-        console.log(`ℹ️ Товары для интеграции ${integrationId} не найдены`);
         return {
           success: false,
           message: 'Товары для данной интеграции не найдены'
         };
       }
 
-      console.log(`🔄 Начинаем обработку ${products.length} товаров...`);
-
       let updatedCount = 0;
       let errorCount = 0;
       const errors = [];
 
       // Обрабатываем каждый товар
-      for (let i = 0; i < products.length; i++) {
-        const product = products[i];
+      for (const product of products) {
         try {
-          console.log(`📦 Обрабатываем товар ${i + 1}/${products.length}: ${product.nmID || 'Без nmID'}`);
           const updateResult = await this.updateProductPrices(product, msToken);
           if (updateResult.success) {
             updatedCount++;
-            console.log(`✅ Товар ${product.nmID || 'Без nmID'} обновлен успешно`);
           } else {
             errorCount++;
-            console.log(`❌ Товар ${product.nmID || 'Без nmID'}: ${updateResult.message}`);
             errors.push({
               productId: product._id,
               nmID: product.nmID,
@@ -70,7 +49,7 @@ class MsPriceUpdateService {
           }
         } catch (error) {
           errorCount++;
-          console.error(`❌ Ошибка при обработке товара ${product.nmID || 'Без nmID'}:`, error.message);
+          console.error(`Ошибка при обработке товара ${product.nmID || 'Без nmID'}:`, error.message);
           errors.push({
             productId: product._id,
             nmID: product.nmID,
@@ -78,8 +57,6 @@ class MsPriceUpdateService {
           });
         }
       }
-
-      console.log(`📊 Результат обновления: ${updatedCount} обновлено, ${errorCount} ошибок, всего ${products.length}`);
 
       return {
         success: true,
@@ -90,8 +67,7 @@ class MsPriceUpdateService {
       };
 
     } catch (error) {
-      console.error('❌ Ошибка при обновлении цен МойСклад:', error.message);
-      console.error('Детали ошибки:', error.stack);
+      console.error('Ошибка при обновлении цен МойСклад:', error.message);
       return {
         success: false,
         message: `Ошибка обновления: ${error.message}`
@@ -107,10 +83,7 @@ class MsPriceUpdateService {
    */
   async updateProductPrices(product, msToken) {
     try {
-      console.log(`📦 Обрабатываем товар: ${product.nmID || 'Без nmID'}, размеров: ${product.sizes ? product.sizes.length : 0}`);
-      
       if (!product.sizes || product.sizes.length === 0) {
-        console.log(`ℹ️ У товара ${product.nmID || 'Без nmID'} нет размеров`);
         return {
           success: false,
           message: 'У товара нет размеров'
@@ -120,58 +93,42 @@ class MsPriceUpdateService {
       let hasUpdates = false;
       const updateData = {};
 
-      console.log(`🔍 Проверяем ${product.sizes.length} размеров товара...`);
-
       // Обрабатываем каждый размер товара
       for (let i = 0; i < product.sizes.length; i++) {
         const size = product.sizes[i];
-        console.log(`  📏 Размер ${i + 1}: ${size.techSize || 'Без названия'}, ms_href: ${size.ms_href ? 'Есть' : 'Нет'}, текущая цена: ${size.priceMS || 'Не установлена'}`);
         
         if (!size.ms_href) {
-          console.log(`  ⏭️ Пропускаем размер ${size.techSize || 'Без названия'} - нет ms_href`);
           continue; // Пропускаем размеры без ссылки на МойСклад
         }
 
         try {
-          console.log(`  🔍 Получаем цену для размера ${size.techSize || 'Без названия'} по href: ${size.ms_href}`);
-          
           // Получаем цену для конкретного товара/варианта
           const prices = await this.moySkladService.getPricesByHrefs(msToken, [size.ms_href]);
-          console.log(`  📊 Получены цены:`, prices);
           
           if (prices[size.ms_href]) {
             const msPrice = prices[size.ms_href];
-            console.log(`  💰 Найдена цена МойСклад: ${msPrice}, текущая цена в БД: ${size.priceMS || 'Не установлена'}`);
             
             // Обновляем цену в размере
             if (size.priceMS !== msPrice) {
               updateData[`sizes.${i}.priceMS`] = msPrice;
               hasUpdates = true;
-              console.log(`  ✅ Цена для размера ${size.techSize || 'Без названия'} будет обновлена с ${size.priceMS || 'Не установлена'} на ${msPrice}`);
-            } else {
-              console.log(`  ℹ️ Цена для размера ${size.techSize || 'Без названия'} уже актуальна: ${msPrice}`);
             }
-          } else {
-            console.log(`  ⚠️ Цена для размера ${size.techSize || 'Без названия'} не найдена в МойСклад`);
           }
         } catch (error) {
-          console.error(`  ❌ Ошибка при получении цены для размера ${size.techSize || 'Без названия'}:`, error.message);
+          console.error(`Ошибка при получении цены для размера ${size.techSize || 'Без названия'}:`, error.message);
           // Продолжаем с другими размерами
         }
       }
 
       // Если есть обновления, сохраняем в БД
       if (hasUpdates) {
-        console.log(`💾 Сохраняем обновления в БД:`, updateData);
         await Product.findByIdAndUpdate(product._id, updateData);
-        console.log(`✅ Цены товара ${product.nmID || 'Без nmID'} обновлены в БД`);
         return {
           success: true,
           message: 'Цены обновлены',
           updates: updateData
         };
       } else {
-        console.log(`ℹ️ Цены товара ${product.nmID || 'Без nmID'} уже актуальны`);
         return {
           success: true,
           message: 'Цены уже актуальны'
@@ -179,8 +136,7 @@ class MsPriceUpdateService {
       }
 
     } catch (error) {
-      console.error(`❌ Ошибка при обновлении цен товара ${product.nmID || 'Без nmID'}:`, error.message);
-      console.error('Детали ошибки:', error.stack);
+      console.error(`Ошибка при обновлении цен товара ${product.nmID || 'Без nmID'}:`, error.message);
       return {
         success: false,
         message: `Ошибка обновления: ${error.message}`
