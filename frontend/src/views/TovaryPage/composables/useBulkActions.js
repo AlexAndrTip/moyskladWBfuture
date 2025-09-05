@@ -4,16 +4,11 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export function useBulkActions(getToken, selectedIntegrationId, selectedProductIds, selectedAllPages, totalProducts, fetchProducts, products) {
+export function useBulkActions(getToken, selectedIntegrationId, getAllSelectedProducts, fetchProducts) {
   const isBulkEditModalOpen = ref(false);
   const bulkActionInProgress = ref(false);
 
   const openBulkEditModal = () => {
-    if (selectedProductIds.value.length === 0 && !selectedAllPages.value) {
-      alert('Пожалуйста, выберите хотя бы один товар или выберите все товары на всех страницах.');
-      return;
-    }
-    
     isBulkEditModalOpen.value = true;
   };
 
@@ -25,29 +20,12 @@ export function useBulkActions(getToken, selectedIntegrationId, selectedProductI
     bulkActionInProgress.value = true;
 
     try {
-      let allProducts = [];
+      // Получаем все выбранные товары через оптимизированный composable
+      const allProducts = await getAllSelectedProducts();
       
-      if (selectedAllPages.value) {
-        // Если выбраны все страницы, нужно получить все товары
-        // Для "Все интеграции" это сложно, поэтому показываем предупреждение
-        if (selectedIntegrationId.value === 'all') {
-          alert('Массовые действия с "выбрать все страницы" в режиме "Все интеграции" не поддерживаются. Пожалуйста, выберите конкретную интеграцию.');
-          return;
-        }
-        
-        // Для конкретной интеграции получаем все товары
-        const productResponse = await axios.post(`${API_BASE_URL}/products/get-by-selection`, {
-          integrationLinkId: selectedIntegrationId.value,
-          selectedAllPages: true,
-          productIds: [],
-        }, {
-          headers: { Authorization: `Bearer ${getToken()}` },
-          timeout: 120000,
-        });
-        allProducts = productResponse.data || [];
-      } else {
-        // Если выбраны конкретные товары, используем их
-        allProducts = products.value.filter(p => selectedProductIds.value.includes(p._id));
+      if (!allProducts || allProducts.length === 0) {
+        alert('Нет выбранных товаров для массового действия.');
+        return;
       }
 
       // Группируем товары по интеграциям
