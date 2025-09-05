@@ -63,12 +63,6 @@
         @clear="clearIndividualActionMessage"
       />
 
-      <div v-if="(products.length || productsLoading) && (selectedIntegrationId === 'all' || !tokenError)" class="products-header">
-        <h3>Список товаров:</h3>
-        <button v-if="selectedIntegrationId !== 'all'" @click="triggerManualSync" :disabled="syncInProgress" class="refresh-button inline-refresh">
-          <i :class="syncInProgress ? 'fas fa-sync fa-spin' : 'fas fa-sync-alt'"></i>
-        </button>
-      </div>
       <p v-if="productsLoading" class="loading-message">Загрузка товаров...</p>
       <p v-if="productsError" class="error-message">{{ productsError }}</p>
 
@@ -128,7 +122,17 @@
           <div class="header-info">Название / Артикул WB / Артикул продавца</div>
           <div class="header-sizes">Размеры</div>
           <div class="header-complect">Комплект</div>
-          <div class="header-actions">Действия</div>
+          <div class="header-actions">
+            <span>Действия</span>
+            <button 
+              @click="triggerManualSync" 
+              :disabled="syncInProgress || selectedIntegrationId === 'all'" 
+              class="refresh-button header-refresh"
+              title="Обновить список товаров"
+            >
+              <i :class="syncInProgress ? 'fas fa-sync fa-spin' : 'fas fa-sync-alt'"></i>
+            </button>
+          </div>
         </div>
         <ProductListItem
           v-for="product in products"
@@ -677,6 +681,27 @@ h3 {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* Стили для кнопки обновления в заголовке */
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.header-refresh {
+  padding: 6px 8px;
+  font-size: 14px;
+  height: 28px;
+  min-width: 28px;
+  margin-left: auto;
+}
+
+.header-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .product-item.header {

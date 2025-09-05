@@ -6,57 +6,61 @@
       <span class="loading-text">Загрузка страницы...</span>
     </div>
 
-    <div class="pagination-controls">
-      <button 
-        @click="emit('change-page', currentPage - 1)" 
-        :disabled="currentPage === 1 || selectedAllPages"
-        class="pagination-btn prev-btn"
-      >
-        <i class="fas fa-chevron-left"></i>
-        Предыдущая
-      </button>
-      
-      <span class="page-info">Страница {{ currentPage }} из {{ totalPages }}</span>
-      
-      <button 
-        @click="emit('change-page', currentPage + 1)" 
-        :disabled="currentPage === totalPages || selectedAllPages"
-        class="pagination-btn next-btn"
-      >
-        Следующая
-        <i class="fas fa-chevron-right"></i>
-      </button>
-    </div>
-
-    <div class="pagination-options">
-      <div class="items-per-page">
-        <label :for="`items-per-page-${isTop ? 'top' : 'bottom'}`">Товаров на странице:</label>
-        <select 
-          :id="`items-per-page-${isTop ? 'top' : 'bottom'}`" 
-          :value="productsPerPage" 
-          @change="e => emit('update:productsPerPage', Number(e.target.value))"
-          class="items-select"
+    <div class="pagination-main-row">
+      <!-- Кнопки навигации -->
+      <div class="pagination-nav">
+        <button 
+          @click="emit('change-page', currentPage - 1)" 
+          :disabled="currentPage === 1 || selectedAllPages"
+          class="pagination-btn prev-btn"
         >
-          <option value="10">10</option>
-          <option value="20">20</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select>
+          <i class="fas fa-chevron-left"></i>
+          Предыдущая
+        </button>
+        
+        <span class="page-info">Страница {{ currentPage }} из {{ totalPages }}</span>
+        
+        <button 
+          @click="emit('change-page', currentPage + 1)" 
+          :disabled="currentPage === totalPages || selectedAllPages"
+          class="pagination-btn next-btn"
+        >
+          Следующая
+          <i class="fas fa-chevron-right"></i>
+        </button>
       </div>
 
-      <div class="go-to-page">
-        <label :for="`go-to-page-${isTop ? 'top' : 'bottom'}`">Перейти к странице:</label>
-        <input 
-          type="number" 
-          :id="`go-to-page-${isTop ? 'top' : 'bottom'}`" 
-          :value="pageInput" 
-          @input="e => emit('update:pageInput', Number(e.target.value))" 
-          @keyup.enter="emit('go-to-page')"
-          :min="1" 
-          :max="totalPages" 
-          class="page-input"
-        />
-        <button @click="emit('go-to-page')" class="go-btn">Перейти</button>
+      <!-- Опции пагинации -->
+      <div class="pagination-options">
+        <div class="items-per-page">
+          <label :for="`items-per-page-${isTop ? 'top' : 'bottom'}`">Товаров на странице:</label>
+          <select 
+            :id="`items-per-page-${isTop ? 'top' : 'bottom'}`" 
+            :value="productsPerPage" 
+            @change="e => emit('update:productsPerPage', Number(e.target.value))"
+            class="items-select"
+          >
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+
+        <div class="go-to-page">
+          <label :for="`go-to-page-${isTop ? 'top' : 'bottom'}`">Перейти к странице:</label>
+          <input 
+            type="number" 
+            :id="`go-to-page-${isTop ? 'top' : 'bottom'}`" 
+            :value="pageInput" 
+            @input="e => emit('update:pageInput', Number(e.target.value))" 
+            @keyup.enter="emit('go-to-page')"
+            :min="1" 
+            :max="totalPages" 
+            class="page-input"
+          />
+          <button @click="emit('go-to-page')" class="go-btn">Перейти</button>
+        </div>
       </div>
     </div>
 
@@ -149,12 +153,20 @@ const emit = defineEmits(['change-page', 'update:productsPerPage', 'update:pageI
   100% { transform: rotate(360deg); }
 }
 
-/* Основные элементы пагинации */
-.pagination-controls {
+/* Основная строка пагинации */
+.pagination-main-row {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Кнопки навигации */
+.pagination-nav {
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
 .pagination-btn {
@@ -163,13 +175,15 @@ const emit = defineEmits(['change-page', 'update:productsPerPage', 'update:pageI
   gap: 8px;
   background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
-  padding: 12px 20px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
   box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+  height: 36px;
+  font-size: 14px;
 }
 
 .pagination-btn:hover:not(:disabled) {
@@ -186,20 +200,23 @@ const emit = defineEmits(['change-page', 'update:productsPerPage', 'update:pageI
 }
 
 .page-info {
-  font-size: 1.1em;
+  font-size: 14px;
   color: #495057;
   font-weight: 600;
   white-space: nowrap;
-  padding: 8px 16px;
+  padding: 8px 12px;
   background: white;
   border-radius: 6px;
   border: 1px solid #dee2e6;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 /* Опции пагинации */
 .pagination-options {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
@@ -214,7 +231,7 @@ const emit = defineEmits(['change-page', 'update:productsPerPage', 'update:pageI
 
 .pagination-options label {
   color: #495057;
-  font-size: 0.95em;
+  font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -223,10 +240,11 @@ const emit = defineEmits(['change-page', 'update:productsPerPage', 'update:pageI
   padding: 8px 12px;
   border: 1px solid #ced4da;
   border-radius: 6px;
-  font-size: 0.95em;
+  font-size: 14px;
   background-color: white;
   cursor: pointer;
   min-width: 80px;
+  height: 36px;
   transition: border-color 0.3s ease;
 }
 
@@ -241,9 +259,11 @@ const emit = defineEmits(['change-page', 'update:productsPerPage', 'update:pageI
   padding: 8px 12px;
   border: 1px solid #ced4da;
   border-radius: 6px;
-  font-size: 0.95em;
+  font-size: 14px;
   text-align: center;
+  height: 36px;
   transition: border-color 0.3s ease;
+  box-sizing: border-box;
 }
 
 .page-input:focus {
@@ -263,6 +283,8 @@ const emit = defineEmits(['change-page', 'update:productsPerPage', 'update:pageI
   font-weight: 500;
   white-space: nowrap;
   box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+  height: 36px;
+  font-size: 14px;
 }
 
 .go-btn:hover {
@@ -311,9 +333,14 @@ const emit = defineEmits(['change-page', 'update:productsPerPage', 'update:pageI
     padding: 15px;
   }
   
-  .pagination-controls {
+  .pagination-main-row {
     flex-direction: column;
     gap: 15px;
+  }
+  
+  .pagination-nav {
+    justify-content: center;
+    flex-wrap: wrap;
   }
   
   .pagination-options {
