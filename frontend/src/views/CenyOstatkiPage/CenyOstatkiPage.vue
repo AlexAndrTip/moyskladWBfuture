@@ -46,11 +46,27 @@
             <span v-if="updatingStocks">🔄 Обновление...</span>
             <span v-else>📦 Обновить остатки FBY</span>
           </button>
+          
+          <!-- Кнопка обновления цен -->
+          <button 
+            type="button" 
+            class="update-prices-btn" 
+            @click="updatePrices"
+            :disabled="updatingPrices"
+          >
+            <span v-if="updatingPrices">🔄 Обновление...</span>
+            <span v-else>💰 Обновить цены</span>
+          </button>
         </form>
 
         <!-- Сообщение о результате обновления остатков -->
         <div v-if="stocksUpdateMessage" class="stocks-update-message" :class="{ 'success': stocksUpdateMessage.includes('✅'), 'error': stocksUpdateMessage.includes('❌') }">
           {{ stocksUpdateMessage }}
+        </div>
+
+        <!-- Сообщение о результате обновления цен -->
+        <div v-if="pricesUpdateMessage" class="prices-update-message" :class="{ 'success': pricesUpdateMessage.includes('✅'), 'error': pricesUpdateMessage.includes('❌') }">
+          {{ pricesUpdateMessage }}
         </div>
 
         <!-- Верхняя пагинация -->
@@ -200,6 +216,10 @@ const msFilter = ref(''); // '', 'exists', 'not_exists'
 // Состояние для обновления остатков FBY
 const updatingStocks = ref(false);
 const stocksUpdateMessage = ref('');
+
+// Состояние для обновления цен
+const updatingPrices = ref(false);
+const pricesUpdateMessage = ref('');
 
 // Состояние для товаров (будет синхронизировано с composable)
 const products = ref([]);
@@ -375,6 +395,60 @@ const updateFbyStocks = async () => {
     // Скрываем сообщение через 5 секунд
     setTimeout(() => {
       stocksUpdateMessage.value = '';
+    }, 5000);
+  }
+};
+
+// Функция для обновления цен
+const updatePrices = async () => {
+  if (updatingPrices.value) return;
+  
+  try {
+    updatingPrices.value = true;
+    pricesUpdateMessage.value = '';
+    
+    const token = getToken();
+    if (!token) {
+      throw new Error('Токен не найден. Пожалуйста, войдите в систему.');
+    }
+
+    console.log('🔄 Начинаем обновление цен...');
+    
+    const response = await axios.get(`${API_BASE_URL}/wb-prices/update-user`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.data && response.data.summary) {
+      const { summary } = response.data;
+      pricesUpdateMessage.value = `✅ Обновление цен завершено! Обработано кабинетов: ${summary.totalCabinets}, обновлено товаров: ${summary.totalUpdatedProducts}`;
+      
+      // Обновляем данные на странице
+      await fetchProductsFromComposable();
+      
+      console.log('✅ Цены обновлены успешно:', summary);
+    } else {
+      throw new Error('Неверный формат ответа от сервера');
+    }
+
+  } catch (error) {
+    console.error('❌ Ошибка при обновлении цен:', error);
+    
+    if (error.response && error.response.data && error.response.data.message) {
+      pricesUpdateMessage.value = `❌ Ошибка: ${error.response.data.message}`;
+    } else if (error.message) {
+      pricesUpdateMessage.value = `❌ Ошибка: ${error.message}`;
+    } else {
+      pricesUpdateMessage.value = '❌ Произошла неизвестная ошибка при обновлении цен';
+    }
+  } finally {
+    updatingPrices.value = false;
+    
+    // Скрываем сообщение через 5 секунд
+    setTimeout(() => {
+      pricesUpdateMessage.value = '';
     }, 5000);
   }
 };
@@ -593,6 +667,34 @@ h3 {
   box-shadow: none;
 }
 
+/* Кнопка обновления цен */
+.update-prices-btn {
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.update-prices-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.update-prices-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Сообщение о результате обновления остатков */
 .stocks-update-message {
   padding: 12px 16px;
@@ -610,6 +712,28 @@ h3 {
 }
 
 .stocks-update-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Сообщение о результате обновления цен */
+.prices-update-message {
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease-out;
+}
+
+.prices-update-message.success {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.prices-update-message.error {
   background-color: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;

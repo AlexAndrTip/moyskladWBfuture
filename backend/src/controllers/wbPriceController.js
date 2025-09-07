@@ -5,6 +5,7 @@ class WbPriceController {
     // Привязываем методы к экземпляру класса
     this.getWbPrices = this.getWbPrices.bind(this);
     this.getLastUpdateStatus = this.getLastUpdateStatus.bind(this);
+    this.updatePricesForUser = this.updatePricesForUser.bind(this);
     this.updatePricesForCabinet = this.updatePricesForCabinet.bind(this);
     this.testGetAllGoods = this.testGetAllGoods.bind(this);
     this.testUpdateProduct = this.testUpdateProduct.bind(this);
@@ -51,6 +52,85 @@ class WbPriceController {
       res.status(500).json({ 
         success: false, 
         message: 'Ошибка при получении статуса обновления',
+        error: error.message 
+      });
+    }
+  }
+
+  // Обновление цен для всех кабинетов пользователя
+  async updatePricesForUser(req, res) {
+    try {
+      const userId = req.user._id;
+      const { limit = 100, offset = 0 } = req.query;
+      
+      console.log(`🚀 Обновление цен для всех кабинетов пользователя: ${userId}`);
+      
+      // Получаем все кабинеты пользователя
+      const WbCabinet = require('../models/WbCabinet');
+      const wbCabinets = await WbCabinet.find({ user: userId }).select('+token');
+      
+      if (!wbCabinets || wbCabinets.length === 0) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'У вас нет настроенных WB кабинетов' 
+        });
+      }
+
+      const results = [];
+      let totalUpdated = 0;
+      let totalErrors = 0;
+
+      // Обрабатываем каждый кабинет
+      for (const cabinet of wbCabinets) {
+        try {
+          console.log(`🚀 Обновляем цены для кабинета: ${cabinet.name}`);
+          
+          const result = await wbPriceService.updatePricesForCabinetById(cabinet._id, limit, offset);
+
+          results.push({
+            cabinetId: cabinet._id,
+            cabinetName: cabinet.name,
+            ...result
+          });
+
+          if (result.success) {
+            totalUpdated += result.updated || 0;
+          } else {
+            totalErrors++;
+          }
+
+        } catch (error) {
+          console.error(`❌ Ошибка при обновлении цен кабинета ${cabinet.name}:`, error.message);
+          
+          results.push({
+            cabinetId: cabinet._id,
+            cabinetName: cabinet.name,
+            success: false,
+            error: error.message
+          });
+          totalErrors++;
+        }
+      }
+
+      const response = {
+        success: true,
+        message: `Обновление цен завершено. Обработано кабинетов: ${wbCabinets.length}`,
+        summary: {
+          totalCabinets: wbCabinets.length,
+          successfulCabinets: wbCabinets.length - totalErrors,
+          failedCabinets: totalErrors,
+          totalUpdatedProducts: totalUpdated
+        },
+        results
+      };
+
+      res.json(response);
+
+    } catch (error) {
+      console.error('❌ Ошибка в updatePricesForUser:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Ошибка при обновлении цен для пользователя',
         error: error.message 
       });
     }

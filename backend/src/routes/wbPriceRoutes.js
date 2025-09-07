@@ -7,6 +7,10 @@ const { protect } = require('../middleware/authMiddleware');
 // GET /api/wb-prices/update
 router.get('/update', protect, wbPriceController.getWbPrices);
 
+// Обновление цен для всех кабинетов пользователя
+// GET /api/wb-prices/update-user
+router.get('/update-user', protect, wbPriceController.updatePricesForUser);
+
 // Получение статуса последнего обновления цен
 // GET /api/wb-prices/status
 router.get('/status', protect, wbPriceController.getLastUpdateStatus);
