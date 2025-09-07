@@ -34,6 +34,7 @@ const wbPriceRoutes = require('./routes/wbPriceRoutes'); // <-- маршруты
 const wbPriceService = require('./services/wbPriceService'); // <-- сервис для цен WB
 const msPriceRoutes = require('./routes/msPriceRoutes'); // <-- маршруты для цен МойСклад
 const msPriceAutoUpdateService = require('./services/msPriceAutoUpdateService');
+const wbStatisticsRoutes = require('./routes/wbStatisticsRoutes'); // <-- маршруты для Statistics API WB
 
 // Создаем глобальный экземпляр сервиса автоматического обновления цен МойСклад
 const msAutoUpdateService = new msPriceAutoUpdateService();
@@ -106,6 +107,7 @@ app.use('/api/postavki', postavkiRoutes);
 app.use('/api/reports', reportRoutes); // <-- Подключение роутов отчетов
 app.use('/api/wb-prices', wbPriceRoutes); // <-- Подключение роутов цен WB
 app.use('/api/ms-prices', msPriceRoutes); // <-- Подключение роутов цен МойСклад
+app.use('/api/wb-statistics', wbStatisticsRoutes); // <-- Подключение роутов Statistics API WB
 app.use('/api/payment', paymentRoutes); // <-- QR оплата
 app.use('/api/limits', limitRoutes); // <-- Подключение роутов лимитов
 // app.use('/api/queue', queueRoutes); // <-- Подключение роутов очередей

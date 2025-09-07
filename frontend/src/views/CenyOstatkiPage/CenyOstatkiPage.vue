@@ -35,7 +35,23 @@
           </select>
 
           <button type="button" class="reset-btn" @click="resetFilters">Сбросить</button>
+          
+          <!-- Кнопка обновления остатков FBY -->
+          <button 
+            type="button" 
+            class="update-stocks-btn" 
+            @click="updateFbyStocks"
+            :disabled="updatingStocks"
+          >
+            <span v-if="updatingStocks">🔄 Обновление...</span>
+            <span v-else>📦 Обновить остатки FBY</span>
+          </button>
         </form>
+
+        <!-- Сообщение о результате обновления остатков -->
+        <div v-if="stocksUpdateMessage" class="stocks-update-message" :class="{ 'success': stocksUpdateMessage.includes('✅'), 'error': stocksUpdateMessage.includes('❌') }">
+          {{ stocksUpdateMessage }}
+        </div>
 
         <!-- Верхняя пагинация -->
         <PaginationControls
@@ -149,7 +165,7 @@ import PaginationControls from '../TovaryPage/components/PaginationControls.vue'
 import ImageModal from '../TovaryPage/components/ImageModal.vue';
 import DemoBlock from '../../components/DemoBlock.vue';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3900/api';
 
 // Состояние для модального окна изображений
 const isImageModalOpen = ref(false);
@@ -180,6 +196,10 @@ const {
 // Состояние для фильтров
 const searchTerm = ref('');
 const msFilter = ref(''); // '', 'exists', 'not_exists'
+
+// Состояние для обновления остатков FBY
+const updatingStocks = ref(false);
+const stocksUpdateMessage = ref('');
 
 // Состояние для товаров (будет синхронизировано с composable)
 const products = ref([]);
@@ -302,7 +322,62 @@ const resetSelection = () => {
   // В этой странице нет выбора товаров, но функция нужна для совместимости
 };
 
+// Функция для обновления остатков FBY
+const updateFbyStocks = async () => {
+  if (updatingStocks.value) return;
+  
+  try {
+    updatingStocks.value = true;
+    stocksUpdateMessage.value = '';
+    
+    const token = getToken();
+    if (!token) {
+      throw new Error('Токен не найден. Пожалуйста, войдите в систему.');
+    }
 
+    console.log('🔄 Начинаем обновление остатков FBY...');
+    
+    const response = await axios.post(`${API_BASE_URL}/wb-statistics/update-all-stocks`, {
+      dateFrom: '2019-06-20', // Фиксированная дата начала
+      filters: {} // Можно добавить фильтры при необходимости
+    }, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.data && response.data.summary) {
+      const { summary } = response.data;
+      stocksUpdateMessage.value = `✅ Обновление завершено! Обработано кабинетов: ${summary.totalCabinets}, обновлено товаров: ${summary.totalUpdatedProducts}`;
+      
+      // Обновляем данные на странице
+      await fetchProductsFromComposable();
+      
+      console.log('✅ Остатки FBY обновлены успешно:', summary);
+    } else {
+      throw new Error('Неверный формат ответа от сервера');
+    }
+
+  } catch (error) {
+    console.error('❌ Ошибка при обновлении остатков FBY:', error);
+    
+    if (error.response && error.response.data && error.response.data.message) {
+      stocksUpdateMessage.value = `❌ Ошибка: ${error.response.data.message}`;
+    } else if (error.message) {
+      stocksUpdateMessage.value = `❌ Ошибка: ${error.message}`;
+    } else {
+      stocksUpdateMessage.value = '❌ Произошла неизвестная ошибка при обновлении остатков';
+    }
+  } finally {
+    updatingStocks.value = false;
+    
+    // Скрываем сообщение через 5 секунд
+    setTimeout(() => {
+      stocksUpdateMessage.value = '';
+    }, 5000);
+  }
+};
 
 // Функция для установки первой интеграции по умолчанию
 const setDefaultIntegration = () => {
@@ -488,6 +563,67 @@ h3 {
 
 .reset-btn:hover {
   background-color: #5a6268;
+}
+
+/* Кнопка обновления остатков FBY */
+.update-stocks-btn {
+  padding: 8px 16px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.update-stocks-btn:hover:not(:disabled) {
+  background-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
+.update-stocks-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Сообщение о результате обновления остатков */
+.stocks-update-message {
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease-out;
+}
+
+.stocks-update-message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.stocks-update-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Заголовок таблицы */
