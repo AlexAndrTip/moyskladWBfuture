@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # MongoDB база данных
+  mongodb:
+    image: mongo:7.0
+    container_name: moysklad-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-moysklad_wb}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - moysklad-network
+
+  # Redis для очередей
+  redis:
+    image: redis:7.2-alpine
+    container_name: moysklad-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - moysklad-network
+
+  # Backend приложение
+  backend:
+    build: .
+    container_name: moysklad-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3900
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password123}@mongodb:27017/${MONGO_DATABASE:-moysklad_wb}?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      REDIS_DB: 0
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "3900:3900"
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - moysklad-network
+
+  # Воркер для обновления цен
+  worker-price:
+    build: .
+    container_name: moysklad-worker-price
+    restart: unless-stopped
+    command: ["node", "src/queue/workers/priceUpdateWorker.js"]
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password123}@mongodb:27017/${MONGO_DATABASE:-moysklad_wb}?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      REDIS_DB: 0
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - moysklad-network
+
+  # Воркер для обновления остатков
+  worker-remains:
+    build: .
+    container_name: moysklad-worker-remains
+    restart: unless-stopped
+    command: ["node", "src/queue/workers/remainsUpdateWorker.js"]
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password123}@mongodb:27017/${MONGO_DATABASE:-moysklad_wb}?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      REDIS_DB: 0
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - moysklad-network
+
+  # Универсальный воркер
+  worker-universal:
+    build: .
+    container_name: moysklad-worker-universal
+    restart: unless-stopped
+    command: ["node", "src/queue/workers/universalWorker.js"]
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password123}@mongodb:27017/${MONGO_DATABASE:-moysklad_wb}?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      REDIS_DB: 0
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - moysklad-network
+
+  # Nginx для проксирования (опционально)
+  nginx:
+    image: nginx:alpine
+    container_name: moysklad-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+    networks:
+      - moysklad-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  moysklad-network:
+    driver: bridge
