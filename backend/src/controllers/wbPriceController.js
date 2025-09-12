@@ -16,10 +16,11 @@ class WbPriceController {
   async getWbPrices(req, res) {
     try {
       const { limit = 100, offset = 0 } = req.query;
+      const userId = req.user._id; // Получаем ID пользователя из токена
       
-      console.log('🚀 Начало обновления цен с WB API...');
+      console.log(`🚀 Начало обновления цен с WB API для пользователя: ${userId}`);
       
-      const result = await wbPriceService.getPricesForProducts(limit, offset);
+      const result = await wbPriceService.getPricesForProducts(limit, offset, userId);
       
       res.json({
         success: true,
