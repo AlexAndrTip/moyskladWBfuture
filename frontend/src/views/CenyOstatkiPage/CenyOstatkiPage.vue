@@ -36,17 +36,6 @@
 
           <button type="button" class="reset-btn" @click="resetFilters">Сбросить</button>
           
-          <!-- Кнопка обновления остатков FBY -->
-          <button 
-            type="button" 
-            class="update-stocks-btn" 
-            @click="updateFbyStocks"
-            :disabled="updatingStocks"
-          >
-            <span v-if="updatingStocks">🔄 Обновление...</span>
-            <span v-else>📦 Обновить остатки FBY</span>
-          </button>
-          
           <!-- Кнопка обновления цен -->
           <button 
             type="button" 
@@ -56,6 +45,17 @@
           >
             <span v-if="updatingPrices">🔄 Обновление...</span>
             <span v-else>💰 Обновить цены</span>
+          </button>
+          
+          <!-- Кнопка обновления остатков -->
+          <button 
+            type="button" 
+            class="update-stocks-btn" 
+            @click="updateFbyStocks"
+            :disabled="updatingStocks"
+          >
+            <span v-if="updatingStocks">🔄 Обновление...</span>
+            <span v-else>📦 Обновить остатки</span>
           </button>
         </form>
 
@@ -639,7 +639,7 @@ h3 {
   background-color: #5a6268;
 }
 
-/* Кнопка обновления остатков FBY */
+/* Кнопка обновления остатков */
 .update-stocks-btn {
   padding: 8px 16px;
   background-color: #28a745;
