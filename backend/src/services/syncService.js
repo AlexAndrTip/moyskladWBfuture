@@ -101,6 +101,7 @@ async function syncProducts(integrationLinkId, userId) {
                     title: productData.title,
                     description: productData.description,
                     needKiz: productData.needKiz,
+                    photos: productData.photos, // Добавляем фото
                     video: productData.video,
                     dimensions: productData.dimensions,
                     characteristics: productData.characteristics,

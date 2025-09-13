@@ -10,6 +10,58 @@ const SizeSchema = new mongoose.Schema({
   ms_href: { // <-- НОВОЕ ПОЛЕ: URL товара в МойСклад для данного размера
     type: String,
     required: false, // Не обязательно, пока товар не создан в МС
+  },
+  // Новые поля для цен и остатков
+  priceWB: { // Цена на Wildberries
+    type: Number,
+    default: 0,
+    required: false
+  },
+  discountedPriceWB: { // Цена со скидкой на Wildberries
+    type: Number,
+    default: 0,
+    required: false
+  },
+  clubDiscountedPriceWB: { // Цена со скидкой для участников клуба WB
+    type: Number,
+    default: 0,
+    required: false
+  },
+  priceMS: { // Цена в МойСклад
+    type: Number,
+    default: 0,
+    required: false
+  },
+  costPriceMS: { // Себестоимость в МойСклад
+    type: Number,
+    default: 0,
+    required: false
+  },
+  stockMS: { // Остаток в МойСклад
+    type: Number,
+    default: 0,
+    required: false
+  },
+  stockFBS: { // Остаток FBS (Fulfillment by Seller)
+    type: Number,
+    default: 0,
+    required: false
+  },
+  stockFBY: { // Остаток FBY (Fulfillment by Yandex)
+    type: Number,
+    default: 0,
+    required: false
+  },
+  // Поля для отслеживания времени последнего обновления
+  lastPriceUpdate: { // Время последнего обновления цен
+    type: Date,
+    default: null,
+    required: false
+  },
+  lastStockUpdate: { // Время последнего обновления остатков
+    type: Date,
+    default: null,
+    required: false
   }
 });
 
@@ -27,7 +79,14 @@ const ProductSchema = new mongoose.Schema({
   title: String, // Название товара
   description: String, // Описание
   needKiz: Boolean, // Нужен ли КИЗ
-  // photos: [String], // Исключено
+  photos: [{
+    big: String, // URL фото 900x1200
+    c246x328: String, // URL фото 248x328
+    c516x688: String, // URL фото 516x688
+    square: String, // URL фото 600x600
+    tm: String, // URL фото 75x100
+    video: String
+  }], // Массив фото
   // video: String, // Исключено
   // dimensions: mongoose.Schema.Types.Mixed, // Исключено
   characteristics: mongoose.Schema.Types.Mixed, // Массив характеристик
@@ -78,7 +137,14 @@ ProductSchema.index({ nmID: 1, integrationLink: 1, user: 1 }, { unique: true });
 // Также индекс для фильтрации по интеграции
 ProductSchema.index({ integrationLink: 1, user: 1 });
 
-ProductSchema.index({ 'sizes.skus': 1 }); // Добавьте это в Product.js
+// Индексы для оптимизации поиска и фильтрации
+ProductSchema.index({ 'sizes.skus': 1 }); // Для поиска по баркоду
+ProductSchema.index({ wbCabinet: 1, user: 1 }); // Для фильтрации по кабинету WB
+ProductSchema.index({ user: 1, integrationLink: 1, wbCabinet: 1 }); // Составной индекс для основных запросов
+ProductSchema.index({ title: 'text', brand: 'text', vendorCode: 'text' }); // Текстовый индекс для поиска
+ProductSchema.index({ ms_href_general: 1 }); // Для фильтрации по наличию в МС
+ProductSchema.index({ 'sizes.ms_href': 1 }); // Для фильтрации по наличию размеров в МС
+ProductSchema.index({ nmID: 1 }); // Для ускорения сортировки и поиска по nmID
 
 
 module.exports = mongoose.model('Product', ProductSchema);

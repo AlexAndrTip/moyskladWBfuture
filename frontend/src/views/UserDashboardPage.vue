@@ -81,6 +81,7 @@ const menuItems = ref([
   { name: 'WBKabinety', label: 'WB Кабинеты', path: '/dashboard/wb-kabinety', icon: 'fas fa-store' },
   { name: 'Integracii', label: 'Интеграции', path: '/dashboard/integracii', icon: 'fas fa-puzzle-piece' },
   { name: 'Tovary', label: 'Товары', path: '/dashboard/tovary', icon: 'fas fa-box' },
+  { name: 'CenyOstatki', label: 'Цены и остатки', path: '/dashboard/ceny-ostatki', icon: 'fas fa-dollar-sign' },
   { name: 'Organizations', label: 'Организации', path: '/dashboard/organizations', icon: 'fas fa-users' }, // <-- ИЗМЕНЕНО: Исправлен путь и добавлена иконка
   { name: 'FBS', label: 'Заказы FBS', path: '/dashboard/fbs', icon: 'fas fa-shopping-cart' },
   { name: 'Uslugi', label: 'Услуги', path: '/dashboard/uslugi', icon: 'fas fa-briefcase' },

@@ -1087,6 +1087,20 @@ watch(() => [currentOrganizationLink.value?.moyskladOrganizationHref, currentOrg
   }
 }, { deep: true });
 
+// Функция для установки первой интеграции по умолчанию
+const setDefaultIntegration = () => {
+  if (integrationLinks.value.length > 0 && !selectedIntegrationId.value) {
+    selectedIntegrationId.value = integrationLinks.value[0]._id;
+  }
+};
+
+// Следим за загрузкой интеграций и устанавливаем первую по умолчанию
+watch(integrationLinks, (newLinks) => {
+  if (newLinks.length > 0 && !selectedIntegrationId.value) {
+    setDefaultIntegration();
+  }
+}, { immediate: true });
+
 onMounted(() => {
   if (selectedIntegrationId.value) {
     fetchMoyskladOrganizationsList();
@@ -1160,17 +1174,11 @@ h2 {
 }
 .integration-select {
   width: 100%;
-  padding: 10px 15px;
-  border: 1px solid #dcdfe6;
-  border-radius: 5px;
-  font-size: 1em;
-  box-sizing: border-box;
-  background-color: #ffffff;
-  appearance: none;
-  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2C197.9c-3.6%2C3.6-8.3%2C5.4-13.1%2C5.4s-9.5-1.8-13.1-5.4L146.2%2C77.4L32.6%2C197.9c-3.6%2C3.6-8.3%2C5.4-13.1%2C5.4s-9.5-1.8-13.1-5.4c-7.3-7.3-7.3-19.1%2C0-26.4L133%2C50.9c7.3-7.3%2C19.1-7.3%2C26.4%2C0l119.6%2C119.6C294.3%2C178.9%2C294.3%2C190.7%2C287%2C197.9z%22%2F%3E%3C%2Fsvg%3E');
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 12px;
+  max-width: 400px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .organization-management-section {

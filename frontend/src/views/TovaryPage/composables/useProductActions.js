@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export function useProductActions(getToken, selectedIntegrationId, updateProductInList) {
+export function useProductActions(getToken, selectedIntegrationId, updateProductInList, products) {
   const individualActionMessage = ref('');
   const individualActionMessageType = ref('');
   const individualActionMsHref = ref('');
@@ -28,6 +28,16 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
   const createInMs = async (product) => {
     clearIndividualActionMessage();
     pendingActions.value[product._id] = 'createMs';
+    
+    // Определяем интеграцию для товара
+    const integrationLinkId = selectedIntegrationId.value === 'all' ? product.integrationLink : selectedIntegrationId.value;
+    
+    if (!integrationLinkId) {
+      individualActionMessage.value = 'Не удалось определить интеграцию для товара.';
+      individualActionMessageType.value = 'error';
+      pendingActions.value[product._id] = null;
+      return;
+    }
     let sizeChrtIDToSend = null;
     let targetSizeTechSize = 'Общий';
 
@@ -63,7 +73,7 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
       const response = await axios.post(`${API_BASE_URL}/products/create-in-ms`, {
         productId: product._id,
         sizeChrtID: sizeChrtIDToSend,
-        integrationLinkId: selectedIntegrationId.value,
+        integrationLinkId: integrationLinkId,
       }, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
@@ -99,6 +109,16 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
   const createVariants = async (product) => {
     clearIndividualActionMessage();
     pendingActions.value[product._id] = 'createVariants';
+    
+    // Определяем интеграцию для товара
+    const integrationLinkId = selectedIntegrationId.value === 'all' ? product.integrationLink : selectedIntegrationId.value;
+    
+    if (!integrationLinkId) {
+      individualActionMessage.value = 'Не удалось определить интеграцию для товара.';
+      individualActionMessageType.value = 'error';
+      pendingActions.value[product._id] = null;
+      return;
+    }
     individualActionMessage.value = `Создание модификаций для "${product.title}"...`;
     individualActionMessageType.value = 'info';
     individualActionMsHref.value = '';
@@ -108,7 +128,7 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
     try {
       const response = await axios.post(`${API_BASE_URL}/products/create-variants-in-ms`, {
         productId: product._id,
-        integrationLinkId: selectedIntegrationId.value,
+        integrationLinkId: integrationLinkId,
       }, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
@@ -149,6 +169,16 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
   // ИЗМЕНЕННАЯ ФУНКЦИЯ linkToProduct
   const linkToProduct = (product) => {
     clearIndividualActionMessage();
+    
+    // Определяем интеграцию для товара
+    const integrationLinkId = selectedIntegrationId.value === 'all' ? product.integrationLink : selectedIntegrationId.value;
+    
+    if (!integrationLinkId) {
+      individualActionMessage.value = 'Не удалось определить интеграцию для товара.';
+      individualActionMessageType.value = 'error';
+      return;
+    }
+    
     // Сохраняем ВЕСЬ объект товара WB, для которого открываем модалку
     currentWbProductForLinking.value = product;
     isLinkToProductModalOpen.value = true; // Открываем модальное окно
@@ -207,11 +237,21 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
   const unlinkProduct = async (product) => {
     clearIndividualActionMessage();
     pendingActions.value[product._id] = 'unlinkProduct';
+    
+    // Определяем интеграцию для товара
+    const integrationLinkId = selectedIntegrationId.value === 'all' ? product.integrationLink : selectedIntegrationId.value;
+    
+    if (!integrationLinkId) {
+      individualActionMessage.value = 'Не удалось определить интеграцию для товара.';
+      individualActionMessageType.value = 'error';
+      pendingActions.value[product._id] = null;
+      return;
+    }
 
     try {
       const response = await axios.post(`${API_BASE_URL}/products/unlink`, {
         productId: product._id,
-        integrationLinkId: selectedIntegrationId.value,
+        integrationLinkId: integrationLinkId,
       }, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
@@ -244,10 +284,19 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
   };
 
   const createBundleInMs = async (product) => {
+    // Определяем интеграцию для товара
+    const integrationLinkId = selectedIntegrationId.value === 'all' ? product.integrationLink : selectedIntegrationId.value;
+    
+    if (!integrationLinkId) {
+      individualActionMessage.value = 'Не удалось определить интеграцию для товара.';
+      individualActionMessageType.value = 'error';
+      return;
+    }
+    
     try {
       const response = await axios.post(`${API_BASE_URL}/products/create-bundle`, {
         productId: product._id,
-        integrationLinkId: selectedIntegrationId.value,
+        integrationLinkId: integrationLinkId,
       }, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
@@ -271,6 +320,25 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
   const toggleComplect = async (productId, complectValue) => {
     clearIndividualActionMessage();
     pendingActions.value[productId] = 'updateComplect';
+    
+    // Находим товар в списке для определения интеграции
+    const product = products.value.find(p => p._id === productId);
+    if (!product) {
+      individualActionMessage.value = 'Товар не найден.';
+      individualActionMessageType.value = 'error';
+      pendingActions.value[productId] = null;
+      return;
+    }
+    
+    // Определяем интеграцию для товара
+    const integrationLinkId = selectedIntegrationId.value === 'all' ? product.integrationLink : selectedIntegrationId.value;
+    
+    if (!integrationLinkId) {
+      individualActionMessage.value = 'Не удалось определить интеграцию для товара.';
+      individualActionMessageType.value = 'error';
+      pendingActions.value[productId] = null;
+      return;
+    }
 
     console.log('Отправка запроса на обновление комплекта:', { productId, complect: complectValue, integrationLinkId: selectedIntegrationId.value });
 
@@ -278,7 +346,7 @@ export function useProductActions(getToken, selectedIntegrationId, updateProduct
       const response = await axios.post(`${API_BASE_URL}/products/set-complect`, {
         productId,
         complect: complectValue,
-        integrationLinkId: selectedIntegrationId.value,
+        integrationLinkId: integrationLinkId,
       }, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });

@@ -11,34 +11,41 @@
         @integration-change="onIntegrationChange"
       />
 
-    <div v-if="selectedIntegrationId && !loadingIntegrations && !tokenChecking">
+    <div v-if="selectedIntegrationId && !loadingIntegrations && (selectedIntegrationId === 'all' || !tokenChecking)">
+
 
       <BulkActionsBar
-        v-if="products.length > 0 && (selectedProductIds.length > 0 || selectedAllPages)"
-        :products-count="selectedProductIds.length"
+        v-if="products.length > 0 && hasSelectedProducts"
+        :products-count="getSelectedProductsCount"
         :selected-all-pages="selectedAllPages"
         :total-products="totalProducts"
         @open-bulk-edit-modal="openBulkEditModal"
       />
 
-      <div class="search-and-refresh-container">
-        <SearchBar
-          v-if="!tokenError"
-          v-model:search-term="searchTerm"
-          @search="debouncedSearch"
-          @clear-search="clearSearch"
+      <!-- Форма поиска и фильтров -->
+      <form class="search-filter-form" @submit.prevent>
+        <input
+          v-model="searchTerm"
+          type="text"
+          placeholder="Поиск по названию, артикулу..."
+          class="search-input"
+          @input="debouncedSearch"
         />
-      </div>
-
-      <h5 v-if="!tokenError">Фильтр по выгрузке в МС:</h5>
-      <select v-if="!tokenError" v-model="msFilter" @change="onMsFilterChange" class="ms-filter-select">
-        <option value="">Все</option>
-        <option value="exists">Есть в МС</option>
-        <option value="not_exists">Нет в МС</option>
-      </select>
+        <select v-model="msFilter" @change="onMsFilterChange" class="ms-filter-select">
+          <option value="">Все товары</option>
+          <option value="exists">Есть в МС</option>
+          <option value="not_exists">Нет в МС</option>
+        </select>
+        <select v-model="complectFilter" @change="onComplectFilterChange" class="complect-filter-select">
+          <option value="">Все товары</option>
+          <option value="true">Комплекты</option>
+          <option value="false">Не комплекты</option>
+        </select>
+        <button type="button" class="reset-btn" @click="resetFilters">Сбросить</button>
+      </form>
 
       <SelectionControls
-        v-if="!tokenError"
+        v-if="selectedIntegrationId === 'all' || !tokenError"
         :products-count-on-page="products.length"
         :are-all-products-selected-on-page="areAllProductsSelectedOnPage"
         :total-pages="totalPages"
@@ -49,24 +56,18 @@
       />
 
       <IndividualActionStatus
-        v-if="!tokenError"
+        v-if="selectedIntegrationId === 'all' || !tokenError"
         :message="individualActionMessage"
         :type="individualActionMessageType"
         :ms-href="individualActionMsHref"
         @clear="clearIndividualActionMessage"
       />
 
-      <div v-if="(products.length || productsLoading) && !tokenError" class="products-header">
-        <h3>Список товаров:</h3>
-        <button @click="triggerManualSync" :disabled="syncInProgress" class="refresh-button inline-refresh">
-          <i :class="syncInProgress ? 'fas fa-sync fa-spin' : 'fas fa-sync-alt'"></i>
-        </button>
-      </div>
       <p v-if="productsLoading" class="loading-message">Загрузка товаров...</p>
       <p v-if="productsError" class="error-message">{{ productsError }}</p>
 
       <!-- Ошибка токена -->
-      <div v-if="tokenError" class="token-error-container">
+      <div v-if="selectedIntegrationId !== 'all' && tokenError" class="token-error-container">
         <div class="token-error-content">
           <div class="token-error-icon">⚠️</div>
           <div class="token-error-message">
@@ -85,7 +86,7 @@
       </div>
 
       <!-- Проверка токена -->
-      <div v-if="tokenChecking" class="token-checking-container">
+      <div v-if="selectedIntegrationId !== 'all' && tokenChecking" class="token-checking-container">
         <div class="token-checking-content">
           <div class="token-checking-spinner"></div>
           <p>Проверка токена WB API...</p>
@@ -93,7 +94,7 @@
       </div>
 
       <PaginationControls
-        v-if="totalPages > 1 && !tokenError"
+        v-if="totalPages > 1 && (selectedIntegrationId === 'all' || !tokenError)"
         :current-page="currentPage"
         :total-pages="totalPages"
         :selected-all-pages="selectedAllPages"
@@ -103,14 +104,35 @@
         @go-to-page="goToPage"
         @update:products-per-page="onProductsPerPageChange"
         :is-top="true"
+        :is-page-loading="isPageLoading(currentPage)"
       />
 
-      <div v-if="products.length > 0 && !tokenError" class="products-list">
+      <div v-if="products.length > 0 && (selectedIntegrationId === 'all' || !tokenError)" class="products-list">
+        <!-- Индикатор загрузки при смене страницы -->
+        <div v-if="isPageLoading(currentPage)" class="page-loading-overlay">
+          <div class="loading-content">
+            <div class="loading-spinner large"></div>
+            <p class="loading-message">Загрузка страницы {{ currentPage }}...</p>
+          </div>
+        </div>
+
         <div class="product-item header">
           <input type="checkbox" :checked="selectedAllPages || areAllProductsSelectedOnPage" @change="toggleSelectAllProducts" />
+          <div class="header-image">Фото</div>
           <div class="header-info">Название / Артикул WB / Артикул продавца</div>
           <div class="header-sizes">Размеры</div>
-          <div class="header-complect">Комплект</div> <div class="header-actions">Действия</div>
+          <div class="header-complect">Комплект</div>
+          <div class="header-actions">
+            <span>Действия</span>
+            <button 
+              @click="triggerManualSync" 
+              :disabled="syncInProgress || selectedIntegrationId === 'all'" 
+              class="refresh-button header-refresh"
+              title="Обновить список товаров"
+            >
+              <i :class="syncInProgress ? 'fas fa-sync fa-spin' : 'fas fa-sync-alt'"></i>
+            </button>
+          </div>
         </div>
         <ProductListItem
           v-for="product in products"
@@ -118,18 +140,21 @@
           :product="product"
           :is-selected="selectedAllPages || selectedProductIds.includes(product._id)"
           :is-action-in-progress="isActionInProgress"
+          :show-integration-info="selectedIntegrationId === 'all'"
+          :integration-links="integrationLinks"
           @toggle-complect="handleToggleComplectFromChild" @toggle-select="onIndividualCheckboxChange"
           @create-in-ms="createInMs"
           @create-variants="createVariants"
           @link-to-product="linkToProduct"
           @unlink-product="unlinkProduct"
+          @open-image-modal="openImageModal"
         />
       </div>
-      <p v-else-if="!productsLoading && !productsError && !tokenError && !products.length && searchTerm">Нет товаров, соответствующих вашему поиску.</p>
-      <p v-else-if="!productsLoading && !productsError && !tokenError && !products.length">Нет товаров для этой интеграции.</p>
+      <p v-else-if="!productsLoading && !productsError && (selectedIntegrationId === 'all' || !tokenError) && !products.length && searchTerm">Нет товаров, соответствующих вашему поиску.</p>
+      <p v-else-if="!productsLoading && !productsError && (selectedIntegrationId === 'all' || !tokenError) && !products.length">Нет товаров для этой интеграции.</p>
 
       <PaginationControls
-        v-if="totalPages > 1 && !tokenError"
+        v-if="totalPages > 1 && (selectedIntegrationId === 'all' || !tokenError)"
         :current-page="currentPage"
         :total-pages="totalPages"
         :selected-all-pages="selectedAllPages"
@@ -139,12 +164,13 @@
         @go-to-page="goToPage"
         @update:products-per-page="onProductsPerPageChange"
         :is-top="false"
+        :is-page-loading="isPageLoading(currentPage)"
       />
     </div>
 
     <BulkEditModal
       :is-open="isBulkEditModalOpen"
-      :selected-product-count="selectedProductIds.length"
+      :selected-product-count="getSelectedProductsCount"
       :selected-all-pages="selectedAllPages"
       :total-products="totalProducts"
       :bulk-action-in-progress="bulkActionInProgress"
@@ -156,11 +182,18 @@
 
     <LinkToProductModal
       :is-open="isLinkToProductModalOpen"
-      :integration-link-id="selectedIntegrationId"
+      :integration-link-id="currentWbProductForLinking?.integrationLink || selectedIntegrationId"
       :get-token="getToken"
       :wb-product="currentWbProductForLinking"
       @close="closeLinkToProductModal"
       @product-linked="handleProductLinked"
+    />
+
+    <ImageModal
+      :is-open="isImageModalOpen"
+      :image-url="currentImageData.imageUrl"
+      :product-title="currentImageData.productTitle"
+      @close="closeImageModal"
     />
     </DemoBlock>
   </div>
@@ -181,14 +214,15 @@ import PaginationControls from './components/PaginationControls.vue';
 import ProductListItem from './components/ProductListItem.vue';
 import BulkEditModal from './modals/BulkEditModal.vue';
 import LinkToProductModal from './modals/LinkToProductModal.vue'; // Импортируем модалку
+import ImageModal from './components/ImageModal.vue'; // Импортируем модалку для изображений
 import DemoBlock from '../../components/DemoBlock.vue';
 
 // Импорт Composables
 import { useIntegrationLinks } from './composables/useIntegrationLinks.js';
-import { useProducts } from './composables/useProducts.js';
+import { useProductsOptimized } from './composables/useProductsOptimized.js';
 import { useProductActions } from './composables/useProductActions.js';
 import { useBulkActions } from './composables/useBulkActions.js';
-import { useSelection } from './composables/useSelection.js';
+import { useSelectionOptimized } from './composables/useSelectionOptimized.js';
 import { useTokenCheck } from './composables/useTokenCheck.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -196,9 +230,36 @@ const router = useRouter();
 
 const getToken = () => localStorage.getItem('token');
 const msFilter = ref(''); // '', 'exists', 'not_exists'
+const complectFilter = ref(''); // '', 'true', 'false'
+
+// Состояние для модального окна изображений
+const isImageModalOpen = ref(false);
+const currentImageData = ref({ imageUrl: '', productTitle: '' });
 
 const onMsFilterChange = () => {
   fetchProducts(); // просто перезапускаем запрос с текущими фильтрами
+};
+
+const onComplectFilterChange = () => {
+  fetchProducts(); // просто перезапускаем запрос с текущими фильтрами
+};
+
+const resetFilters = () => {
+  searchTerm.value = '';
+  msFilter.value = '';
+  complectFilter.value = '';
+  fetchProducts();
+};
+
+// Функции для работы с модальным окном изображений
+const openImageModal = (imageData) => {
+  currentImageData.value = imageData;
+  isImageModalOpen.value = true;
+};
+
+const closeImageModal = () => {
+  isImageModalOpen.value = false;
+  currentImageData.value = { imageUrl: '', productTitle: '' };
 };
 
 // Использование composables
@@ -232,9 +293,12 @@ const {
   changePage,
   onProductsPerPageChange,
   goToPage,
+  quickGoToPage,
   debouncedSearch,
   clearSearch,
-} = useProducts(selectedIntegrationId, getToken, msFilter);
+  isPageLoading,
+  getAllProductsForBulkActions,
+} = useProductsOptimized(selectedIntegrationId, getToken, msFilter, complectFilter);
 
 
 const {
@@ -246,7 +310,12 @@ const {
   selectAllProductsOnAllPages,
   clearAllPageSelection,
   resetSelection,
-} = useSelection(products, totalPages, totalProducts, currentPage);
+  getAllSelectedProducts,
+  getSelectedProductsCount,
+  hasSelectedProducts,
+  executeBulkAction,
+  bulkActionInProgress,
+} = useSelectionOptimized(products, totalPages, totalProducts, currentPage, getAllProductsForBulkActions);
 
 
 // Вспомогательная функция для обновления продукта в списке после индивидуального действия
@@ -276,18 +345,17 @@ const {
   currentWbProductForLinking,
   handleProductLinked,
   closeLinkToProductModal,
-} = useProductActions(getToken, selectedIntegrationId, updateProductInList);
+} = useProductActions(getToken, selectedIntegrationId, updateProductInList, products);
 
 
 const {
   isBulkEditModalOpen,
-  bulkActionInProgress,
   openBulkEditModal,
   closeBulkEditModal,
   bulkCreateInMs,
   bulkCreateVariants,
   bulkUnlinkProducts,
-} = useBulkActions(getToken, selectedIntegrationId, selectedProductIds, selectedAllPages, totalProducts, fetchProducts);
+} = useBulkActions(getToken, selectedIntegrationId, getAllSelectedProducts, fetchProducts);
 
 
 // --- НОВАЯ ФУНКЦИЯ ДЛЯ ОБРАБОТКИ СОБЫТИЯ ОТ ProductListItem ---
@@ -353,79 +421,303 @@ const triggerManualSync = async () => {
 // Обработчики, которые координируют работу composables
 const onIntegrationChange = async () => {
   if (selectedIntegrationId.value) {
-    // Сначала проверяем токен
-    await checkToken(selectedIntegrationId.value);
-    // Затем загружаем товары только если токен валиден
-    if (tokenValid.value) {
+    if (selectedIntegrationId.value === 'all') {
+      // Для "Все интеграции" не проверяем токен, сразу загружаем товары
       currentPage.value = 1;
       searchTerm.value = '';
       resetSelection(); // Сброс выбора при смене интеграции
+      resetTokenCheck(); // Сбрасываем проверку токена
       fetchProducts();
+    } else {
+      // Для конкретной интеграции проверяем токен
+      await checkToken(selectedIntegrationId.value);
+      // Затем загружаем товары только если токен валиден
+      if (tokenValid.value) {
+        currentPage.value = 1;
+        searchTerm.value = '';
+        resetSelection(); // Сброс выбора при смене интеграции
+        fetchProducts();
+      }
     }
   } else {
     resetTokenCheck();
   }
 };
 
+// Функция для установки первой интеграции по умолчанию
+const setDefaultIntegration = () => {
+  if (integrationLinks.value.length > 0 && !selectedIntegrationId.value) {
+    selectedIntegrationId.value = integrationLinks.value[0]._id;
+  }
+};
+
 // Следим за изменением выбранной интеграции
 watch(selectedIntegrationId, onIntegrationChange);
+
+// Следим за загрузкой интеграций и устанавливаем первую по умолчанию
+watch(integrationLinks, (newLinks) => {
+  if (newLinks.length > 0 && !selectedIntegrationId.value) {
+    setDefaultIntegration();
+  }
+}, { immediate: true });
 </script>
 
 <style scoped>
 /* Общие стили для страницы */
 .tovary-page-container {
-  padding: 20px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 25px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   min-height: 400px;
   text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 h2 {
-  color: #333;
-  margin-bottom: 25px;
+  color: #1976d2;
+  margin-bottom: 30px;
   text-align: center;
+  font-size: 2.2em;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(25, 118, 210, 0.2);
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 h3 {
   margin-bottom: 15px;
-  color: #555;
-  font-size: 1.2em;
+  color: #1976d2;
+  font-size: 1.3em;
+  font-weight: 600;
 }
 
 .loading-message, .error-message {
   text-align: center;
   margin-top: 20px;
-  color: #666;
+  padding: 15px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
+
+.loading-message {
+  color: #1976d2;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 1px solid #90caf9;
+}
+
 .error-message {
   color: #dc3545;
   font-weight: bold;
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border: 1px solid #f44336;
 }
 
 .products-list {
   margin-top: 20px;
-  border: 1px solid #eee;
-  border-radius: 5px;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
   overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+
+/* Overlay индикатор загрузки для списка товаров */
+.page-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  border-radius: 5px;
+  opacity: 0;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+.page-loading-overlay .loading-content {
+  text-align: center;
+}
+
+.page-loading-overlay .loading-message {
+  margin: 15px 0 0 0;
+  color: #495057;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.page-loading-overlay .loading-spinner.large {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Красивые стили для формы поиска и фильтров */
+.search-filter-form {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.search-input,
+.ms-filter-select,
+.complect-filter-select {
+  padding: 10px 15px;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.search-input:focus,
+.ms-filter-select:focus,
+.complect-filter-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.search-input {
+  min-width: 250px;
+  flex: 1;
+}
+
+.ms-filter-select,
+.complect-filter-select {
+  min-width: 160px;
+}
+
+.reset-btn {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
+}
+
+.reset-btn:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.4);
+}
+
+/* Красивые стили для заголовка списка товаров */
+.products-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0 15px;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 10px;
+  border: 1px solid #90caf9;
+  box-shadow: 0 2px 6px rgba(33, 150, 243, 0.2);
+}
+
+.products-header h3 {
+  margin: 0;
+  color: #1976d2;
+  font-weight: 600;
+}
+
+.inline-refresh {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 8px 12px;
+  color: white;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.inline-refresh:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
+}
+
+.inline-refresh:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Стили для кнопки обновления в заголовке */
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.header-refresh {
+  padding: 6px 8px;
+  font-size: 14px;
+  height: 28px;
+  min-width: 28px;
+  margin-left: auto;
+}
+
+.header-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .product-item.header {
-  background-color: #f0f2f5;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   font-weight: bold;
   position: sticky;
   top: 0;
   z-index: 10;
-  padding-top: 10px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #ccc;
+  padding: 15px 20px;
+  border-bottom: 2px solid #dee2e6;
   display: grid; /* Важно, чтобы тут был grid, т.к. он задается в ProductListItem */
-  grid-template-columns: 40px 3fr 2fr 1fr 3fr; /* Должен совпадать с ProductListItem, добавлено для "Комплект" */
+  grid-template-columns: 40px 80px 3fr 2fr 1fr 3fr; /* 6 колонок для страницы товаров */
   gap: 15px;
   align-items: center;
-  padding-left: 20px;
-  padding-right: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px 8px 0 0;
 }
 
 /* Удален .header-controls, так как кнопка перемещена */
@@ -438,47 +730,34 @@ h3 {
   gap: 15px;
 } */
 
-/* Новый стиль для контейнера строки поиска и кнопки обновления */
-.search-and-refresh-container {
-  display: flex;
-  gap: 10px; /* Отступ между строкой поиска и кнопкой */
-  margin-bottom: 20px;
-  margin-top: 10px;
-  align-items: center; /* Выравнивание по центру по вертикали */
-}
-
 /* Стили для кнопки "Обновить" (только иконка) */
 .refresh-button {
-  background-color: #007bff; /* Синий цвет */
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
-  padding: 10px; /* Равный padding для квадратной кнопки */
+  padding: 12px;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 1.2em; /* Увеличенный размер иконки */
-  transition: background-color 0.3s ease, transform 0.1s ease;
-  display: flex; /* Для центрирования иконки */
+  font-size: 1.2em;
+  transition: all 0.3s ease;
+  display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
 .refresh-button:hover:not(:disabled) {
-  background-color: #0056b3;
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
 }
 
 .refresh-button:disabled {
-  background-color: #cccccc;
+  background: #cccccc;
   cursor: not-allowed;
   opacity: 0.8;
   transform: none;
-}
-
-/* Изменения для SearchBar */
-.search-bar {
-  flex-grow: 1; /* Позволяет строке поиска занимать все доступное пространство */
-  margin-bottom: 0; /* Убираем отступы, так как они теперь управляются родительским контейнером */
-  margin-top: 0;
+  box-shadow: none;
 }
 
 
@@ -506,27 +785,49 @@ h3 {
 
 /* Адаптивность */
 @media (max-width: 768px) {
-  .product-item.header {
-    grid-template-columns: 40px 1fr;
+  .tovary-page-container {
+    padding: 15px;
+    border-radius: 12px;
   }
+  
+  .product-item.header {
+    grid-template-columns: 40px 60px 1fr;
+    padding: 12px 15px;
+  }
+  
   .product-item.header .header-sizes,
   .product-item.header .header-actions {
     display: none;
   }
-  /* Адаптивность для нового контейнера */
-  .search-and-refresh-container {
-    flex-direction: column; /* Элементы в столбец на маленьких экранах */
-    align-items: stretch; /* Растягивание по ширине */
+  
+  /* Адаптивность для формы фильтров */
+  .search-filter-form {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 15px;
+    gap: 12px;
   }
-  .search-bar {
-    width: 100%; /* Строка поиска занимает всю ширину */
+  
+  .search-input, .ms-filter-select, .complect-filter-select {
+    width: 100%;
+    min-width: auto;
   }
-  .refresh-button {
-    width: 100%; /* Кнопка занимает всю ширину */
-  }
+  
   .bulk-actions-bar {
-    width: 100%; /* Панель массовых действий также занимает всю ширину */
+    width: 100%;
     justify-content: center;
+  }
+  
+  .products-header {
+    padding: 12px 15px;
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  h2 {
+    font-size: 1.8em;
+    margin-bottom: 20px;
   }
 }
 
@@ -641,5 +942,44 @@ h3 {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Стили для формы поиска и фильтров */
+.search-filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.search-input, .ms-filter-select, .complect-filter-select {
+  padding: 7px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.search-input {
+  min-width: 200px;
+}
+
+.ms-filter-select, .complect-filter-select {
+  min-width: 140px;
+}
+
+.reset-btn {
+  background: #e0e0e0;
+  color: #333;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reset-btn:hover {
+  background: #bdbdbd;
 }
 </style>

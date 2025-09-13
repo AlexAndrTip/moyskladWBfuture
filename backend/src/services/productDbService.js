@@ -13,7 +13,7 @@ const IntegrationLink = require('../models/IntegrationLink');
  * @returns {Promise<Object>} - Объект с товарами, текущей страницей, общим количеством страниц и общим количеством товаров.
  * @throws {Error} - Если интеграционная связка не найдена.
  */
-async function getProductsFromDb(integrationLinkId, userId, page, limit, searchTerm, msFilter) {
+async function getProductsFromDb(integrationLinkId, userId, page, limit, searchTerm, msFilter, complectFilter) {
     const skip = (page - 1) * limit;
 
     console.log(`[PRODUCT_DB_SERVICE] Получен запрос на товары для integrationLink ID: ${integrationLinkId}, страница: ${page}, лимит: ${limit}, поиск: ${searchTerm || 'N/A'}, фильтр МС: ${msFilter || 'N/A'}`);
@@ -75,14 +75,23 @@ async function getProductsFromDb(integrationLinkId, userId, page, limit, searchT
             ];
         }
 
+        // Фильтр по комплектам
+        if (complectFilter === 'true') {
+            query.complect = true;
+        } else if (complectFilter === 'false') {
+            query.complect = false;
+        }
 
-        // Получаем товары из вашей БД
+        // Получаем товары из вашей БД с оптимизированным запросом
         const products = await Product.find(query)
             .skip(skip)
             .limit(limit)
-            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect'); // Выбираем все необходимые поля, включая ms_href внутри sizes
+            .sort({ nmID: 1 }) // Сортируем по индексированному полю для ускорения
+            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect photos sizes.priceWB sizes.discountedPriceWB sizes.clubDiscountedPriceWB sizes.priceMS sizes.costPriceMS sizes.stockMS sizes.stockFBS sizes.stockFBY')
+            .lean(); // Используем lean() для ускорения запросов
 
         // Подсчитываем общее количество товаров для пагинации
+        // Примечание: убрали .cache() так как этот метод не существует в стандартном Mongoose
         const totalProducts = await Product.countDocuments(query);
 
         console.log(`[PRODUCT_DB_SERVICE] Найдено ${products.length} товаров на странице ${page} из ${totalProducts} всего для связки ${integrationLinkId}.`);
@@ -95,6 +104,102 @@ async function getProductsFromDb(integrationLinkId, userId, page, limit, searchT
         };
     } catch (error) {
         console.error(`[PRODUCT_DB_SERVICE ERROR] Общая ошибка при получении товаров для связки ${integrationLinkId}: ${error.message}`);
+        throw error; // Перебрасываем ошибку для обработки в контроллере
+    }
+}
+
+/**
+ * Получает товары всех интеграций пользователя из базы данных с пагинацией и поиском.
+ * @param {string} userId - ID пользователя.
+ * @param {number} page - Номер текущей страницы.
+ * @param {number} limit - Количество товаров на странице.
+ * @param {string} [searchTerm] - Строка для поиска.
+ * @param {string} [msFilter] - Фильтр по наличию в МС ('exists' или 'not_exists').
+ * @returns {Promise<Object>} - Объект с товарами, текущей страницей, общим количеством страниц и общим количеством товаров.
+ */
+async function getAllProductsFromDb(userId, page, limit, searchTerm, msFilter, complectFilter) {
+    const skip = (page - 1) * limit;
+
+    console.log(`[PRODUCT_DB_SERVICE] Получен запрос на товары всех интеграций для пользователя: ${userId}, страница: ${page}, лимит: ${limit}, поиск: ${searchTerm || 'N/A'}, фильтр МС: ${msFilter || 'N/A'}`);
+
+    try {
+        // Формируем основной запрос для MongoDB - получаем товары всех интеграций пользователя
+        let query = { user: userId };
+
+        if (searchTerm) {
+            const isNumeric = /^\d+$/.test(searchTerm); // Проверка: строка состоит только из цифр
+
+            if (isNumeric) {
+                query.$or = [
+                    { nmID: Number(searchTerm) },       // числовой поиск
+                    { vendorCode: searchTerm },         // точное совпадение
+                    { 'sizes.skus': searchTerm },       // точное совпадение
+                ];
+            } else {
+                const searchRegex = new RegExp(searchTerm, 'i'); // регистронезависимый regex
+                query.$or = [
+                    { title: searchRegex },
+                    { vendorCode: searchRegex },
+                    { 'sizes.techSize': searchRegex },
+                    { 'sizes.skus': searchRegex },
+                    { brand: searchRegex },
+                ];
+            }
+        }
+
+        // Фильтр по наличию в МС (ms_href_general ИЛИ ms_href в любом размере)
+        if (msFilter === 'exists') {
+            query.$or = [
+                { ms_href_general: { $exists: true, $ne: null } },
+                { 'sizes.ms_href': { $exists: true, $ne: null } }
+            ];
+        } else if (msFilter === 'not_exists') {
+            // Если нужен товар, у которого НЕТ ни общей ссылки, ни ссылок в размерах
+            query.$and = [
+                {
+                    $or: [
+                        { ms_href_general: { $exists: false } },
+                        { ms_href_general: null }
+                    ]
+                },
+                {
+                    $or: [
+                        { 'sizes.ms_href': { $exists: false } },
+                        { 'sizes.ms_href': null }
+                    ]
+                }
+            ];
+        }
+
+        // Фильтр по комплектам
+        if (complectFilter === 'true') {
+            query.complect = true;
+        } else if (complectFilter === 'false') {
+            query.complect = false;
+        }
+
+        // Получаем товары из вашей БД с оптимизированным запросом
+        const products = await Product.find(query)
+            .skip(skip)
+            .limit(limit)
+            .sort({ nmID: 1 }) // Сортируем по индексированному полю для ускорения
+            .select('nmID title brand vendorCode sizes.chrtID sizes.techSize sizes.wbSize sizes.skus sizes.ms_href ms_href_general complect integrationLink photos sizes.priceWB sizes.discountedPriceWB sizes.clubDiscountedPriceWB sizes.priceMS sizes.costPriceMS sizes.stockMS sizes.stockFBS sizes.stockFBY')
+            .lean(); // Используем lean() для ускорения запросов
+
+        // Подсчитываем общее количество товаров для пагинации
+        // Примечание: убрали .cache() так как этот метод не существует в стандартном Mongoose
+        const totalProducts = await Product.countDocuments(query);
+
+        console.log(`[PRODUCT_DB_SERVICE] Найдено ${products.length} товаров на странице ${page} из ${totalProducts} всего для всех интеграций пользователя ${userId}.`);
+
+        return {
+            products,
+            currentPage: page,
+            totalPages: Math.ceil(totalProducts / limit),
+            totalProducts,
+        };
+    } catch (error) {
+        console.error(`[PRODUCT_DB_SERVICE ERROR] Общая ошибка при получении товаров всех интеграций для пользователя ${userId}: ${error.message}`);
         throw error; // Перебрасываем ошибку для обработки в контроллере
     }
 }
@@ -314,6 +419,7 @@ async function linkMoySkladProduct(integrationLinkId, userId, wbProductId, msPro
 
 module.exports = {
     getProductsFromDb,
+    getAllProductsFromDb,
     unlinkMoySkladLinks,
     bulkUnlinkMoySkladLinks,
     updateProductComplect,

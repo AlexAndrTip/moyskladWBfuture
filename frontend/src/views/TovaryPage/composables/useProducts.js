@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export function useProducts(selectedIntegrationId, getToken, msFilter) {
+export function useProducts(selectedIntegrationId, getToken, msFilter, complectFilter) {
   const products = ref([]);
   const productsLoading = ref(false);
   const productsError = ref('');
@@ -36,8 +36,15 @@ export function useProducts(selectedIntegrationId, getToken, msFilter) {
         limit: productsPerPage.value,
         searchTerm: searchTerm.value,
         msFilter: msFilter.value,
+        complectFilter: complectFilter.value,
       };
-      const response = await axios.get(`${API_BASE_URL}/products/${selectedIntegrationId.value}`, {
+
+      // Определяем URL в зависимости от выбранной интеграции
+      const url = selectedIntegrationId.value === 'all' 
+        ? `${API_BASE_URL}/products/all`
+        : `${API_BASE_URL}/products/${selectedIntegrationId.value}`;
+
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${getToken()}` },
         params
       });

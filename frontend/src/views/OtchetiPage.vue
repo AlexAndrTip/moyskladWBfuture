@@ -449,11 +449,13 @@ const loadReportsStatus = async () => {
       
       // Обновляем статус в списке отчетов
       reports.value.forEach(report => {
-        report.loadedInDB = loadedReportsStatus.value.has(report.id);
-        report.exportedToMS = exportedReportsStatus.value.has(report.id);
-        report.serviceReceiptsCreated = receiptsSet.has(report.id);
-        report.expenseOrdersCreated = expensesSet.has(report.id);
-        report.incomeOrdersCreated = incomeOrdersSet.has(report.id);
+        // Для новых ID отчетов используем короткий ID для проверки статуса
+        const shortId = getShortReportId(report.id);
+        report.loadedInDB = loadedReportsStatus.value.has(shortId);
+        report.exportedToMS = exportedReportsStatus.value.has(shortId);
+        report.serviceReceiptsCreated = receiptsSet.has(shortId);
+        report.expenseOrdersCreated = expensesSet.has(shortId);
+        report.incomeOrdersCreated = incomeOrdersSet.has(shortId);
       });
     }
   } catch (error) {
@@ -502,7 +504,9 @@ const loadToDB = async (report) => {
     if (response.data.success) {
       showNotification(`Отчет ${report.id} успешно загружен в БД! Загружено записей: ${response.data.count}`);
       report.loadedInDB = true;
-      loadedReportsStatus.value.add(report.id); // Обновляем статус в Set
+      // Добавляем короткий ID в статус для совместимости
+      const shortId = getShortReportId(report.id);
+      loadedReportsStatus.value.add(shortId);
     } else {
       showNotification('Ошибка загрузки отчета в БД', 'error');
     }
@@ -543,13 +547,15 @@ const deleteFromDB = async (report, skipConfirm = false) => {
     if (response.data.success) {
       showNotification(`Отчет ${report.id} успешно удален из БД! Удалено записей: ${response.data.deletedCount}`);
       report.loadedInDB = false;
-      loadedReportsStatus.value.delete(report.id); // Обновляем статус в Set
+      // Удаляем короткий ID из статуса для совместимости
+      const shortId = getShortReportId(report.id);
+      loadedReportsStatus.value.delete(shortId);
       // сброс остальных статусов
       report.exportedToMS = false;
       report.serviceReceiptsCreated = false;
       report.expenseOrdersCreated = false;
       report.incomeOrdersCreated = false;
-      exportedReportsStatus.value.delete(report.id);
+      exportedReportsStatus.value.delete(shortId);
       serviceLoadingIds.value.delete(report.id);
       expenseLoadingIds.value.delete(report.id);
       incomeLoadingIds.value.delete(report.id);
@@ -593,7 +599,9 @@ const exportToMS = async (report) => {
         showNotification(`Отчет ${report.id} успешно выгружен в МойСклад!`);
       }
       report.exportedToMS = true;
-      exportedReportsStatus.value.add(report.id);
+      // Добавляем короткий ID в статус для совместимости
+      const shortId = getShortReportId(report.id);
+      exportedReportsStatus.value.add(shortId);
 
       // автоматические действия согласно настройкам
       if (settings.value.createServiceReceipts && !report.serviceReceiptsCreated) {
@@ -643,6 +651,10 @@ const createServiceReceipts = async (report) => {
         showNotification(`Приёмки услуг для отчёта ${report.id} успешно созданы!`);
       }
       report.serviceReceiptsCreated = true;
+      // Добавляем короткий ID в статус для совместимости
+      const shortId = getShortReportId(report.id);
+      // Обновляем статус приемок услуг в соответствующем Set
+      // TODO: Добавить логику для обновления статуса приемок услуг
     } else {
       showNotification('Не удалось создать приёмки услуг', 'error');
     }
@@ -672,6 +684,10 @@ const createExpenseOrders = async (report) => {
         showNotification(`Расходные ордера для отчёта ${report.id} успешно созданы!`);
       }
       report.expenseOrdersCreated = true;
+      // Добавляем короткий ID в статус для совместимости
+      const shortId = getShortReportId(report.id);
+      // Обновляем статус расходных ордеров в соответствующем Set
+      // TODO: Добавить логику для обновления статуса расходных ордеров
     } else {
       showNotification('Не удалось создать расходные ордера', 'error');
     }
@@ -701,6 +717,10 @@ const createIncomeOrders = async (report) => {
         showNotification(`Приходный ордер для отчёта ${report.id} успешно создан!`);
       }
       report.incomeOrdersCreated = true;
+      // Добавляем короткий ID в статус для совместимости
+      const shortId = getShortReportId(report.id);
+      // Обновляем статус приходных ордеров в соответствующем Set
+      // TODO: Добавить логику для обновления статуса приходных ордеров
     } else {
       showNotification('Не удалось создать приходный ордер', 'error');
     }
@@ -772,13 +792,25 @@ const generateReports = () => {
     const endMonth = (weekEnd.getMonth() + 1).toString().padStart(2, '0');
     const endYear = weekEnd.getFullYear().toString().slice(-2);
     
-    const reportId = `${startDay}${startMonth}${startYear}${endDay}${endMonth}${endYear}`;
+    const dateRange = `${startDay}${startMonth}${startYear}${endDay}${endMonth}${endYear}`;
+    
+    // Генерируем уникальный ID отчета в новом формате: {integrationIdSuffix}-{dateRange}
+    let reportId;
+    if (selectedIntegrationId.value) {
+      reportId = generateUniqueReportId(selectedIntegrationId.value, dateRange);
+      console.log(`[OTCHETI] Сгенерирован уникальный ID отчета: ${reportId} для интеграции ${selectedIntegrationId.value}`);
+    } else {
+      // Fallback для случая, когда интеграция не выбрана
+      reportId = dateRange;
+      console.log(`[OTCHETI] Используем fallback ID отчета: ${reportId} (интеграция не выбрана)`);
+    }
     
     // Формируем период для отображения
     const period = `${startDay}.${startMonth}.${startYear} - ${endDay}.${endMonth}.${endYear}`;
     
-    // Проверяем, загружен ли отчет в БД
-    const isLoadedInDB = loadedReportsStatus.value.has(reportId);
+    // Проверяем, загружен ли отчет в БД (используем короткий ID для совместимости)
+    const shortId = getShortReportId(reportId);
+    const isLoadedInDB = loadedReportsStatus.value.has(shortId);
     
     console.log(`[OTCHETI] Добавляем отчет: ${period} (ID: ${reportId}, загружен: ${isLoadedInDB})`);
     addedCount++;
@@ -803,6 +835,32 @@ const generateReports = () => {
   // Сортируем по дате начала периода (от самого нового к раннему)
   reportsList.sort((a, b) => b.startDate - a.startDate);
   reports.value = reportsList;
+};
+
+// Функция для генерации уникального ID отчета в новом формате
+const generateUniqueReportId = (integrationId, dateRange) => {
+  if (!integrationId || !dateRange) {
+    throw new Error('Необходимы integrationId и dateRange');
+  }
+  
+  // Получаем последние 8 символов ID интеграции
+  const integrationIdSuffix = integrationId.slice(-8);
+  
+  // Формируем уникальный номер: {integrationIdSuffix}-{dateRange}
+  const uniqueId = `${integrationIdSuffix}-${dateRange}`;
+  console.log(`[OTCHETI] Сгенерирован уникальный ID: ${uniqueId} (интеграция: ${integrationId}, дата: ${dateRange})`);
+  return uniqueId;
+};
+
+// Функция для извлечения короткого ID отчета (без префикса интеграции)
+const getShortReportId = (fullReportId) => {
+  if (!fullReportId || !fullReportId.includes('-')) {
+    return fullReportId;
+  }
+  
+  const shortId = fullReportId.split('-')[1];
+  console.log(`[OTCHETI] Извлечен короткий ID: ${shortId} из полного ID: ${fullReportId}`);
+  return shortId;
 };
 
 // Загрузка данных при монтировании компонента

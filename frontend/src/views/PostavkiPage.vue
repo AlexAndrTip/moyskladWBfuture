@@ -173,7 +173,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
 import { useIntegrationLinks } from './TovaryPage/composables/useIntegrationLinks.js';
 import { usePostavki } from './PostavkiPage/composables/usePostavki.js';
@@ -371,6 +371,20 @@ function toggleSelectPage() {
   }
 }
 // === конец добавленного ===
+
+// Функция для установки первой интеграции по умолчанию
+const setDefaultIntegration = () => {
+  if (integrationLinks.value.length > 0 && !selectedIntegrationId.value) {
+    selectedIntegrationId.value = integrationLinks.value[0]._id;
+  }
+};
+
+// Следим за загрузкой интеграций и устанавливаем первую по умолчанию
+watch(integrationLinks, (newLinks) => {
+  if (newLinks.length > 0 && !selectedIntegrationId.value) {
+    setDefaultIntegration();
+  }
+}, { immediate: true });
 
 onMounted(async () => {
   await fetchIntegrationLinks();

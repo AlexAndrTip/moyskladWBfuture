@@ -6,17 +6,32 @@
       :checked="isSelected"
       @change="event => emit('toggle-select', event, product._id)"
     />
+    <div class="product-image">
+      <img 
+        v-if="product.photos && product.photos.length > 0 && product.photos[0].c246x328" 
+        :src="product.photos[0].c246x328" 
+        :alt="product.title"
+        class="product-thumbnail"
+        @error="handleImageError"
+        @click="openImageModal"
+      />
+      <div v-else class="no-image-placeholder">
+        <span>Нет фото</span>
+      </div>
+    </div>
     <div class="product-info">
       <strong>Название:</strong> {{ product.title }}<br/>
       <strong>Артикул WB:</strong> {{ product.nmID }}<br/>
-      <strong>Артикул продавца:</strong> {{ product.vendorCode }}
+      <strong>Артикул продавца:</strong> {{ product.vendorCode }}<br/>
+      <strong v-if="showIntegrationInfo && product.integrationLink">Интеграция:</strong> {{ showIntegrationInfo && product.integrationLink ? getIntegrationName(product.integrationLink) : '' }}
       <div v-if="product.ms_href_general || (product.sizes && product.sizes.some(size => size.ms_href))" class="ms-link">
         <span class="ms-exists-label">
           в МС ✅
         </span>
       </div>
     </div>
-    <div class="product-sizes">
+    <!-- Блок с размерами для страницы товаров -->
+    <div v-if="showActions" class="product-sizes">
       <strong>Размеры:</strong>
       <ul>
         <li v-for="size in product.sizes" :key="size.chrtID">
@@ -27,7 +42,27 @@
         </li>
       </ul>
     </div>
-    <div v-if="product.sizes && product.sizes.length === 1" class="product-complect">
+    
+    <!-- Блок с баркодами для страницы цен и остатков -->
+    <div v-else-if="showBarcodesBySize" class="product-barcodes">
+      <strong>Баркоды:</strong>
+      <ul>
+        <li v-for="size in product.sizes" :key="size.chrtID">
+          {{ size.techSize }}: {{ size.skus ? size.skus.join(', ') : 'Нет' }}
+          <span v-if="size.ms_href" class="ms-size-link-icon">
+            ✅
+          </span>
+        </li>
+      </ul>
+    </div>
+    
+    <!-- Блок с баркодом для страницы товаров -->
+    <div v-else class="product-barcode">
+      <strong>Баркод:</strong> {{ product.barcode || 'Нет' }}
+    </div>
+    
+    <!-- Блок с комплектом для страницы товаров -->
+    <div v-if="showActions && product.sizes && product.sizes.length === 1" class="product-complect">
       <label class="complect-label">Комплект:</label>
       <input
         type="checkbox"
@@ -41,9 +76,10 @@
         class="complect-checkbox"
       />
     </div>
-    <div v-else class="product-complect-placeholder"></div>
+    <div v-else-if="showActions" class="product-complect-placeholder"></div>
 
-    <div class="product-actions">
+
+    <div v-if="showActions" class="product-actions">
       <button @click="emit('create-in-ms', product)" class="action-btn create-ms" :disabled="isActionInProgress(product._id, 'createMs')">
         {{ isActionInProgress(product._id, 'createMs') ? 'Создаётся...' : 'Создать в МС' }}
       </button>
@@ -68,6 +104,62 @@
       <button @click="emit('link-to-product', product)" class="action-btn link-product" :disabled="isActionInProgress(product._id, 'linkProduct')">Связать с товаром</button>
       <button @click="emit('unlink-product', product)" class="action-btn unlink-product" :disabled="isActionInProgress(product._id, 'unlinkProduct')">Удалить связку</button>
     </div>
+    
+    <!-- Колонка для цен -->
+    <div v-if="!showActions" class="product-prices">
+      <div class="price-item">
+        <strong>Цена на WB:</strong> 
+        <span class="price-value">
+          {{ getPriceDisplay(product, 'priceWB') }}
+        </span>
+      </div>
+      <div class="price-item">
+        <strong>Цена по акции клуб:</strong> 
+        <span class="price-value">
+          {{ getPriceDisplay(product, 'clubDiscountedPriceWB') }}
+        </span>
+      </div>
+      <div class="price-item">
+        <strong>Цена по акции:</strong> 
+        <span class="price-value">
+          {{ getPriceDisplay(product, 'discountedPriceWB') }}
+        </span>
+      </div>
+      <div class="price-item">
+        <strong>Цена в МС:</strong> 
+        <span class="price-value">
+          {{ getPriceDisplay(product, 'priceMS') }}
+        </span>
+      </div>
+      <div class="price-item">
+        <strong>Себестоимость в МС:</strong> 
+        <span class="price-value">
+          {{ getPriceDisplay(product, 'costPriceMS') }}
+        </span>
+      </div>
+    </div>
+    
+    <!-- Колонка для остатков -->
+    <div v-if="!showActions" class="product-stocks">
+      <div class="stock-item">
+        <strong>Остаток в МС:</strong> 
+        <span class="stock-value">
+          {{ getStockDisplay(product, 'stockMS') }}
+        </span>
+      </div>
+      <div class="stock-item">
+        <strong>Остаток FBS:</strong> 
+        <span class="stock-value">
+          {{ getStockDisplay(product, 'stockFBS') }}
+        </span>
+      </div>
+      <div class="stock-item">
+        <strong>Остаток FBY WB:</strong> 
+        <span class="stock-value">
+          {{ getStockDisplay(product, 'stockFBY') }}
+        </span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -78,6 +170,22 @@ const props = defineProps({
   product: Object,
   isSelected: Boolean,
   isActionInProgress: Function,
+  showIntegrationInfo: {
+    type: Boolean,
+    default: false
+  },
+  showActions: {
+    type: Boolean,
+    default: true
+  },
+  showBarcodesBySize: {
+    type: Boolean,
+    default: false
+  },
+  integrationLinks: {
+    type: Array,
+    default: () => []
+  }
 });
 
 const emit = defineEmits([
@@ -87,6 +195,7 @@ const emit = defineEmits([
   'link-to-product',
   'unlink-product',
   'toggle-complect',
+  'open-image-modal',
 ]);
 
 const handleComplectToggle = (event) => {
@@ -95,21 +204,120 @@ const handleComplectToggle = (event) => {
     console.log('Новое значение:', event.target.checked);
     emit('toggle-complect', props.product._id, event.target.checked);
 };
+
+const getIntegrationName = (integrationLinkId) => {
+  const integration = props.integrationLinks.find(link => link._id === integrationLinkId);
+  if (integration) {
+    return `${integration.wbCabinet.name} - ${integration.storage.name}`;
+  }
+  return 'Неизвестная интеграция';
+};
+
+const handleImageError = (event) => {
+  // При ошибке загрузки изображения заменяем на placeholder
+  event.target.style.display = 'none';
+  event.target.nextElementSibling.style.display = 'flex';
+};
+
+const openImageModal = () => {
+  if (props.product.photos && props.product.photos.length > 0 && props.product.photos[0].big) {
+    emit('open-image-modal', {
+      imageUrl: props.product.photos[0].big,
+      productTitle: props.product.title
+    });
+  }
+};
+
+// Функция для отображения цен
+const getPriceDisplay = (product, priceField) => {
+  if (!product.sizes || product.sizes.length === 0) {
+    return '—';
+  }
+  
+  // Если у товара несколько размеров, показываем диапазон цен
+  if (product.sizes.length > 1) {
+    const prices = product.sizes
+      .map(size => size[priceField])
+      .filter(price => price !== undefined && price !== null && price > 0);
+    
+    if (prices.length === 0) {
+      return '—';
+    }
+    
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    
+    if (minPrice === maxPrice) {
+      return formatPrice(minPrice);
+    } else {
+      return `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`;
+    }
+  } else {
+    // Если у товара один размер
+    const price = product.sizes[0][priceField];
+    return price && price > 0 ? formatPrice(price) : '—';
+  }
+};
+
+// Функция для отображения остатков
+const getStockDisplay = (product, stockField) => {
+  if (!product.sizes || product.sizes.length === 0) {
+    return '—';
+  }
+  
+  // Если у товара несколько размеров, показываем общий остаток
+  if (product.sizes.length > 1) {
+    const totalStock = product.sizes.reduce((sum, size) => {
+      const stock = size[stockField];
+      return sum + (stock && stock > 0 ? stock : 0);
+    }, 0);
+    
+    return totalStock > 0 ? totalStock : '—';
+  } else {
+    // Если у товара один размер
+    const stock = product.sizes[0][stockField];
+    return stock && stock > 0 ? stock : '—';
+  }
+};
+
+// Функция для форматирования цен
+const formatPrice = (price) => {
+  if (typeof price !== 'number' || price <= 0) {
+    return '—';
+  }
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price);
+};
 </script>
 
 <style scoped>
 /* Ваши текущие стили */
 .product-item {
   display: grid;
-  grid-template-columns: 40px 3fr 2fr 1fr 3fr; /* Это должно быть согласовано с заголовком */
+  grid-template-columns: 60px 80px 3fr 2fr 1fr 3fr; /* Структура для страницы товаров */
   gap: 15px;
   align-items: center;
   padding: 15px 20px;
   border-bottom: 1px solid #eee;
   background-color: #f9f9f9;
 }
+
+/* Специальная структура для страницы цен и остатков */
+.product-item.no-actions {
+  grid-template-columns: 60px 80px 3fr 2fr 2fr 2fr; /* Структура с 6 колонками */
+  gap: 15px;
+  align-items: start;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  background-color: #f9f9f9;
+  display: grid;
+}
 .product-item.header {
-  grid-template-columns: 40px 3fr 2fr 1fr 3fr; /* Важно, чтобы здесь тоже был столбец для "Комплекта" */
+  grid-template-columns: 60px 80px 3fr 2fr 1fr 3fr; /* Структура для страницы товаров */
   background-color: #f0f2f5;
   font-weight: bold;
   position: sticky;
@@ -117,6 +325,18 @@ const handleComplectToggle = (event) => {
   z-index: 10;
   padding-top: 10px;
   padding-bottom: 10px;
+  border-bottom: 2px solid #ccc;
+}
+
+/* Специальная структура заголовка для страницы цен и остатков */
+.product-item.header.no-actions {
+  grid-template-columns: 60px 80px 3fr 2fr 2fr 2fr; /* Структура с 6 колонками */
+  background-color: #f0f2f5;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 10px 20px;
   border-bottom: 2px solid #ccc;
 }
 .product-item:last-child {
@@ -136,6 +356,43 @@ const handleComplectToggle = (event) => {
   display: block;
 }
 
+.product-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+}
+
+.product-thumbnail {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #eee;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.no-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: #f8f9fa;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  color: #666;
+  font-size: 12px;
+  text-align: center;
+}
+
 .ms-link {
   margin-top: 5px;
   font-size: 0.9em;
@@ -152,6 +409,9 @@ const handleComplectToggle = (event) => {
   font-weight: bold;
   margin-left: 5px; /* Небольшой отступ от текста размера */
 }
+
+
+
 
 .product-complect {
   display: flex;
@@ -188,8 +448,120 @@ const handleComplectToggle = (event) => {
     color: #999;
     min-height: 50px;
 }
-.complect-info {
-    padding: 5px 0;
+
+.product-barcode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.product-barcodes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  font-size: 0.9em;
+  color: #555;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.product-barcodes ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.product-barcodes li {
+  padding: 4px 0;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.product-barcodes li:last-child {
+  border-bottom: none;
+}
+
+
+
+/* Стили для колонок с ценами и остатками */
+.product-prices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  min-height: 120px;
+  justify-content: space-between;
+}
+
+.price-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9em;
+  padding: 4px 0;
+  min-height: 20px;
+}
+
+.price-item strong {
+  color: #495057;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+.price-value {
+  color: #6c757d;
+  font-weight: 500;
+  text-align: right;
+  min-width: 80px;
+}
+
+/* Стили для колонки с остатками */
+.product-stocks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  min-height: 120px;
+  justify-content: space-between;
+}
+
+.stock-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9em;
+  padding: 4px 0;
+  min-height: 20px;
+}
+
+.stock-item strong {
+  color: #495057;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+.stock-value {
+  color: #6c757d;
+  font-weight: 500;
+  text-align: right;
+  min-width: 80px;
 }
 
 
@@ -264,14 +636,35 @@ const handleComplectToggle = (event) => {
   background-color: #c9302c;
 }
 
+
+
+.product-actions-disabled {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+}
+
+.actions-disabled-text {
+  color: #666;
+  font-size: 0.85em;
+  font-style: italic;
+}
+
 @media (max-width: 768px) {
   .product-item {
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 60px 80px 1fr;
     flex-direction: column;
     align-items: flex-start;
   }
   .product-item.header {
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 60px 80px 1fr;
+  }
+  .product-item.no-actions {
+    grid-template-columns: 60px 80px 1fr;
   }
   .product-item .header-sizes,
   .product-item .header-actions,
@@ -281,8 +674,16 @@ const handleComplectToggle = (event) => {
   .product-sizes,
   .product-actions,
   .product-complect,
-  .product-complect-placeholder {
+  .product-complect-placeholder,
+  .product-prices,
+  .product-stocks,
+  .product-barcode,
+  .product-barcodes {
     display: none;
+  }
+  .product-image {
+    width: 60px;
+    height: 60px;
   }
   .product-actions {
     justify-content: flex-start;

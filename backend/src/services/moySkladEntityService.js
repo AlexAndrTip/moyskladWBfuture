@@ -98,6 +98,7 @@ async function createMoyskladCounterparty(integrationLinkId, userId, counterpart
 // @desc    Получить список договоров из МойСклад
 // @param   organizationHref - href организации (ownAgent) для фильтрации на стороне сервера
 // @param   counterpartyHref - href контрагента (agent) для фильтрации на стороне сервера
+// ПРИМЕЧАНИЕ: Возвращаются только договоры типа "Commission" (Договор комиссии)
 async function getMoyskladContracts(integrationLinkId, userId, organizationHref, counterpartyHref, searchTerm = '') {
   const token = await getMoyskladToken(integrationLinkId, userId);
   const headers = {
@@ -126,6 +127,9 @@ async function getMoyskladContracts(integrationLinkId, userId, organizationHref,
       );
     }
 
+    // ИЗМЕНЕНО: Фильтруем только договоры типа "Commission" (Договор комиссии)
+    contracts = contracts.filter(contract => contract.contractType === 'Commission');
+
     return contracts; // Возвращаем отфильтрованный массив договоров
   } catch (error) {
     console.error('[moySkladEntityService] Ошибка при получении договоров из МойСклад:', error.response?.data || error.message);
@@ -134,6 +138,7 @@ async function getMoyskladContracts(integrationLinkId, userId, organizationHref,
 }
 
 // @desc    Создать договор в МойСклад
+// ПРИМЕЧАНИЕ: Создаются только договоры типа "Commission" (Договор комиссии)
 async function createMoyskladContract(integrationLinkId, userId, contractData) {
   const token = await getMoyskladToken(integrationLinkId, userId);
   const headers = {
@@ -142,8 +147,14 @@ async function createMoyskladContract(integrationLinkId, userId, contractData) {
   };
 
   try {
+    // ИЗМЕНЕНО: Добавляем contractType: "Commission" для создания договора комиссии
+    const contractPayload = {
+      ...contractData,
+      contractType: 'Commission' // Обязательно указываем тип договора как "Commission"
+    };
+
     // contractData должно содержать name, ownAgent.meta, agent.meta
-    const response = await axios.post(`${MOYSKLAD_API_BASE_URL}contract`, contractData, { headers });
+    const response = await axios.post(`${MOYSKLAD_API_BASE_URL}contract`, contractPayload, { headers });
     return response.data;
   } catch (error) {
     console.error('[moySkladEntityService] Ошибка при создании договора в МойСклад:', error.response?.data || error.message);

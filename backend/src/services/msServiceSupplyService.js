@@ -3,6 +3,7 @@ const IntegrationLink = require('../models/IntegrationLink');
 const OrganizationLink = require('../models/OrganizationLink');
 const Uslugi = require('../models/Uslugi');
 const { findOrCreateMoySkladService } = require('./moySkladServiceService');
+const { generateUniqueDocumentName } = require('../utils/reportIdUtils');
 const axios = require('axios');
 const MS_BASE_URL = 'https://api.moysklad.ru/api/remap/1.2';
 
@@ -92,10 +93,14 @@ async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
   // создаём supply, если есть позиции
   let supplyHref = null;
   if (positions.length) {
+    // Генерируем уникальное имя для приемки услуг
+    const uniqueSupplyName = generateUniqueDocumentName(integrationLinkId, reportId);
+    console.log(`[SERVICE_SUPPLY] Создаем приемку услуг с уникальным именем: ${uniqueSupplyName} для отчета: ${reportId}`);
+    
     const supplyPayload = {
       organization: { meta: { href: organizationHref, type: 'organization', mediaType: 'application/json' } },
       contract: { meta: { href: contractHref, type: 'contract', mediaType: 'application/json' } },
-      name: String(reportId),
+      name: uniqueSupplyName,
       agent: { meta: { href: counterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
       store: { meta: { href: storeHref, type: 'store', mediaType: 'application/json' } },
       moment: `${reportHeader.date_to} 00:00:00`,
@@ -113,9 +118,14 @@ async function createServiceReceipts({ userId, reportId, integrationLinkId }) {
   }
   // создаём demands для отрицательных сумм
   for (const ns of negativeServices) {
+    // Генерируем уникальное имя для отгрузки
+    const uniqueDemandName = generateUniqueDocumentName(integrationLinkId, reportId);
+    console.log(`[SERVICE_SUPPLY] Создаем отгрузку с уникальным именем: ${uniqueDemandName} для отчета: ${reportId}`);
+    
     const demandPayload = {
       organization: { meta: { href: organizationHref, type: 'organization', mediaType: 'application/json' } },
       contract: { meta: { href: contractHref, type: 'contract', mediaType: 'application/json' } },
+      name: uniqueDemandName,
       agent: { meta: { href: counterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
       store: { meta: { href: storeHref, type: 'store', mediaType: 'application/json' } },
       moment: `${reportHeader.date_to} 00:00:00`,
@@ -157,12 +167,14 @@ async function createExpenseOrders({ userId, reportId, integrationLinkId }) {
   // supplyHref из БД
   let supplyHref = reportRows[0].msSupplyHref;
   if (!supplyHref) {
-    // резервный поиск по имени
+    // резервный поиск по уникальному имени
+    const uniqueSupplyName = generateUniqueDocumentName(integrationLinkId, reportId);
+    console.log(`[EXPENSE_ORDERS] Ищем supply по уникальному имени: ${uniqueSupplyName} для отчета: ${reportId}`);
     const resp = await axios.get(`${MS_BASE_URL}/entity/supply`, {
       headers: { Authorization: `Bearer ${msToken}`, 'Accept-Encoding': 'gzip' },
-      params: { filter: `name=${reportId}` }
+      params: { filter: `name=${uniqueSupplyName}` }
     });
-    const row = (resp.data.rows || []).find(r => r.name === String(reportId));
+    const row = (resp.data.rows || []).find(r => r.name === uniqueSupplyName);
     supplyHref = row ? row.meta.href : null;
     if (supplyHref) {
       await Report.updateMany({ user: userId, Report_id: reportId, integrationlinks_id: integrationLinkId }, { msSupplyHref: supplyHref });

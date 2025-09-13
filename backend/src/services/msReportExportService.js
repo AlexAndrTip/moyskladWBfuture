@@ -9,6 +9,7 @@ const MS_BASE_URL = 'https://api.moysklad.ru/api/remap/1.2';
 
 async function checkReportExists(reportNumber, msToken) {
   const url = `${MS_BASE_URL}/entity/commissionreportin`;
+  
   const resp = await axios.get(url, {
     headers: {
       Authorization: `Bearer ${msToken}`,
@@ -18,9 +19,12 @@ async function checkReportExists(reportNumber, msToken) {
       filter: `name=${reportNumber}`
     }
   });
+  
   if (resp.status === 200) {
     const found = resp.data.rows.find(r => r.name === String(reportNumber));
-    return found ? found.meta.href : null;
+    if (found) {
+      return found.meta.href;
+    }
   }
   return null;
 }
@@ -33,18 +37,41 @@ async function createCommissionReport({ reportNumber, dateFrom, dateTo, orgLink,
     contract: { meta: { href: orgLink.moyskladContractHref, type: 'contract', mediaType: 'application/json' } },
     agent: { meta: { href: orgLink.moyskladCounterpartyHref, type: 'counterparty', mediaType: 'application/json' } },
     organization: { meta: { href: orgLink.moyskladOrganizationHref, type: 'organization', mediaType: 'application/json' } },
+    store: { meta: { href: orgLink.moyskladStoreHref, type: 'store', mediaType: 'application/json' } },
     moment: `${dateTo} 00:00:00`,
     commissionPeriodStart: `${dateFrom} 00:00:00`,
     commissionPeriodEnd: `${dateTo} 00:00:00`
   };
 
-  const resp = await axios.post(url, payload, {
-    headers: {
-      Authorization: `Bearer ${msToken}`,
-      'Content-Type': 'application/json'
+  console.log('[MS_EXPORT] Отправляем payload в МойСклад:', JSON.stringify(payload, null, 2));
+
+  try {
+    const resp = await axios.post(url, payload, {
+      headers: {
+        Authorization: `Bearer ${msToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log('[MS_EXPORT] Успешный ответ от МойСклад:', resp.status);
+    return resp.data.meta.href;
+  } catch (error) {
+    console.error('[MS_EXPORT] Ошибка при создании отчёта в МойСклад:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
+    
+    // Детальное логирование ошибок от МойСклад
+    if (error.response?.data?.errors) {
+      console.error('[MS_EXPORT] Детали ошибок МойСклад:');
+      error.response.data.errors.forEach((err, index) => {
+        console.error(`  Ошибка ${index + 1}:`, err);
+      });
     }
-  });
-  return resp.data.meta.href;
+    
+    throw error;
+  }
 }
 
 // список операций, влияющих на overhead
@@ -63,6 +90,22 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
     integrationlinks_id: reportDoc.integrationlinks_id,
     Report_id: reportDoc.Report_id,
   }).lean();
+
+  console.log(`[MS_EXPORT] Обрабатываем ${rows.length} строк отчёта ${reportDoc.Report_id}`);
+  
+  // Логируем проблемные строки для диагностики
+  const zeroQuantityRows = rows.filter(r => r.quantity === 0 || r.quantity === null || r.quantity === undefined);
+  if (zeroQuantityRows.length > 0) {
+    console.log(`[MS_EXPORT] Найдено ${zeroQuantityRows.length} строк с нулевым количеством:`, 
+      zeroQuantityRows.map(r => ({
+        barcode: r.barcode,
+        quantity: r.quantity,
+        doc_type: r.doc_type_name,
+        retail_amount: r.retail_amount,
+        ppvz_for_pay: r.ppvz_for_pay
+      }))
+    );
+  }
 
   const sales = []; const returns = [];
 
@@ -93,6 +136,26 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
     }
     if (!hrefMS) continue;
 
+    // Пропускаем позиции с нулевым количеством - МойСклад их не принимает
+    if (r.quantity === 0 || r.quantity === null || r.quantity === undefined) {
+      console.log(`[MS_EXPORT] Пропускаем позицию с нулевым количеством: ${r.barcode}, reward: ${r.ppvz_for_pay}`);
+      continue;
+    }
+
+    // Рассчитываем комиссию правильно: комиссия = розничная цена - выплата продавцу
+    // Это дает нам реальную комиссию WB, а не то, что получит продавец
+    let reward;
+    if (r.doc_type_name === 'Продажа') {
+      // Для продаж: комиссия = розничная цена - выплата продавцу
+      reward = Math.round(((r.retail_amount || 0) - (r.ppvz_for_pay || 0)) * 100);
+    } else if (r.doc_type_name === 'Возврат') {
+      // Для возвратов: комиссия = розничная цена - выплата продавцу (может быть отрицательной)
+      reward = Math.round(((r.retail_amount || 0) - (r.ppvz_for_pay || 0)) * 100);
+    } else {
+      // Для других типов: используем ту же логику
+      reward = Math.round(((r.retail_amount || 0) - (r.ppvz_for_pay || 0)) * 100);
+    }
+
     const position = {
       assortment: {
         meta: { href: hrefMS, type, mediaType: 'application/json' },
@@ -100,7 +163,7 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
       quantity: r.quantity,
       price: Math.round((r.retail_amount || 0) * 100),
       vat: 0,
-      reward: Math.round(((r.retail_amount || 0) - (r.ppvz_for_pay || 0)) * 100),
+      reward: reward,
     };
 
     if (r.doc_type_name === 'Возврат') returns.push(position);
@@ -112,15 +175,62 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
     if (!arr.length) return;
     const url = `${MS_BASE_URL}/entity/commissionreportin/${cleanId}` +
       (isReturn ? '/returntocommissionerpositions' : '/positions');
+    
+    console.log(`[MS_EXPORT] Отправляем ${arr.length} позиций на ${url}`);
+    
     for (let i = 0; i < arr.length; i += 1000) {
-      await axios.post(url, arr.slice(i, i + 1000), {
-        headers: {
-          Authorization: `Bearer ${msToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const chunk = arr.slice(i, i + 1000);
+      console.log(`[MS_EXPORT] Отправляем чанк ${i/1000 + 1} (${chunk.length} позиций)`);
+      
+      try {
+        await axios.post(url, chunk, {
+          headers: {
+            Authorization: `Bearer ${msToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        console.log(`[MS_EXPORT] Чанк ${i/1000 + 1} успешно отправлен`);
+      } catch (error) {
+        console.error(`[MS_EXPORT] Ошибка отправки чанка ${i/1000 + 1}:`, {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: url
+        });
+        throw error;
+      }
     }
   };
+
+  // Валидация позиций перед отправкой
+  const validatePosition = (pos, index, type) => {
+    if (pos.quantity <= 0) {
+      throw new Error(`Позиция ${index} (${type}): некорректное количество ${pos.quantity}`);
+    }
+    if (pos.price < 0) {
+      throw new Error(`Позиция ${index} (${type}): некорректная цена ${pos.price}`);
+    }
+    // Комиссия может быть любой (положительной, отрицательной, нулевой) - это нормально для WB отчетов
+    // if (pos.reward < 0) {
+    //   throw new Error(`Позиция ${index} (${type}): некорректная комиссия ${pos.reward}`);
+    // }
+    if (!pos.assortment?.meta?.href) {
+      throw new Error(`Позиция ${index} (${type}): отсутствует ссылка на товар`);
+    }
+  };
+
+  // Проверяем все позиции
+  sales.forEach((pos, index) => validatePosition(pos, index, 'продажа'));
+  returns.forEach((pos, index) => validatePosition(pos, index, 'возврат'));
+
+  console.log(`[MS_EXPORT] Валидация пройдена: ${sales.length} продаж, ${returns.length} возвратов`);
+
+  // Проверяем, что есть позиции для отправки
+  if (sales.length === 0 && returns.length === 0) {
+    console.warn('[MS_EXPORT] Внимание: нет позиций для отправки в МойСклад после фильтрации');
+    console.warn('[MS_EXPORT] Возможные причины: все позиции имеют нулевое количество или некорректные данные');
+    return; // Выходим без отправки
+  }
 
   await postChunk(sales, false);
   await postChunk(returns, true);
@@ -150,6 +260,24 @@ async function fillReportPositionsAndOverhead(reportDoc, href, msToken) {
   console.log(
     `[MS_EXPORT] Позиции отправлены (продажи ${sales.length}, возвраты ${returns.length}), overhead = ${overheadSum}`,
   );
+  
+  // Дополнительное логирование для диагностики
+  if (sales.length > 0) {
+    console.log('[MS_EXPORT] Примеры позиций продаж:', sales.slice(0, 2).map(p => ({
+      quantity: p.quantity,
+      price: p.price,
+      reward: p.reward,
+      assortment: p.assortment.meta.href
+    })));
+  }
+  if (returns.length > 0) {
+    console.log('[MS_EXPORT] Примеры позиций возвратов:', returns.slice(0, 2).map(p => ({
+      quantity: p.quantity,
+      price: p.price,
+      reward: p.reward,
+      assortment: p.assortment.meta.href
+    })));
+  }
 }
 
 /**
@@ -189,8 +317,26 @@ async function exportReportToMS({ userId, reportId, integrationLinkId }) {
     await report.save();
   }
 
+  // Получаем ссылки организации/контрагента/договора (как в сервисе отгрузок)
   const orgLink = await OrganizationLink.findOne({ user: userId, integrationLink: integrationLinkId });
-  if (!orgLink) throw new Error('OrganizationLink не найден. Заполните связи организации/контрагента/договора');
+  if (!orgLink) throw new Error('OrganizationLink не настроен');
+  
+  const organizationHref = orgLink.moyskladOrganizationHref;
+  const counterpartyHref = orgLink.moyskladCounterpartyHref;
+  const contractHref = orgLink.moyskladContractHref;
+  const storeHref = orgLink.moyskladStoreHref || orgLink.moyskladStoreExpensesHref;
+
+  console.log('[MS_EXPORT] Извлечённые ссылки:', {
+    organization: organizationHref,
+    counterparty: counterpartyHref,
+    contract: contractHref,
+    store: storeHref
+  });
+
+  // Проверяем только наличие обязательных полей (как в сервисе отгрузок)
+  if (!organizationHref || !counterpartyHref || !contractHref || !storeHref) {
+    throw new Error('Не заполнены href организации/контрагента/договора/склада. Перейдите на страницу "Организации" и заполните все обязательные поля.');
+  }
 
   console.log(`[MS_EXPORT] Обработка отчёта ${reportId}`);
 
@@ -202,7 +348,7 @@ async function exportReportToMS({ userId, reportId, integrationLinkId }) {
       reportNumber: reportId,
       dateFrom: report.date_from,
       dateTo: report.date_to,
-      orgLink,
+      orgLink: { moyskladOrganizationHref: organizationHref, moyskladCounterpartyHref: counterpartyHref, moyskladContractHref: contractHref, moyskladStoreHref: storeHref },
       msToken
     });
     console.log(`[MS_EXPORT] Создан отчёт, href=${href}`);

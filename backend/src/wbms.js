@@ -30,7 +30,14 @@ const reportRoutes = require('./routes/reportRoutes'); // <-- Импорт ро�
 const reportCleanup = require('./services/reportsCleanupService');
 const limitRoutes = require('./routes/limitRoutes'); // <-- ДОБАВЛЕНО: Импорт роутов лимитов
 const paymentRoutes = require('./routes/paymentRoutes'); // <-- маршруты оплаты
+const wbPriceRoutes = require('./routes/wbPriceRoutes'); // <-- маршруты для цен WB
+const wbPriceService = require('./services/wbPriceService'); // <-- сервис для цен WB
+const msPriceRoutes = require('./routes/msPriceRoutes'); // <-- маршруты для цен МойСклад
+const msPriceAutoUpdateService = require('./services/msPriceAutoUpdateService');
+const wbStatisticsRoutes = require('./routes/wbStatisticsRoutes'); // <-- маршруты для Statistics API WB
 
+// Создаем глобальный экземпляр сервиса автоматического обновления цен МойСклад
+const msAutoUpdateService = new msPriceAutoUpdateService();
 
 const app = express();
 
@@ -98,6 +105,9 @@ app.use('/api/uslugi', uslugiRoutes); // <-- ДОБАВЛЕНО: Подключ�
 app.use('/api/settings', settingsRoutes); // <-- ДОБАВЛЕНО: Подключение роутов настроек
 app.use('/api/postavki', postavkiRoutes);
 app.use('/api/reports', reportRoutes); // <-- Подключение роутов отчетов
+app.use('/api/wb-prices', wbPriceRoutes); // <-- Подключение роутов цен WB
+app.use('/api/ms-prices', msPriceRoutes); // <-- Подключение роутов цен МойСклад
+app.use('/api/wb-statistics', wbStatisticsRoutes); // <-- Подключение роутов Statistics API WB
 app.use('/api/payment', paymentRoutes); // <-- QR оплата
 app.use('/api/limits', limitRoutes); // <-- Подключение роутов лимитов
 // app.use('/api/queue', queueRoutes); // <-- Подключение роутов очередей
@@ -115,9 +125,64 @@ app.get('/', (req, res) => {
   res.send('WBMS Backend is running!');
 });
 
+// Функция для автоматического обновления цен WB
+async function startWbPriceUpdates() {
+  try {
+    console.log('🚀 Запуск автоматического обновления цен WB...');
+    
+    // Первое обновление при запуске сервера
+    await wbPriceService.getPricesForProducts();
+    console.log('✅ Первое обновление цен WB завершено');
+    
+    // Устанавливаем периодическое обновление каждые 5 минут
+    setInterval(async () => {
+      try {
+        console.log(`🕐 [${new Date().toISOString()}] Запуск планового обновления цен WB...`);
+        await wbPriceService.getPricesForProducts();
+        console.log('✅ Плановое обновление цен WB завершено');
+      } catch (error) {
+        console.error('❌ Ошибка при плановом обновлении цен WB:', error.message);
+      }
+    }, 5 * 60 * 1000); // 5 минут в миллисекундах
+    
+    console.log('🔄 Автоматическое обновление цен WB настроено каждые 5 минут');
+    
+  } catch (error) {
+    console.error('❌ Ошибка при запуске автоматического обновления цен WB:', error.message);
+    console.log('⚠️ Автоматическое обновление цен WB не запущено');
+    // Не прерываем работу сервера при ошибке обновления цен
+  }
+}
+
+// Функция для автоматического обновления цен МойСклад
+async function startMsPriceUpdates() {
+  try {
+    if (!msAutoUpdateService) {
+      throw new Error('Сервис автоматического обновления цен МойСклад не инициализирован');
+    }
+    
+    // Используем глобальный экземпляр сервиса автоматического обновления
+    await msAutoUpdateService.startAutoUpdates();
+    
+  } catch (error) {
+    console.error('Ошибка при запуске автоматического обновления цен МойСклад:', error.message);
+    // Не прерываем работу сервера при ошибке обновления цен
+  }
+}
+
 // Запуск сервера
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   // Запускаем ежедневную очистку старых отчётов
   reportCleanup.scheduleDailyCleanup();
+  
+  // Запускаем автоматическое обновление цен WB с небольшой задержкой
+  setTimeout(() => {
+    startWbPriceUpdates();
+  }, 5000); // 5 секунд задержки для полного запуска сервера
+  
+      // Запускаем автоматическое обновление цен МойСклад с задержкой 10 секунд
+    setTimeout(() => {
+      startMsPriceUpdates();
+    }, 10000); // 10 секунд задержки для полного запуска сервера
 });
